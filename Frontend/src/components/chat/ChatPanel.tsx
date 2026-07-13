@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, X } from "lucide-react";
+import { Expand, Sparkles, X } from "lucide-react";
 import { useChatPanel } from "@/components/chat/ChatPanelProvider";
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState";
 import { ChatComposer } from "@/components/chat/ChatComposer";
@@ -24,16 +24,26 @@ export function ChatPanel() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-active text-accent">
               <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </span>
-            <span className="text-sm font-semibold text-ink">AI Assistant</span>
           </div>
-          <button
-            type="button"
-            onClick={closePanel}
-            aria-label="Close AI Assistant"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
-          >
-            <X className="h-[18px] w-[18px]" />
-          </button>
+          <div className="flex items-center gap-1">
+            <a
+              href="/ask-ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open in full screen"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+            >
+              <Expand className="h-[18px] w-[18px]" />
+            </a>
+            <button
+              type="button"
+              onClick={closePanel}
+              aria-label="Close AI Assistant"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">

@@ -12,6 +12,10 @@ import { useChatPanel } from "@/components/chat/ChatPanelProvider";
 export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname();
   const sections = getNavSections(role);
+  const isAdmin = role === "admin";
+  const profileInitials = isAdmin ? "DA" : "U";
+  const profileName = isAdmin ? "Dev Admin" : "User";
+  const profileRole = isAdmin ? "Tenant Admin" : "Member";
   const { open: collapsed } = useChatPanel();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -110,20 +114,20 @@ export function Sidebar({ role }: { role?: string }) {
           className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-3 text-left hover:bg-hover"
         >
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#15171c] text-xs font-bold text-white">
-            DA
+            {profileInitials}
           </div>
           {!collapsed && (
             <>
               <div className="flex flex-col overflow-hidden leading-[1.25]">
                 <span className="truncate text-[13.5px] font-semibold text-ink">
-                  Dev Admin
+                  {profileName}
                 </span>
                 <span className="whitespace-nowrap text-xs text-ink-muted">
-                  Tenant Admin
+                  {profileRole}
                 </span>
               </div>
               <Chevron
-                direction={menuOpen ? "down" : "left"}
+                direction={menuOpen ? "up" : "down"}
                 className="ml-auto h-4 w-4 flex-shrink-0 text-ink-muted"
               />
             </>

@@ -1,15 +1,31 @@
-import { Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
+import Image from "next/image";
 
-export function ChatEmptyState() {
+export function ChatEmptyState({
+  title = "Ask AI anything",
+  description = "Start a conversation to get help with your workspace, playbooks, and data.",
+  showIcon = true,
+  className = "flex h-full flex-col items-center justify-center px-8 text-center",
+}: {
+  title?: string;
+  description?: ReactNode;
+  showIcon?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-page text-accent">
-        <Sparkles className="h-6 w-6" strokeWidth={1.8} />
-      </div>
-      <h2 className="mt-4 text-sm font-semibold text-ink">Ask AI anything</h2>
+    <div className={className}>
+      {showIcon && (
+        <Image
+          src="/Mascot1.png"
+          alt="AI assistant mascot"
+          width={745}
+          height={805}
+          className="mb-4 h-64 w-auto"
+        />
+      )}
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
       <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
-        Start a conversation to get help with your workspace, playbooks, and
-        data.
+        {description}
       </p>
     </div>
   );
