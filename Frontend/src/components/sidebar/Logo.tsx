@@ -1,14 +1,23 @@
 import Image from "next/image";
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({
+  collapsed = false,
+  className,
+}: {
+  collapsed?: boolean;
+  className?: string;
+}) {
+  const source = collapsed ? "/Logo2.png" : "/Logo.png";
+  const width = collapsed ? 163 : 753;
+
   return (
     <Image
-      src="/Logo.png"
+      src={source}
       alt="Dailoqa"
-      width={752}
+      width={width}
       height={192}
       priority
-      className={className ?? "h-7 w-auto"}
+      className={className ?? (collapsed ? "h-11 w-auto" : "h-7 w-auto")}
     />
   );
 }

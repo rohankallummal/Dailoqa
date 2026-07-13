@@ -7,10 +7,12 @@ import { getNavSections } from "./navConfig";
 import { NavIcon, Chevron, LogoutIcon } from "./icons";
 import { Logo } from "./Logo";
 import { logout } from "@/app/(web)/actions";
+import { useChatPanel } from "@/components/chat/ChatPanelProvider";
 
 export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname();
   const sections = getNavSections(role);
+  const { open: collapsed } = useChatPanel();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -26,17 +28,33 @@ export function Sidebar({ role }: { role?: string }) {
   }, [menuOpen]);
 
   return (
-    <nav className="flex h-full w-[264px] flex-col overflow-hidden border-r border-line bg-white">
-      <div className="flex flex-shrink-0 items-center px-5 pb-3.5 pt-5">
-        <Logo />
+    <nav
+      className={`flex h-full flex-col overflow-hidden border-r border-line bg-white transition-[width] duration-300 ease-in-out motion-reduce:transition-none ${
+        collapsed ? "w-[72px]" : "w-[264px]"
+      }`}
+    >
+      <div
+        className={`flex h-[62px] flex-shrink-0 items-center ${
+          collapsed ? "justify-center px-2" : "px-5"
+        }`}
+      >
+        <Logo collapsed={collapsed} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3 pt-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar">
         {sections.map((section) => (
           <div key={section.label ?? "primary"}>
             {section.label && (
-              <div className="px-2.5 pb-2 pt-[18px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-muted">
-                {section.label}
+              <div className="relative whitespace-nowrap px-2.5 pb-2 pt-[18px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-muted">
+                <span className={collapsed ? "invisible" : undefined}>
+                  {section.label}
+                </span>
+                {collapsed && (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-2.5 top-1/2 h-px -translate-y-1/2 bg-line"
+                  />
+                )}
               </div>
             )}
             {section.items.map((item) => {
@@ -45,7 +63,8 @@ export function Sidebar({ role }: { role?: string }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative my-0.5 flex items-center gap-2.5 rounded-lg border-l-[3px] py-[9px] pl-3 pr-2.5 text-sm font-medium transition-colors ${
+                  title={collapsed ? item.label : undefined}
+                  className={`group relative my-0.5 flex min-h-[38px] items-center gap-2.5 rounded-lg border-l-[3px] py-[9px] pl-3 pr-2.5 text-sm font-medium transition-colors ${
                     active
                       ? "border-accent bg-active font-semibold text-ink"
                       : "border-transparent text-ink-soft hover:bg-hover hover:text-ink"
@@ -55,8 +74,10 @@ export function Sidebar({ role }: { role?: string }) {
                     name={item.icon}
                     className={`h-[18px] w-[18px] shrink-0 ${active ? "text-accent" : ""}`}
                   />
-                  {item.label}
-                  {item.hasChevron && (
+                  {!collapsed && (
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  )}
+                  {!collapsed && item.hasChevron && (
                     <Chevron className="ml-auto h-[15px] w-[15px] text-ink-muted opacity-0 transition-opacity group-hover:opacity-100" />
                   )}
                 </Link>
@@ -72,32 +93,41 @@ export function Sidebar({ role }: { role?: string }) {
             <form action={logout}>
               <button
                 type="submit"
-                className="flex w-full items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-medium text-ink-soft shadow-sm transition-colors hover:bg-hover hover:text-ink"
+                title={collapsed ? "Log out" : undefined}
+                className={`flex w-full items-center rounded-lg border border-line bg-white text-sm font-medium text-ink-soft shadow-sm transition-colors hover:bg-hover hover:text-ink ${
+                  collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+                }`}
               >
                 <LogoutIcon className="h-[18px] w-[18px] shrink-0" />
-                Log out
+                {!collapsed && "Log out"}
               </button>
             </form>
           </div>
         )}
         <button
           type="button"
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => setMenuOpen((menu) => !menu)}
           className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-3 text-left hover:bg-hover"
         >
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#15171c] text-xs font-bold text-white">
             DA
           </div>
-          <div className="flex flex-col overflow-hidden leading-[1.25]">
-            <span className="truncate text-[13.5px] font-semibold text-ink">
-              Dev Admin
-            </span>
-            <span className="text-xs text-ink-muted">Tenant Admin</span>
-          </div>
-          <Chevron
-            direction={menuOpen ? "down" : "left"}
-            className="ml-auto h-4 w-4 flex-shrink-0 text-ink-muted"
-          />
+          {!collapsed && (
+            <>
+              <div className="flex flex-col overflow-hidden leading-[1.25]">
+                <span className="truncate text-[13.5px] font-semibold text-ink">
+                  Dev Admin
+                </span>
+                <span className="whitespace-nowrap text-xs text-ink-muted">
+                  Tenant Admin
+                </span>
+              </div>
+              <Chevron
+                direction={menuOpen ? "down" : "left"}
+                className="ml-auto h-4 w-4 flex-shrink-0 text-ink-muted"
+              />
+            </>
+          )}
         </button>
       </div>
     </nav>
