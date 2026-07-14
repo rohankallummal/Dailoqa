@@ -9,10 +9,12 @@ export function StartingPointCard({
   description,
   href,
   priority = false,
-}: StartingPoint & { priority?: boolean }) {
+  onClick,
+}: StartingPoint & { priority?: boolean; onClick?: () => void }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md"
     >
       <span className="relative block aspect-[3/2] w-full border-b border-line">

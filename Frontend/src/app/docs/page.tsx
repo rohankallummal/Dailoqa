@@ -1,6 +1,6 @@
-import { LanguageTabs } from "@/components/docs/LanguageTabs";
-import { StartingPointCard } from "@/components/docs/StartingPointCard";
-import { startingPoints } from "@/components/docs/startingPoints";
+import { LanguageProvider } from "@/components/docs/mdx/LanguageProvider";
+import { LanguageToggle } from "@/components/docs/mdx/LanguageToggle";
+import { OverviewCards } from "@/components/docs/OverviewCards";
 
 export default function Page() {
   return (
@@ -19,15 +19,12 @@ export default function Page() {
         based on how much control you need:
       </p>
 
-      <div className="mt-6">
-        <LanguageTabs />
-      </div>
-
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {startingPoints.map((point, index) => (
-          <StartingPointCard key={point.href} {...point} priority={index === 0} />
-        ))}
-      </div>
+      <LanguageProvider storageKey="overviewLang">
+        <div className="mt-6">
+          <LanguageToggle />
+        </div>
+        <OverviewCards />
+      </LanguageProvider>
     </div>
   );
 }

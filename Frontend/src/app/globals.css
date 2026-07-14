@@ -34,3 +34,143 @@ body {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
 }
+
+@keyframes commandPaletteOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes commandPalettePanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.docArticle {
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.docArticle > p,
+.docArticle li > p {
+  margin: 1rem 0;
+  color: var(--ink-soft);
+}
+
+.docArticle h2 {
+  scroll-margin-top: 5rem;
+  margin: 2.5rem 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.docArticle h3 {
+  scroll-margin-top: 5rem;
+  margin: 2rem 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.docArticle ul,
+.docArticle ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: var(--ink-soft);
+}
+
+.docArticle ul {
+  list-style: disc;
+}
+
+.docArticle ol {
+  list-style: decimal;
+}
+
+.docArticle li {
+  margin: 0.4rem 0;
+}
+
+.docArticle strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.docArticle a {
+  color: var(--accent);
+}
+
+.docArticle :not(pre) > code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.85em;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.3rem;
+}
+
+.docArticle table {
+  width: 100%;
+  margin: 1.25rem 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.docArticle th,
+.docArticle td {
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.docArticle th {
+  background: var(--hover);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.docArticle td {
+  color: var(--ink-soft);
+}
+
+.docArticle img {
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.docArticle blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.docArticle hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}

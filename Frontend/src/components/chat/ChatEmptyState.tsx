@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function ChatEmptyState({
   title = "Ask Broccoli",
-  description = "Start a conversation to get help with your workspace, playbooks, and data.",
+  description = "To get help with your workspace, playbooks, and data.",
   showIcon = true,
   className = "flex h-full flex-col items-center justify-center px-8 text-center",
 }: {
