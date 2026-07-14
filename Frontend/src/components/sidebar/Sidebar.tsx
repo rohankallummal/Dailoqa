@@ -67,6 +67,8 @@ export function Sidebar({ role }: { role?: string }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  target={item.newTab ? "_blank" : undefined}
+                  rel={item.newTab ? "noopener noreferrer" : undefined}
                   title={collapsed ? item.label : undefined}
                   className={`group relative my-0.5 flex min-h-[38px] items-center gap-2.5 rounded-lg border-l-[3px] py-[9px] pl-3 pr-2.5 text-sm font-medium transition-colors ${
                     active

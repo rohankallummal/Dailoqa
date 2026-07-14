@@ -3,6 +3,7 @@ export type NavItem = {
   href: string;
   icon: string;
   hasChevron?: boolean;
+  newTab?: boolean;
 };
 
 export type NavSection = {
@@ -17,7 +18,7 @@ export const navSections: NavSection[] = [
       { label: "Playbooks", href: "/playbooks", icon: "playbooks" },
       { label: "Executions", href: "/executions", icon: "executions" },
       { label: "Approvals", href: "/approvals", icon: "approvals" },
-      { label: "Docs", href: "/docs", icon: "docs" },
+      { label: "Docs", href: "/docs", icon: "docs", newTab: true },
     ],
   },
   {

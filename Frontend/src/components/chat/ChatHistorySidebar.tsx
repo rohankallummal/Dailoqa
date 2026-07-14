@@ -34,8 +34,8 @@ export function ChatHistorySidebar({
             <Search className="h-4 w-4 shrink-0 text-ink-muted" />
             <input
               type="text"
-              placeholder="Search threads…"
-              aria-label="Search threads"
+              placeholder="Search"
+              aria-label="Search"
               className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
             />
           </div>
