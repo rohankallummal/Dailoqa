@@ -1,3 +1,5 @@
+import { PlaybooksClient } from "@/components/playbooks/PlaybooksClient";
+
 export default function Page() {
-  return null;
+  return <PlaybooksClient />;
 }
