@@ -16,12 +16,6 @@ import {
   MessagesSquare,
   CalendarClock,
   SlidersHorizontal,
-  User,
-  UserRoundPlus,
-  Mail,
-  ClipboardList,
-  FingerprintPattern,
-  Telescope,
 } from "lucide-react";
 
 const navIcons: Record<string, LucideIcon> = {
@@ -41,12 +35,6 @@ const navIcons: Record<string, LucideIcon> = {
   chatWithDb: MessagesSquare,
   scheduleManagement: CalendarClock,
   configuration: SlidersHorizontal,
-  users: User,
-  teams: UserRoundPlus,
-  invitations: Mail,
-  auditLog: ClipboardList,
-  accessControl: FingerprintPattern,
-  observability: Telescope,
 };
 
 export function NavIcon({

@@ -12,24 +12,16 @@ export default function Page() {
           Welcome to Dailoqa
         </h1>
         <p className="mt-2 text-sm text-ink-soft">
-          Choose how you want to enter the console.
+          Enter the console to get started.
         </p>
 
-        <div className="mt-8 flex flex-col gap-3">
-          <form action={enterApp.bind(null, "user")}>
+        <div className="mt-8">
+          <form action={enterApp}>
             <button
               type="submit"
               className="w-full rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:opacity-90"
             >
-              User
-            </button>
-          </form>
-          <form action={enterApp.bind(null, "admin")}>
-            <button
-              type="submit"
-              className="w-full rounded-lg border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition-colors hover:bg-hover"
-            >
-              Admin
+              Enter console
             </button>
           </form>
         </div>

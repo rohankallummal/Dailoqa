@@ -2,7 +2,6 @@ export type NavItem = {
   label: string;
   href: string;
   icon: string;
-  hasChevron?: boolean;
   newTab?: boolean;
 };
 
@@ -42,27 +41,4 @@ export const navSections: NavSection[] = [
       { label: "Configuration", href: "/configuration", icon: "configuration" },
     ],
   },
-  {
-    label: "Admin",
-    items: [
-      { label: "Users", href: "/users", icon: "users" },
-      { label: "Teams", href: "/teams", icon: "teams" },
-      { label: "Invitations", href: "/invitations", icon: "invitations" },
-      { label: "Audit log", href: "/audit-log", icon: "auditLog" },
-      { label: "Access Control", href: "/access-control", icon: "accessControl", hasChevron: true },
-      { label: "Observability", href: "/observability", icon: "observability" },
-    ],
-  },
 ];
-
-export const adminSectionLabel = "Admin";
-
-export const adminRoutes: string[] =
-  navSections
-    .find((section) => section.label === adminSectionLabel)
-    ?.items.map((item) => item.href) ?? [];
-
-export function getNavSections(role?: string): NavSection[] {
-  if (role === "admin") return navSections;
-  return navSections.filter((section) => section.label !== adminSectionLabel);
-}

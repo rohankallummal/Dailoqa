@@ -3,19 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { getNavSections } from "./navConfig";
+import { navSections } from "./navConfig";
 import { NavIcon, Chevron, LogoutIcon } from "./icons";
 import { Logo } from "./Logo";
 import { logout } from "@/app/(web)/actions";
 import { useChatPanel } from "@/components/chat/ChatPanelProvider";
 
-export function Sidebar({ role }: { role?: string }) {
+export function Sidebar() {
   const pathname = usePathname();
-  const sections = getNavSections(role);
-  const isAdmin = role === "admin";
-  const profileInitials = isAdmin ? "DA" : "U";
-  const profileName = isAdmin ? "Dev Admin" : "User";
-  const profileRole = isAdmin ? "Tenant Admin" : "Member";
+  const profileInitials = "U";
+  const profileName = "User";
+  const profileRole = "Member";
   const { open: collapsed } = useChatPanel();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -46,7 +44,7 @@ export function Sidebar({ role }: { role?: string }) {
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar">
-        {sections.map((section) => (
+        {navSections.map((section) => (
           <div key={section.label ?? "primary"}>
             {section.label && (
               <div className="relative whitespace-nowrap px-2.5 pb-2 pt-[18px] text-[11px] font-bold uppercase tracking-[0.06em] text-ink-muted">
@@ -82,9 +80,6 @@ export function Sidebar({ role }: { role?: string }) {
                   />
                   {!collapsed && (
                     <span className="whitespace-nowrap">{item.label}</span>
-                  )}
-                  {!collapsed && item.hasChevron && (
-                    <Chevron className="ml-auto h-[15px] w-[15px] text-ink-muted opacity-0 transition-opacity group-hover:opacity-100" />
                   )}
                 </Link>
               );

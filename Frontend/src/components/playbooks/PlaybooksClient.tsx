@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Plus, Search, Tag } from "lucide-react";
 import type { Playbook } from "./types";
-import { playbooksSeed } from "./data";
 import { PlaybookCard } from "./PlaybookCard";
 
 function Toolbar({
@@ -56,7 +55,7 @@ function FilterButton({
 }
 
 export function PlaybooksClient() {
-  const [playbooks] = useState<Playbook[]>(playbooksSeed);
+  const [playbooks] = useState<Playbook[]>([]);
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -98,7 +97,7 @@ export function PlaybooksClient() {
         </div>
       ) : (
         <div className="mt-16 text-center text-sm text-ink-muted">
-          No playbooks match “{query}”.
+          {query ? `No playbooks match “${query}”.` : "No playbooks yet."}
         </div>
       )}
     </div>

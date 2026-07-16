@@ -3,8 +3,7 @@
 import {
   createContext,
   useContext,
-  useEffect,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -16,6 +15,15 @@ type LanguageContextValue = {
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
+
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
 function isLanguage(value: string | null): value is DocsLanguage {
   return value === "python" || value === "js";
@@ -34,15 +42,15 @@ export function LanguageProvider({
   storageKey: string;
   children: ReactNode;
 }) {
-  const [lang, setLang] = useState<DocsLanguage>("python");
-
-  useEffect(() => {
-    setLang(readStoredLanguage(storageKey));
-  }, [storageKey]);
+  const lang = useSyncExternalStore<DocsLanguage>(
+    subscribe,
+    () => readStoredLanguage(storageKey),
+    () => "python",
+  );
 
   const update = (next: DocsLanguage) => {
-    setLang(next);
     window.localStorage.setItem(storageKey, next);
+    listeners.forEach((listener) => listener());
   };
 
   return (
