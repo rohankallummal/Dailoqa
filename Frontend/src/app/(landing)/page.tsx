@@ -1,4 +1,4 @@
-import { Logo } from "@/components/sidebar/Logo";
+import { Logo } from "@/shared/ui/Logo";
 import { enterApp } from "./actions";
 
 export default function Page() {

@@ -1,6 +1,4 @@
-import { LanguageProvider } from "@/components/docs/mdx/LanguageProvider";
-import { LanguageToggle } from "@/components/docs/mdx/LanguageToggle";
-import { OverviewCards } from "@/components/docs/OverviewCards";
+import { LanguageProvider, LanguageToggle, OverviewCards } from "@/features/docs";
 
 export default function Page() {
   return (

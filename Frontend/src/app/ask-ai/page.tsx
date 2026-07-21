@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AskAiWorkspace } from "@/components/chat/AskAiWorkspace";
+import { AskAiWorkspace } from "@/features/chat";
 
 export const metadata: Metadata = {
   title: "Ask AI — Dailoqa",

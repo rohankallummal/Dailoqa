@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { DocsHeader } from "@/components/layout/DocsHeader";
-import { DocsNav } from "@/components/layout/DocsNav";
+import { DocsHeader, DocsNav } from "@/features/docs";
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
