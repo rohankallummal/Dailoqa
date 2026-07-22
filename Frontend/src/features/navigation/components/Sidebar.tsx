@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { navSections } from "../lib/navConfig";
 import { NavIcon, Chevron, LogoutIcon } from "./icons";
 import { Logo } from "@/shared/ui/Logo";
-import { logout } from "../api/actions";
+import { logout } from "@/features/auth/api/actions";
 import { useChatPanel } from "@/features/chat";
 
 export function Sidebar() {

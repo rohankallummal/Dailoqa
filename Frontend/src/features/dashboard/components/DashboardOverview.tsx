@@ -23,12 +23,6 @@ export function DashboardOverview() {
             Here&apos;s what&apos;s happening across your AI agents today.
           </p>
         </div>
-        <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-active text-4xl"
-          aria-hidden="true"
-        >
-          🧑‍🔬
-        </div>
       </header>
 
       <section

@@ -26,6 +26,13 @@ coverage/
 .env.*
 !.env.example
 
+# ---- Secrets / credentials (never commit) ----
+client_secret*.json
+*.credentials.json
+*.secret.json
+*-service-account*.json
+*.key
+
 # ---- Logs ----
 *.log
 npm-debug.log*

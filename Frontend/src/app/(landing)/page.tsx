@@ -1,7 +1,10 @@
+import { redirect } from "next/navigation";
 import { Logo } from "@/shared/ui/Logo";
-import { enterApp } from "./actions";
+import { SignInButton, getSession } from "@/features/auth";
 
-export default function Page() {
+export default async function Page() {
+  if (await getSession()) redirect("/dashboard");
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-page px-6">
       <div className="w-full max-w-md rounded-2xl border border-line bg-white p-10 text-center shadow-sm">
@@ -12,18 +15,11 @@ export default function Page() {
           Welcome to Dailoqa
         </h1>
         <p className="mt-2 text-sm text-ink-soft">
-          Enter the console to get started.
+          Sign in to enter the console.
         </p>
 
         <div className="mt-8">
-          <form action={enterApp}>
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:opacity-90"
-            >
-              Enter console
-            </button>
-          </form>
+          <SignInButton />
         </div>
       </div>
     </main>
