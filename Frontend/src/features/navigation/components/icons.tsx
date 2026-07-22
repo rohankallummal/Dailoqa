@@ -10,12 +10,6 @@ import {
   Lightbulb,
   BookMarked,
   Server,
-  Database,
-  Search,
-  FileText,
-  MessagesSquare,
-  CalendarClock,
-  SlidersHorizontal,
 } from "lucide-react";
 
 const navIcons: Record<string, LucideIcon> = {
@@ -29,12 +23,6 @@ const navIcons: Record<string, LucideIcon> = {
   skills: Lightbulb,
   knowledgeBases: BookMarked,
   mcpServers: Server,
-  databaseManagement: Database,
-  queryOnDatabase: Search,
-  interactiveReport: FileText,
-  chatWithDb: MessagesSquare,
-  scheduleManagement: CalendarClock,
-  configuration: SlidersHorizontal,
 };
 
 export function NavIcon({

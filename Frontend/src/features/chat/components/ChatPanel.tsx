@@ -1,6 +1,6 @@
 "use client";
 
-import { Expand, Sparkles, X } from "lucide-react";
+import { Expand, MessageSquarePlus, Sparkles, SquarePen, X } from "lucide-react";
 import { useChatPanel } from "./ChatPanelProvider";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { ChatComposer } from "./ChatComposer";
@@ -26,6 +26,20 @@ export function ChatPanel() {
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="New chat"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+            >
+              <SquarePen className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              aria-label="New message"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+            >
+              <MessageSquarePlus className="h-[18px] w-[18px]" />
+            </button>
             <a
               href="/ask-ai"
               target="_blank"

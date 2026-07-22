@@ -1,18 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { navSections } from "../lib/navConfig";
 import { NavIcon, Chevron, LogoutIcon } from "./icons";
-import { Logo } from "@/shared/ui/Logo";
+import { Logo } from "@/shared/ui";
 import { logout } from "@/features/auth/api/actions";
 import { useChatPanel } from "@/features/chat";
 
-export function Sidebar() {
+export function Sidebar({ userName }: { userName: string }) {
   const pathname = usePathname();
-  const profileInitials = "U";
-  const profileName = "User";
+  const profileName = userName.trim().split(/\s+/)[0] || "User";
   const profileRole = "Member";
   const { open: collapsed } = useChatPanel();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -110,9 +110,13 @@ export function Sidebar() {
           onClick={() => setMenuOpen((menu) => !menu)}
           className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-3 text-left hover:bg-hover"
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#15171c] text-xs font-bold text-white">
-            {profileInitials}
-          </div>
+          <Image
+            src="/ProfilePic.jpg"
+            alt={profileName}
+            width={32}
+            height={32}
+            className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
+          />
           {!collapsed && (
             <>
               <div className="flex flex-col overflow-hidden leading-[1.25]">

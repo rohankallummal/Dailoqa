@@ -3,11 +3,17 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { ChatPanelProvider, ChatPanel } from "@/features/chat";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  userName,
+}: {
+  children: ReactNode;
+  userName: string;
+}) {
   return (
     <ChatPanelProvider>
       <div className="flex h-screen overflow-hidden bg-page">
-        <Sidebar />
+        <Sidebar userName={userName} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Header />
           <div className="flex min-h-0 flex-1">

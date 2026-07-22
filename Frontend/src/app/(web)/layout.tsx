@@ -4,6 +4,7 @@ import { AppShell } from "@/features/navigation";
 import { getSession } from "@/features/auth";
 
 export default async function WebLayout({ children }: { children: ReactNode }) {
-  if (!(await getSession())) redirect("/");
-  return <AppShell>{children}</AppShell>;
+  const session = await getSession();
+  if (!session) redirect("/");
+  return <AppShell userName={session.name}>{children}</AppShell>;
 }

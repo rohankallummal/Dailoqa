@@ -30,15 +30,4 @@ export const navSections: NavSection[] = [
       { label: "MCP Servers", href: "/mcp-servers", icon: "mcpServers" },
     ],
   },
-  {
-    label: "Agentic Data Intelligence",
-    items: [
-      { label: "Database Management", href: "/database-management", icon: "databaseManagement" },
-      { label: "Query on Database", href: "/query-on-database", icon: "queryOnDatabase" },
-      { label: "Interactive Report", href: "/interactive-report", icon: "interactiveReport" },
-      { label: "Chat with DB", href: "/chat-with-db", icon: "chatWithDb" },
-      { label: "Schedule Management", href: "/schedule-management", icon: "scheduleManagement" },
-      { label: "Configuration", href: "/configuration", icon: "configuration" },
-    ],
-  },
 ];

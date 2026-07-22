@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Logo } from "@/shared/ui/Logo";
+import { Logo } from "@/shared/ui";
 import { SignInButton, getSession } from "@/features/auth";
 
 export default async function Page() {
