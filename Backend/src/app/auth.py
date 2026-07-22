@@ -27,6 +27,7 @@ def verify_service_token(token: str) -> AuthContext:
         get_settings().service_jwt_secret,
         algorithms=["HS256"],
         audience=SERVICE_JWT_AUDIENCE,
+        options={"require": ["sub", "userId"]},
     )
     return AuthContext(user_sub=payload["sub"], user_id=payload["userId"])
 

@@ -7,7 +7,7 @@ from app.config import Settings
 def test_settings_load_from_env(base_env):
     settings = Settings()
     assert settings.database_url.endswith("/db")
-    assert settings.service_jwt_secret == "test-secret"
+    assert settings.service_jwt_secret == "unit-test-service-jwt-secret-0123456789ab"
     assert settings.llm_provider == "openai"
     assert settings.jira_issue_type_bug == "Bug"
     assert settings.jira_issue_type_feature == "Request"

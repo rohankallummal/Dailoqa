@@ -6,7 +6,7 @@ from fastapi import HTTPException
 
 from app.auth import AuthContext, SERVICE_JWT_AUDIENCE, require_auth, verify_service_token
 
-SECRET = "test-secret"
+SECRET = "unit-test-service-jwt-secret-0123456789ab"
 
 
 def _token(claims: dict, secret: str = SECRET) -> str:
@@ -47,7 +47,19 @@ def test_verify_expired_rejected():
 
 def test_verify_bad_signature_rejected():
     with pytest.raises(jwt.InvalidSignatureError):
-        verify_service_token(_token({}, secret="wrong-secret"))
+        verify_service_token(_token({}, secret="wrong-unit-test-service-jwt-secret-cd"))
+
+
+def test_verify_missing_user_id_claim_rejected():
+    payload = {
+        "sub": "google-sub-123",
+        "aud": SERVICE_JWT_AUDIENCE,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 60,
+    }
+    token = jwt.encode(payload, SECRET, algorithm="HS256")
+    with pytest.raises(jwt.MissingRequiredClaimError):
+        verify_service_token(token)
 
 
 @pytest.mark.asyncio
@@ -61,3 +73,10 @@ async def test_require_auth_missing_header_401():
 async def test_require_auth_valid_bearer_returns_context():
     ctx = await require_auth(authorization=f"Bearer {_token({})}")
     assert ctx.user_sub == "google-sub-123"
+
+
+@pytest.mark.asyncio
+async def test_require_auth_rejects_invalid_token():
+    with pytest.raises(HTTPException) as exc:
+        await require_auth(authorization=f"Bearer {_token({'aud': 'frontend'})}")
+    assert exc.value.status_code == 401
