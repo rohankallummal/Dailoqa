@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { ChatPanelProvider, ChatPanel, ChatStreamProvider } from "@/features/chat";
+import { NotificationsListener } from "@/features/notifications";
+import { ToastProvider } from "@/shared/ui";
 
 export function AppShell({
   children,
@@ -12,18 +14,21 @@ export function AppShell({
 }) {
   return (
     <ChatStreamProvider>
-      <ChatPanelProvider>
-        <div className="flex h-screen overflow-hidden bg-page">
-          <Sidebar userName={userName} />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Header />
-            <div className="flex min-h-0 flex-1">
-              <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
-              <ChatPanel />
+      <ToastProvider>
+        <NotificationsListener />
+        <ChatPanelProvider>
+          <div className="flex h-screen overflow-hidden bg-page">
+            <Sidebar userName={userName} />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Header />
+              <div className="flex min-h-0 flex-1">
+                <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+                <ChatPanel />
+              </div>
             </div>
           </div>
-        </div>
-      </ChatPanelProvider>
+        </ChatPanelProvider>
+      </ToastProvider>
     </ChatStreamProvider>
   );
 }
