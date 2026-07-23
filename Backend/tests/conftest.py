@@ -1,4 +1,12 @@
+import os
+
 import pytest
+
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://user:password@localhost:5432/dailoqa_test")
+os.environ.setdefault("SERVICE_JWT_SECRET", "unit-test-service-jwt-secret-0123456789ab")
+os.environ.setdefault("LLM_PROVIDER", "openai")
+os.environ.setdefault("LLM_MODEL", "gpt-4o-mini")
+os.environ.setdefault("JIRA_SITE_URL", "https://example.atlassian.net")
 
 
 @pytest.fixture
