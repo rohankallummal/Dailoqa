@@ -9,6 +9,15 @@ from app.config import get_settings
 LANGGRAPH_SCHEMA = "langgraph"
 
 
+def _raw_dsn() -> str:
+    """Return a libpq DSN with no SQLAlchemy dialect prefix and no schema pin.
+
+    Suitable for connections where search_path does not matter, such as the
+    database-global LISTEN/NOTIFY backplane.
+    """
+    return get_settings().database_url.replace("postgresql+psycopg://", "postgresql://")
+
+
 def _psycopg_dsn() -> str:
     """Return a raw psycopg DSN pinned to the langgraph schema via search_path.
 
@@ -16,7 +25,7 @@ def _psycopg_dsn() -> str:
     ``options`` parameter sets ``search_path`` so its tables land in the isolated
     langgraph schema rather than public.
     """
-    url = get_settings().database_url.replace("postgresql+psycopg://", "postgresql://")
+    url = _raw_dsn()
     sep = "&" if "?" in url else "?"
     return f"{url}{sep}options=-c%20search_path%3D{LANGGRAPH_SCHEMA}"
 
