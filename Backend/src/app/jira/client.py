@@ -64,3 +64,22 @@ class JiraClient:
             response.raise_for_status()
             data = response.json()
         return {"key": data["key"], "id": data["id"]}
+
+    async def search_issues(
+        self,
+        jql: str,
+        fields: list[str] | None = None,
+        max_results: int = 20,
+    ) -> list[dict]:
+        """Run a JQL search and return the matching issues (each key + fields).
+
+        Used to find candidate duplicate tickets before creating a new one.
+        """
+        base = await self._api_base()
+        payload = {"jql": jql, "maxResults": max_results}
+        if fields:
+            payload["fields"] = fields
+        async with httpx.AsyncClient() as http:
+            response = await http.post(f"{base}/search/jql", auth=self._auth(), json=payload)
+            response.raise_for_status()
+            return response.json().get("issues", [])

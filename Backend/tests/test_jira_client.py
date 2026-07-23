@@ -66,3 +66,25 @@ async def test_create_issue_posts_adf_and_returns_key():
     assert fields["project"]["key"] == "KAN"
     assert fields["issuetype"]["name"] == "Bug"
     assert fields["description"]["type"] == "doc"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_issues_returns_issue_list():
+    respx.get("https://example.atlassian.net/_edge/tenant_info").mock(
+        return_value=httpx.Response(200, json={"cloudId": CLOUD_ID})
+    )
+    respx.post(
+        f"https://api.atlassian.com/ex/jira/{CLOUD_ID}/rest/api/3/search/jql"
+    ).mock(
+        return_value=httpx.Response(
+            200,
+            json={"issues": [{"key": "KAN-1", "fields": {"summary": "Search bug"}}]},
+        )
+    )
+    issues = await JiraClient().search_issues(
+        jql='project = KAN AND issuetype = Bug AND statusCategory != Done',
+        fields=["summary"],
+        max_results=10,
+    )
+    assert issues == [{"key": "KAN-1", "fields": {"summary": "Search bug"}}]
