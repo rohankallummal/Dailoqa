@@ -10,11 +10,16 @@ import { useChat } from "../hooks/useChat";
 export function AskAiWorkspace() {
   const [collapsed, setCollapsed] = useState(false);
   const toggle = () => setCollapsed((value) => !value);
-  const { messages, send, connected, newChat } = useChat("full");
+  const { messages, send, connected, newChat, openConversation, activeConversationId } = useChat("full");
 
   return (
     <div className="flex h-screen overflow-hidden bg-page">
-      <ChatHistorySidebar collapsed={collapsed} onToggle={toggle} />
+      <ChatHistorySidebar
+        collapsed={collapsed}
+        onToggle={toggle}
+        onOpen={openConversation}
+        activeConversationId={activeConversationId}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-line bg-white px-8">

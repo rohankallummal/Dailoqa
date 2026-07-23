@@ -1,12 +1,16 @@
 import { PanelLeftClose, Search } from "lucide-react";
-import { ChatEmptyState } from "./ChatEmptyState";
+import { ChatHistoryList } from "./ChatHistoryList";
 
 export function ChatHistorySidebar({
   collapsed,
   onToggle,
+  onOpen,
+  activeConversationId,
 }: {
   collapsed: boolean;
   onToggle: () => void;
+  onOpen: (id: string) => void;
+  activeConversationId?: string;
 }) {
   return (
     <aside
@@ -29,7 +33,7 @@ export function ChatHistorySidebar({
           </span>
         </div>
 
-        <div className="p-5">
+        <div className="flex min-h-0 flex-1 flex-col p-5">
           <div className="flex items-center gap-2.5 rounded-lg border border-line bg-page px-3 py-2.5">
             <Search className="h-4 w-4 shrink-0 text-ink-muted" />
             <input
@@ -40,12 +44,9 @@ export function ChatHistorySidebar({
             />
           </div>
 
-          <ChatEmptyState
-            showIcon={false}
-            title="No conversations yet"
-            description={<>Start chatting</>}
-            className="mt-8 flex flex-col items-center px-2 text-center"
-          />
+          <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+            <ChatHistoryList surface="full" onOpen={onOpen} activeConversationId={activeConversationId} />
+          </div>
         </div>
       </div>
     </aside>
