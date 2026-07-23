@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 import respx
@@ -40,3 +42,27 @@ async def test_api_base_uses_scoped_route():
     )
     base = await JiraClient()._api_base()
     assert base == f"https://api.atlassian.com/ex/jira/{CLOUD_ID}/rest/api/3"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_issue_posts_adf_and_returns_key():
+    respx.get("https://example.atlassian.net/_edge/tenant_info").mock(
+        return_value=httpx.Response(200, json={"cloudId": CLOUD_ID})
+    )
+    create = respx.post(
+        f"https://api.atlassian.com/ex/jira/{CLOUD_ID}/rest/api/3/issue"
+    ).mock(return_value=httpx.Response(201, json={"id": "10001", "key": "KAN-1"}))
+
+    result = await JiraClient().create_issue(
+        issue_type="Bug",
+        summary="Search returns no results",
+        description="Steps: search, see empty results.",
+        labels=["agent-filed"],
+    )
+
+    assert result == {"key": "KAN-1", "id": "10001"}
+    fields = json.loads(create.calls.last.request.read())["fields"]
+    assert fields["project"]["key"] == "KAN"
+    assert fields["issuetype"]["name"] == "Bug"
+    assert fields["description"]["type"] == "doc"

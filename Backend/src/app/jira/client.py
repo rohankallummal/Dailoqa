@@ -3,6 +3,7 @@
 import httpx
 
 from app.config import Settings, get_settings
+from app.jira.adf import _to_adf
 
 _TENANT_INFO_PATH = "/_edge/tenant_info"
 _SCOPED_HOST = "https://api.atlassian.com/ex/jira"
@@ -36,3 +37,30 @@ class JiraClient:
     async def _api_base(self) -> str:
         cloud_id = await self.resolve_cloud_id()
         return f"{_SCOPED_HOST}/{cloud_id}/rest/api/3"
+
+    async def create_issue(
+        self,
+        issue_type: str,
+        summary: str,
+        description: str,
+        labels: list[str] | None = None,
+    ) -> dict:
+        """Create a Jira issue and return its key and id.
+
+        issue_type is the display name (e.g. "Bug" or "Request"); description is
+        plain text converted to ADF. Returns {"key", "id"}.
+        """
+        base = await self._api_base()
+        fields = {
+            "project": {"key": self.project_key},
+            "issuetype": {"name": issue_type},
+            "summary": summary,
+            "description": _to_adf(description),
+        }
+        if labels:
+            fields["labels"] = labels
+        async with httpx.AsyncClient() as http:
+            response = await http.post(f"{base}/issue", auth=self._auth(), json={"fields": fields})
+            response.raise_for_status()
+            data = response.json()
+        return {"key": data["key"], "id": data["id"]}
