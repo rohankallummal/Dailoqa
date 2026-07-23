@@ -5,6 +5,7 @@ Revises:
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 revision = "0001"
 down_revision = None
@@ -36,7 +37,7 @@ def upgrade() -> None:
         sa.Column("conversation_id", sa.String(), nullable=False, index=True),
         sa.Column("role", sa.String(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("metadata", sa.JSON(), nullable=True),
+        sa.Column("metadata", postgresql.JSONB(), nullable=True),
         sa.Column("job_id", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["conversation_id"], [f"{SCHEMA}.conversations.id"], ondelete="CASCADE"),
@@ -73,7 +74,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(), nullable=False, server_default="queued", index=True),
         sa.Column("conversation_id", sa.String(), nullable=False),
         sa.Column("user_sub", sa.String(), nullable=False),
-        sa.Column("payload", sa.JSON(), nullable=False),
+        sa.Column("payload", postgresql.JSONB(), nullable=False),
         sa.Column("jira_key", sa.String(), nullable=True),
         sa.Column("action", sa.String(), nullable=True),
         sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),

@@ -61,3 +61,22 @@ async def test_messages_metadata_column_and_unique_constraints(migrated_db):
         ).scalars().all()
         for expected in ["uq_message_job", "uq_notification_job", "uq_ticket_jira_key", "uq_ticket_reporter"]:
             assert expected in constraints
+
+
+@pytest.mark.asyncio
+async def test_metadata_and_payload_columns_are_jsonb(migrated_db):
+    """messages.metadata and jobs.payload must be jsonb, not json, for worker inspection."""
+    async with migrated_db.connect() as conn:
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT table_name, column_name, data_type FROM information_schema.columns "
+                    "WHERE table_schema = 'app' "
+                    "AND ((table_name = 'messages' AND column_name = 'metadata') "
+                    "OR (table_name = 'jobs' AND column_name = 'payload'))"
+                )
+            )
+        ).all()
+        data_types = {(row.table_name, row.column_name): row.data_type for row in rows}
+        assert data_types[("messages", "metadata")] == "jsonb"
+        assert data_types[("jobs", "payload")] == "jsonb"

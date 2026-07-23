@@ -62,6 +62,18 @@ def test_verify_missing_user_id_claim_rejected():
         verify_service_token(token)
 
 
+def test_verify_missing_exp_claim_rejected():
+    payload = {
+        "sub": "google-sub-123",
+        "userId": "user-uuid-1",
+        "aud": SERVICE_JWT_AUDIENCE,
+        "iat": int(time.time()),
+    }
+    token = jwt.encode(payload, SECRET, algorithm="HS256")
+    with pytest.raises(jwt.MissingRequiredClaimError):
+        verify_service_token(token)
+
+
 @pytest.mark.asyncio
 async def test_require_auth_missing_header_401():
     with pytest.raises(HTTPException) as exc:
