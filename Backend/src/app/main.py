@@ -2,11 +2,12 @@
 
 from fastapi import Depends, FastAPI
 
-from app.api import events
+from app.api import chat, events
 from app.auth import AuthContext, require_auth
 
 app = FastAPI(title="Dailoqa Agent Backend")
 app.include_router(events.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")
