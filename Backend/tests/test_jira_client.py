@@ -88,3 +88,30 @@ async def test_search_issues_returns_issue_list():
         max_results=10,
     )
     assert issues == [{"key": "KAN-1", "fields": {"summary": "Search bug"}}]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_add_comment_posts_adf_body():
+    respx.get("https://example.atlassian.net/_edge/tenant_info").mock(
+        return_value=httpx.Response(200, json={"cloudId": CLOUD_ID})
+    )
+    route = respx.post(
+        f"https://api.atlassian.com/ex/jira/{CLOUD_ID}/rest/api/3/issue/KAN-1/comment"
+    ).mock(return_value=httpx.Response(201, json={"id": "9"}))
+    await JiraClient().add_comment("KAN-1", "Also reported by user@example.com")
+    assert json.loads(route.calls.last.request.read())["body"]["type"] == "doc"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_add_labels_puts_update_ops():
+    respx.get("https://example.atlassian.net/_edge/tenant_info").mock(
+        return_value=httpx.Response(200, json={"cloudId": CLOUD_ID})
+    )
+    route = respx.put(
+        f"https://api.atlassian.com/ex/jira/{CLOUD_ID}/rest/api/3/issue/KAN-1"
+    ).mock(return_value=httpx.Response(204))
+    await JiraClient().add_labels("KAN-1", ["also-affected"])
+    update = json.loads(route.calls.last.request.read())["update"]
+    assert update["labels"][0]["add"] == "also-affected"

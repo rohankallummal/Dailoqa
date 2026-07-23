@@ -83,3 +83,24 @@ class JiraClient:
             response = await http.post(f"{base}/search/jql", auth=self._auth(), json=payload)
             response.raise_for_status()
             return response.json().get("issues", [])
+
+    async def add_comment(self, issue_key: str, text: str) -> None:
+        """Add a comment (ADF) to an existing issue."""
+        base = await self._api_base()
+        async with httpx.AsyncClient() as http:
+            response = await http.post(
+                f"{base}/issue/{issue_key}/comment",
+                auth=self._auth(),
+                json={"body": _to_adf(text)},
+            )
+            response.raise_for_status()
+
+    async def add_labels(self, issue_key: str, labels: list[str]) -> None:
+        """Add labels to an existing issue without removing existing ones."""
+        base = await self._api_base()
+        update = {"labels": [{"add": label} for label in labels]}
+        async with httpx.AsyncClient() as http:
+            response = await http.put(
+                f"{base}/issue/{issue_key}", auth=self._auth(), json={"update": update}
+            )
+            response.raise_for_status()
