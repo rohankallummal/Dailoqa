@@ -43,6 +43,7 @@ class Message(Base):
     """A UI-facing message; the source of truth for chat history."""
 
     __tablename__ = "messages"
+    __table_args__ = (UniqueConstraint("job_id", name="uq_message_job"),)
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     conversation_id: Mapped[str] = mapped_column(
@@ -51,7 +52,7 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     meta: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
-    job_id: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    job_id: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -59,9 +60,10 @@ class Ticket(Base):
     """A Jira ticket this backend created, kept locally for linking."""
 
     __tablename__ = "tickets"
+    __table_args__ = (UniqueConstraint("jira_key", name="uq_ticket_jira_key"),)
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    jira_key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    jira_key: Mapped[str] = mapped_column(String, nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -111,6 +113,7 @@ class Notification(Base):
     """A durable notification; the source of truth for toast delivery."""
 
     __tablename__ = "notifications"
+    __table_args__ = (UniqueConstraint("job_id", name="uq_notification_job"),)
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     user_sub: Mapped[str] = mapped_column(String, nullable=False, index=True)
@@ -119,6 +122,6 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     jira_key: Mapped[str | None] = mapped_column(String, nullable=True)
-    job_id: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    job_id: Mapped[str | None] = mapped_column(String, nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

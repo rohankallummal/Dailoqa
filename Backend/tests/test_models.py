@@ -20,8 +20,10 @@ def test_idempotency_unique_constraints_present():
     notifications = Base.metadata.tables[f"{APP_SCHEMA}.notifications"]
     reporters = Base.metadata.tables[f"{APP_SCHEMA}.ticket_reporters"]
 
-    assert messages.c.job_id.unique is True
-    assert notifications.c.job_id.unique is True
+    message_uniques = {c.name for c in messages.constraints if c.__class__.__name__ == "UniqueConstraint"}
+    notification_uniques = {c.name for c in notifications.constraints if c.__class__.__name__ == "UniqueConstraint"}
+    assert "uq_message_job" in message_uniques
+    assert "uq_notification_job" in notification_uniques
     reporter_uniques = [c for c in reporters.constraints if c.__class__.__name__ == "UniqueConstraint"]
     assert any({"ticket_id", "user_sub"} == {col.name for col in c.columns} for c in reporter_uniques)
 
