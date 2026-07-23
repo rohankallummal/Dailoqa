@@ -134,6 +134,8 @@ async def test_run_turn_fresh_persists_and_publishes(migrated_db, monkeypatch):
     from app.db.repositories import list_messages
     from app.sse.registry import registry
 
+    monkeypatch.setenv("DATABASE_URL", os.environ["TEST_DATABASE_URL"])
+    get_settings.cache_clear()
     monkeypatch.setattr("app.api.chat.build_graph", _terminal_builder)
     subscriber = registry.subscribe("sub-run")
     try:
