@@ -17,4 +17,4 @@ def test_settings_missing_required_raises(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("SERVICE_JWT_SECRET", raising=False)
     with pytest.raises(ValidationError):
-        Settings()
+        Settings(_env_file=None)
