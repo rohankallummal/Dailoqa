@@ -4,10 +4,13 @@ import { useState } from "react";
 import { PanelLeftOpen, Sparkles } from "lucide-react";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatPromptBar } from "./ChatPromptBar";
+import { ChatMessages } from "./ChatMessages";
+import { useChat } from "../hooks/useChat";
 
 export function AskAiWorkspace() {
   const [collapsed, setCollapsed] = useState(false);
   const toggle = () => setCollapsed((value) => !value);
+  const { messages, send, connected, newChat } = useChat("full");
 
   return (
     <div className="flex h-screen overflow-hidden bg-page">
@@ -30,6 +33,7 @@ export function AskAiWorkspace() {
 
           <button
             type="button"
+            onClick={newChat}
             className="flex h-9 items-center gap-2 rounded-lg border border-line bg-page px-3.5 text-sm font-medium text-ink-soft transition-colors duration-200 hover:bg-hover hover:text-ink"
           >
             <Sparkles className="h-4 w-4 text-accent" strokeWidth={1.8} />
@@ -37,12 +41,23 @@ export function AskAiWorkspace() {
           </button>
         </header>
 
-        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6">
-          <h1 className="text-3xl font-semibold tracking-tight text-ink">
-            What can I help with?
-          </h1>
-          <ChatPromptBar />
-        </div>
+        {messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6">
+            <h1 className="text-3xl font-semibold tracking-tight text-ink">What can I help with?</h1>
+            <ChatPromptBar onSend={send} />
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto">
+              <div className="mx-auto w-full max-w-3xl">
+                <ChatMessages messages={messages} connected={connected} onSend={send} />
+              </div>
+            </div>
+            <div className="flex justify-center px-6 pb-6">
+              <ChatPromptBar onSend={send} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
