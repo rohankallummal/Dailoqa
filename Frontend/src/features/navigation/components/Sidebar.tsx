@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { navSections } from "../lib/navConfig";
 import { NavIcon, Chevron, LogoutIcon } from "./icons";
 import { Logo } from "@/shared/ui";
-import { logout } from "@/features/auth/api/actions";
+import { signOut } from "@/features/auth/lib/signOut";
 import { useChatPanel } from "@/features/chat";
 
 export function Sidebar({ userName }: { userName: string }) {
@@ -91,18 +91,17 @@ export function Sidebar({ userName }: { userName: string }) {
       <div ref={menuRef} className="relative flex-shrink-0 border-t border-line">
         {menuOpen && (
           <div className="absolute bottom-full left-0 right-0 p-2">
-            <form action={logout}>
-              <button
-                type="submit"
-                title={collapsed ? "Log out" : undefined}
-                className={`flex w-full items-center rounded-lg border border-line bg-white text-sm font-medium text-ink-soft shadow-sm transition-colors hover:bg-hover hover:text-ink ${
-                  collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
-                }`}
-              >
-                <LogoutIcon className="h-[18px] w-[18px] shrink-0" />
-                {!collapsed && "Log out"}
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              title={collapsed ? "Log out" : undefined}
+              className={`flex w-full items-center rounded-lg border border-line bg-white text-sm font-medium text-ink-soft shadow-sm transition-colors hover:bg-hover hover:text-ink ${
+                collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+              }`}
+            >
+              <LogoutIcon className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && "Log out"}
+            </button>
           </div>
         )}
         <button
