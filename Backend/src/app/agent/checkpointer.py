@@ -49,3 +49,13 @@ async def build_checkpointer():
         saver = AsyncPostgresSaver(conn)
         await saver.setup()
         yield saver
+
+
+async def reset_thread(thread_id: str) -> None:
+    """Delete all checkpointer state for a conversation's graph thread.
+
+    Used by graceful-exit paths (hard delete, logout-abandon) so a removed or
+    hidden conversation leaves no orphaned checkpoint rows behind.
+    """
+    async with build_checkpointer() as saver:
+        await saver.adelete_thread(thread_id)
