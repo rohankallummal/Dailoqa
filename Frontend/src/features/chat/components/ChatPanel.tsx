@@ -4,9 +4,12 @@ import { Expand, MessageSquarePlus, Sparkles, SquarePen, X } from "lucide-react"
 import { useChatPanel } from "./ChatPanelProvider";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { ChatComposer } from "./ChatComposer";
+import { ChatMessages } from "./ChatMessages";
+import { useChat } from "../hooks/useChat";
 
 export function ChatPanel() {
   const { open, closePanel } = useChatPanel();
+  const { messages, send, connected, newChat } = useChat("panel");
 
   return (
     <aside
@@ -28,6 +31,7 @@ export function ChatPanel() {
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={newChat}
               aria-label="New chat"
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
             >
@@ -61,10 +65,14 @@ export function ChatPanel() {
         </header>
 
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
-          <ChatEmptyState />
+          {messages.length === 0 ? (
+            <ChatEmptyState />
+          ) : (
+            <ChatMessages messages={messages} connected={connected} onSend={send} />
+          )}
         </div>
 
-        <ChatComposer />
+        <ChatComposer onSend={send} disabled={!connected} />
       </section>
     </aside>
   );
