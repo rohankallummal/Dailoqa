@@ -27,5 +27,16 @@ services:
       postgres:
         condition: service_healthy
 
+  worker:
+    build: .
+    command: ["./worker-entrypoint.sh"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://user:password@postgres:5432/dailoqa
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
