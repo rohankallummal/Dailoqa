@@ -35,3 +35,29 @@ async def test_alembic_version_table_in_app_schema(migrated_db):
             )
         ).scalars().all()
         assert "alembic_version" in tables
+
+
+@pytest.mark.asyncio
+async def test_messages_metadata_column_and_unique_constraints(migrated_db):
+    """The messages table exposes a literal metadata column and all four uq_* constraints exist."""
+    async with migrated_db.connect() as conn:
+        columns = (
+            await conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'app' AND table_name = 'messages'"
+                )
+            )
+        ).scalars().all()
+        assert "metadata" in columns
+
+        constraints = (
+            await conn.execute(
+                text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_schema = 'app' AND constraint_type = 'UNIQUE'"
+                )
+            )
+        ).scalars().all()
+        for expected in ["uq_message_job", "uq_notification_job", "uq_ticket_jira_key", "uq_ticket_reporter"]:
+            assert expected in constraints
