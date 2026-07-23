@@ -115,3 +115,18 @@ async def test_add_labels_puts_update_ops():
     await JiraClient().add_labels("KAN-1", ["also-affected"])
     update = json.loads(route.calls.last.request.read())["update"]
     assert update["labels"][0]["add"] == "also-affected"
+
+
+def test_issue_type_for_maps_kinds():
+    client = JiraClient()
+    assert client.issue_type_for("bug") == "Bug"
+    assert client.issue_type_for("feature") == "Request"
+    with pytest.raises(ValueError):
+        client.issue_type_for("other")
+
+
+def test_package_exports():
+    from app.jira import JiraClient as Exported, _to_adf as adf
+
+    assert Exported is JiraClient
+    assert adf("x")["type"] == "doc"

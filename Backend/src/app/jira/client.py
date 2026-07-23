@@ -95,6 +95,14 @@ class JiraClient:
             )
             response.raise_for_status()
 
+    def issue_type_for(self, kind: str) -> str:
+        """Map an internal classification ("bug"/"feature") to a Jira issue-type name."""
+        if kind == "bug":
+            return self.issue_type_bug
+        if kind == "feature":
+            return self.issue_type_feature
+        raise ValueError(f"unknown ticket kind: {kind}")
+
     async def add_labels(self, issue_key: str, labels: list[str]) -> None:
         """Add labels to an existing issue without removing existing ones."""
         base = await self._api_base()
