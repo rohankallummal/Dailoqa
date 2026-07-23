@@ -50,3 +50,48 @@ def test_unknown_role_rejected(monkeypatch):
     monkeypatch.setattr(llm_module, "init_chat_model", lambda *a, **k: "MODEL")
     with pytest.raises(ValueError):
         llm_module.get_chat_model("nonsense")
+
+
+def test_agent_role_omits_unset_api_key_and_base_url(monkeypatch):
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    get_settings.cache_clear()
+    captured = {}
+
+    def fake_init(model, **kwargs):
+        captured["model"] = model
+        captured.update(kwargs)
+        return "MODEL"
+
+    monkeypatch.setattr(llm_module, "init_chat_model", fake_init)
+    llm_module.get_chat_model("agent")
+    assert "api_key" not in captured
+    assert "base_url" not in captured
+
+
+def test_agent_role_falls_back_to_base_model_when_unset(monkeypatch):
+    monkeypatch.delenv("LLM_AGENT_MODEL", raising=False)
+    get_settings.cache_clear()
+    captured = {}
+
+    def fake_init(model, **kwargs):
+        captured["model"] = model
+        captured.update(kwargs)
+        return "MODEL"
+
+    monkeypatch.setattr(llm_module, "init_chat_model", fake_init)
+    llm_module.get_chat_model("agent")
+    assert captured["model"] == "gpt-4o-mini"
+
+
+def test_agent_role_forwards_configured_temperature(monkeypatch):
+    captured = {}
+
+    def fake_init(model, **kwargs):
+        captured["model"] = model
+        captured.update(kwargs)
+        return "MODEL"
+
+    monkeypatch.setattr(llm_module, "init_chat_model", fake_init)
+    llm_module.get_chat_model("agent")
+    assert captured["temperature"] == 0.2
