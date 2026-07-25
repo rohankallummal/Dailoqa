@@ -1,16 +1,30 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Send } from "lucide-react";
 
 export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => void; disabled?: boolean }) {
   const [value, setValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const resize = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
 
   const submit = () => {
     const text = value.trim();
     if (!text || disabled) return;
     onSend(text);
     setValue("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  };
+
+  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(event.target.value);
+    resize();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -21,16 +35,16 @@ export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => v
   };
 
   return (
-    <div className="flex-shrink-0 border-t border-line p-3">
+    <div className="flex-shrink-0 p-3">
       <div className="flex items-end gap-2 rounded-xl border border-line bg-page px-3 py-2 transition-colors focus-within:border-accent">
         <textarea
-          rows={2}
+          ref={textareaRef}
+          rows={1}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question…"
           aria-label="Message"
-          className="max-h-40 min-h-[40px] flex-1 resize-none bg-transparent py-1 text-sm leading-relaxed text-ink outline-none placeholder:text-ink-muted [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
+          className="max-h-40 min-h-[32px] flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm leading-relaxed text-ink outline-none placeholder:text-ink-muted [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
         />
         <button
           type="button"

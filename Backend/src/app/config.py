@@ -13,13 +13,7 @@ class Settings(BaseSettings):
     database_url: str
     service_jwt_secret: str
 
-    llm_provider: str
-    llm_model: str
-    llm_classifier_model: str | None = None
-    llm_agent_model: str | None = None
-    llm_api_key: str | None = None
-    llm_base_url: str | None = None
-    llm_temperature: float = 0.2
+    llm_key: str | None = None
 
     jira_site_url: str
     jira_email: str | None = None

@@ -38,6 +38,22 @@ class JiraClient:
         cloud_id = await self.resolve_cloud_id()
         return f"{_SCOPED_HOST}/{cloud_id}/rest/api/3"
 
+    async def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
+        """Send an authenticated request to the scoped Jira API and raise on error."""
+        base = await self._api_base()
+        async with httpx.AsyncClient() as http:
+            response = await http.request(method, f"{base}{path}", auth=self._auth(), **kwargs)
+            response.raise_for_status()
+            return response
+
+    def issue_type_for(self, kind: str) -> str:
+        """Map an internal classification ("bug"/"feature") to a Jira issue-type name."""
+        if kind == "bug":
+            return self.issue_type_bug
+        if kind == "feature":
+            return self.issue_type_feature
+        raise ValueError(f"unknown ticket kind: {kind}")
+
     async def create_issue(
         self,
         issue_type: str,
@@ -50,7 +66,6 @@ class JiraClient:
         issue_type is the display name (e.g. "Bug" or "Request"); description is
         plain text converted to ADF. Returns {"key", "id"}.
         """
-        base = await self._api_base()
         fields = {
             "project": {"key": self.project_key},
             "issuetype": {"name": issue_type},
@@ -59,10 +74,8 @@ class JiraClient:
         }
         if labels:
             fields["labels"] = labels
-        async with httpx.AsyncClient() as http:
-            response = await http.post(f"{base}/issue", auth=self._auth(), json={"fields": fields})
-            response.raise_for_status()
-            data = response.json()
+        response = await self._request("POST", "/issue", json={"fields": fields})
+        data = response.json()
         return {"key": data["key"], "id": data["id"]}
 
     async def search_issues(
@@ -75,40 +88,17 @@ class JiraClient:
 
         Used to find candidate duplicate tickets before creating a new one.
         """
-        base = await self._api_base()
         payload = {"jql": jql, "maxResults": max_results}
         if fields:
             payload["fields"] = fields
-        async with httpx.AsyncClient() as http:
-            response = await http.post(f"{base}/search/jql", auth=self._auth(), json=payload)
-            response.raise_for_status()
-            return response.json().get("issues", [])
+        response = await self._request("POST", "/search/jql", json=payload)
+        return response.json().get("issues", [])
 
     async def add_comment(self, issue_key: str, text: str) -> None:
         """Add a comment (ADF) to an existing issue."""
-        base = await self._api_base()
-        async with httpx.AsyncClient() as http:
-            response = await http.post(
-                f"{base}/issue/{issue_key}/comment",
-                auth=self._auth(),
-                json={"body": _to_adf(text)},
-            )
-            response.raise_for_status()
-
-    def issue_type_for(self, kind: str) -> str:
-        """Map an internal classification ("bug"/"feature") to a Jira issue-type name."""
-        if kind == "bug":
-            return self.issue_type_bug
-        if kind == "feature":
-            return self.issue_type_feature
-        raise ValueError(f"unknown ticket kind: {kind}")
+        await self._request("POST", f"/issue/{issue_key}/comment", json={"body": _to_adf(text)})
 
     async def add_labels(self, issue_key: str, labels: list[str]) -> None:
         """Add labels to an existing issue without removing existing ones."""
-        base = await self._api_base()
         update = {"labels": [{"add": label} for label in labels]}
-        async with httpx.AsyncClient() as http:
-            response = await http.put(
-                f"{base}/issue/{issue_key}", auth=self._auth(), json={"update": update}
-            )
-            response.raise_for_status()
+        await self._request("PUT", f"/issue/{issue_key}", json={"update": update})

@@ -69,66 +69,89 @@ def _surface(result: dict, turn_id: str, conversation_id: str) -> tuple[dict, bo
     return {**base, "text": result.get("reply", ""), "stage": "reply"}, bool(result.get("confirmed"))
 
 
-async def run_turn(user_sub: str, conversation_id: str | None, surface: str, text: str) -> tuple[str, str]:
-    """Persist the user message, run/resume the graph, publish a delta; return ids.
-
-    Builds the compiled graph over the Postgres checkpointer keyed by
-    ``thread_id = conversation_id``. If the thread is paused on an interrupt, the
-    user's text resumes it (a gather answer or a confirm decision); otherwise a
-    fresh turn starts. The surfaced output is persisted as an assistant message
-    and pushed to the user's SSE channel; on the confirmed path a durable job is
-    enqueued for the worker.
-    """
-    turn_id = uuid.uuid4().hex
+async def _start_turn(user_sub: str, conversation_id: str | None, surface: str, text: str) -> str:
+    """Create the conversation if needed and persist the user message; return its id."""
     async with async_session() as session:
         if conversation_id is None:
             conversation = await create_conversation(session, user_sub, surface)
             conversation_id = conversation.id
         await append_message(session, conversation_id, "user", text)
         await session.commit()
+    return conversation_id
 
+
+async def _run_or_resume_graph(conversation_id: str, surface: str, user_sub: str, text: str) -> dict:
+    """Run a fresh turn, or resume a paused interrupt, over the checkpointed graph.
+
+    The graph is keyed by ``thread_id = conversation_id``. A paused thread resumes with
+    the user's text (a gather answer or a confirm decision); otherwise a fresh turn starts.
+    """
     async with build_checkpointer() as saver:
         graph = build_graph().compile(checkpointer=saver)
         config = {"configurable": {"thread_id": conversation_id}}
         snapshot = await graph.aget_state(config)
         if snapshot.interrupts:
             resume = _resume_value(snapshot.interrupts[0].value, text)
-            result = await graph.ainvoke(Command(resume=resume), config)
-        else:
-            result = await graph.ainvoke(
-                {
-                    "messages": [text],
-                    "surface": surface,
-                    "user_sub": user_sub,
-                    "conversation_id": conversation_id,
-                    "fields": {},
-                },
-                config,
-            )
+            return await graph.ainvoke(Command(resume=resume), config)
+        return await graph.ainvoke(
+            {
+                "messages": [text],
+                "surface": surface,
+                "user_sub": user_sub,
+                "conversation_id": conversation_id,
+                "fields": {},
+            },
+            config,
+        )
+
+
+async def _enqueue_confirmed(user_sub: str, conversation_id: str, result: dict) -> None:
+    """Enqueue the durable ticket-creation job for a confirmed turn."""
+    async with async_session() as session:
+        await enqueue_job(
+            session,
+            {
+                "user_sub": user_sub,
+                "conversation_id": conversation_id,
+                "kind": result.get("kind"),
+                "fields": result.get("fields", {}),
+                "dedupe_key": result.get("dedupe_key"),
+                "confirmed": True,
+            },
+        )
+        await session.commit()
+
+
+async def _persist_assistant(conversation_id: str, turn_id: str, delta: dict) -> None:
+    """Persist a surfaced assistant delta as a chat message."""
+    async with async_session() as session:
+        await append_message(
+            session,
+            conversation_id,
+            "assistant",
+            delta["text"],
+            meta={"stage": delta["stage"], "turn_id": turn_id},
+        )
+        await session.commit()
+
+
+async def run_turn(user_sub: str, conversation_id: str | None, surface: str, text: str) -> tuple[str, str]:
+    """Persist the user message, run/resume the graph, publish a delta; return ids.
+
+    Builds the compiled graph over the Postgres checkpointer keyed by
+    ``thread_id = conversation_id``. The surfaced output is persisted as an assistant
+    message and pushed to the user's SSE channel; on the confirmed path a durable job
+    is enqueued for the worker.
+    """
+    turn_id = uuid.uuid4().hex
+    conversation_id = await _start_turn(user_sub, conversation_id, surface, text)
+    result = await _run_or_resume_graph(conversation_id, surface, user_sub, text)
 
     delta, reached_enqueue = _surface(result, turn_id, conversation_id)
-
     if reached_enqueue:
-        async with async_session() as session:
-            await enqueue_job(
-                session,
-                {
-                    "user_sub": user_sub,
-                    "conversation_id": conversation_id,
-                    "kind": result.get("kind"),
-                    "fields": result.get("fields", {}),
-                    "dedupe_key": result.get("dedupe_key"),
-                    "confirmed": True,
-                },
-            )
-            await session.commit()
-
+        await _enqueue_confirmed(user_sub, conversation_id, result)
     if delta["text"]:
-        async with async_session() as session:
-            await append_message(
-                session, conversation_id, "assistant", delta["text"], meta={"stage": delta["stage"], "turn_id": turn_id}
-            )
-            await session.commit()
+        await _persist_assistant(conversation_id, turn_id, delta)
 
     await registry.publish(user_sub, delta)
     return conversation_id, turn_id

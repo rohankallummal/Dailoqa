@@ -13,7 +13,14 @@ async def create_conversation(session, user_sub: str, surface: str, title: str |
     return conversation
 
 
-async def append_message(session, conversation_id: str, role: str, content: str, meta: dict | None = None, job_id: str | None = None) -> Message:
+async def append_message(
+    session,
+    conversation_id: str,
+    role: str,
+    content: str,
+    meta: dict | None = None,
+    job_id: str | None = None,
+) -> Message:
     """Append a message to a conversation and return it."""
     message = Message(conversation_id=conversation_id, role=role, content=content, meta=meta, job_id=job_id)
     session.add(message)
