@@ -44,7 +44,7 @@ export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => v
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           aria-label="Message"
-          className="max-h-40 min-h-[32px] flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm leading-relaxed text-ink outline-none placeholder:text-ink-muted [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
+          className="max-h-40 min-h-[32px] flex-1 resize-none overflow-y-auto bg-transparent py-1 text-sm leading-relaxed text-ink outline-none transition-[height] duration-150 ease-out placeholder:text-ink-muted [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
         />
         <button
           type="button"

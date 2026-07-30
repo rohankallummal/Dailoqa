@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 
-from app.api import chat, conversations, events, notifications
+from app.api import chat, conversations, events, jira_webhook, notifications
 from app.auth import AuthContext, require_auth
 from app.db.base import async_session
 from app.sse.backplane import run_listener
@@ -30,6 +30,7 @@ app.include_router(events.router)
 app.include_router(chat.router)
 app.include_router(conversations.router)
 app.include_router(notifications.router)
+app.include_router(jira_webhook.router)
 
 
 @app.get("/health")

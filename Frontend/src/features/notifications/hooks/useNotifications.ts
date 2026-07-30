@@ -14,7 +14,7 @@ export function useNotifications() {
       if (seen.current.has(notification.id)) return;
       seen.current.add(notification.id);
       show({ id: notification.id, title: notification.title, body: notification.body });
-      void notificationsClient.markRead([notification.id]);
+      void notificationsClient.markDelivered([notification.id]);
     },
     [show],
   );
@@ -22,7 +22,7 @@ export function useNotifications() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const rows = await notificationsClient.listUnread();
+      const rows = await notificationsClient.listUndelivered();
       if (!cancelled) rows.forEach((row) => handle({ id: row.id, title: row.title, body: row.body }));
     })();
     return () => {

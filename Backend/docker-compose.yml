@@ -5,8 +5,11 @@ services:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL_DOCKER}
+      EVIDENCE_ROOT: /evidence
     ports:
       - "8000:8000"
+    volumes:
+      - ../Frontend/tmp:/evidence
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -17,5 +20,8 @@ services:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL_DOCKER}
+      EVIDENCE_ROOT: /evidence
+    volumes:
+      - ../Frontend/tmp:/evidence
     extra_hosts:
       - "host.docker.internal:host-gateway"

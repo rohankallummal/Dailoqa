@@ -10,19 +10,47 @@ type StreamValue = { subscribe: (handler: Handler) => () => void; connected: boo
 
 const ChatStreamContext = createContext<StreamValue | null>(null);
 
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
+
 export function ChatStreamProvider({ children }: { children: ReactNode }) {
   const handlers = useRef(new Set<Handler>());
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const source = new EventSource("/api/events");
-    source.onopen = () => setConnected(true);
-    source.onerror = () => setConnected(false);
-    source.onmessage = (message) => {
-      const event = parseEvent(message.data);
-      if (event) handlers.current.forEach((handler) => handler(event));
+    let source: EventSource | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    let stopped = false;
+
+    const connect = () => {
+      const instance = new EventSource("/api/events");
+      source = instance;
+      instance.onopen = () => {
+        attempt = 0;
+        setConnected(true);
+      };
+      instance.onerror = () => {
+        setConnected(false);
+        if (instance.readyState !== EventSource.CLOSED) return;
+        instance.close();
+        if (stopped) return;
+        timer = setTimeout(connect, Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_MAX_MS));
+        attempt += 1;
+      };
+      instance.onmessage = (message) => {
+        const event = parseEvent(message.data);
+        if (event) handlers.current.forEach((handler) => handler(event));
+      };
     };
-    return () => source.close();
+
+    connect();
+
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      source?.close();
+    };
   }, []);
 
   const value = useMemo<StreamValue>(

@@ -21,7 +21,6 @@ class AgentState(TypedDict, total=False):
     conversation_id: str
     kind: str
     fields: dict
-    dedupe_key: str | None
     confirmed: bool
     job_id: str | None
     reply: str

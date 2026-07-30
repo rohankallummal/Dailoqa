@@ -1,18 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { Expand, MessageSquarePlus, Sparkles, SquarePen, X } from "lucide-react";
+import { ArrowLeft, Expand, MessageSquarePlus, Sparkles, SquarePen, X } from "lucide-react";
 import { useChatPanel } from "./ChatPanelProvider";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { ChatComposer } from "./ChatComposer";
+import { ChatConfirmActions } from "./ChatConfirmActions";
+import { ChatErrorNotice } from "./ChatErrorNotice";
 import { ChatMessages } from "./ChatMessages";
+import { ChatPendingNotice } from "./ChatPendingNotice";
 import { ChatHistoryList } from "./ChatHistoryList";
+import { EvidenceCard } from "./EvidenceCard";
 import { useChat } from "../hooks/useChat";
 
 export function ChatPanel() {
   const { open, closePanel } = useChatPanel();
-  const { messages, send, connected, newChat, openConversation, activeConversationId } = useChat("panel");
+  const { messages, send, connected, inputState, error, newChat, openConversation, activeConversationId } =
+    useChat("panel");
   const [showHistory, setShowHistory] = useState(false);
+  const isActiveChat = messages.some((message) => message.role === "assistant");
+
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      newChat();
+      setShowHistory(false);
+    }
+  }
 
   return (
     <aside
@@ -27,22 +42,35 @@ export function ChatPanel() {
       >
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-line px-5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-active text-accent">
-              <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.8} />
-            </span>
+            {showHistory ? (
+              <button
+                type="button"
+                onClick={() => setShowHistory(false)}
+                aria-label="Back to chat"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+              >
+                <ArrowLeft className="h-[18px] w-[18px]" />
+              </button>
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-active text-accent">
+                <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.8} />
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                newChat();
-                setShowHistory(false);
-              }}
-              aria-label="New chat"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
-            >
-              <SquarePen className="h-[18px] w-[18px]" />
-            </button>
+            {isActiveChat && (
+              <button
+                type="button"
+                onClick={() => {
+                  newChat();
+                  setShowHistory(false);
+                }}
+                aria-label="New chat"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+              >
+                <SquarePen className="h-[18px] w-[18px]" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowHistory((value) => !value)}
@@ -89,11 +117,26 @@ export function ChatPanel() {
           ) : messages.length === 0 ? (
             <ChatEmptyState />
           ) : (
-            <ChatMessages messages={messages} connected={connected} onSend={send} />
+            <ChatMessages messages={messages} connected={connected} />
           )}
         </div>
 
-        <ChatComposer onSend={send} disabled={!connected} />
+        {!showHistory && error && <ChatErrorNotice message={error} />}
+
+        {!showHistory &&
+          (inputState === "awaiting_evidence" ? (
+            <EvidenceCard
+              conversationId={activeConversationId}
+              onSubmit={(text, evidence) => send(text, evidence)}
+              onCancel={(text) => send(text)}
+            />
+          ) : inputState === "awaiting_confirm" ? (
+            <ChatConfirmActions onDecide={send} />
+          ) : inputState === "pending" ? (
+            <ChatPendingNotice />
+          ) : (
+            <ChatComposer onSend={send} disabled={!connected} />
+          ))}
       </section>
     </aside>
   );

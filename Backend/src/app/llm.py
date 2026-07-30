@@ -5,22 +5,26 @@ from langchain.chat_models import init_chat_model
 from app.config import get_settings
 
 _MODEL_PROVIDER = "anthropic"
-_MODEL = "claude-sonnet-5"
-_ROLES = ("classifier", "agent")
+_MODELS = {
+    "classifier": "claude-sonnet-5",
+    "agent": "claude-sonnet-5",
+    "titler": "claude-haiku-4-5",
+}
 
 
 def get_chat_model(role: str):
     """Return a configured chat model for the given role.
 
-    role must be "classifier" or "agent". The provider and model are fixed; only the
-    API key is configurable via LLM_KEY. No sampling parameters are set: claude-sonnet-5
-    rejects a non-default temperature, and schema-constrained structured output keeps
-    classification stable without one.
+    role must be one of "classifier", "agent", or "titler". The provider is fixed
+    to Anthropic; the model is selected per role and only the API key is
+    configurable via LLM_KEY. No sampling parameters are set: claude-sonnet-5
+    rejects a non-default temperature, and schema-constrained structured output
+    keeps classification stable without one.
     """
-    if role not in _ROLES:
+    if role not in _MODELS:
         raise ValueError(f"unknown role: {role}")
     settings = get_settings()
     kwargs = {"model_provider": _MODEL_PROVIDER}
     if settings.llm_key:
         kwargs["api_key"] = settings.llm_key
-    return init_chat_model(_MODEL, **kwargs)
+    return init_chat_model(_MODELS[role], **kwargs)

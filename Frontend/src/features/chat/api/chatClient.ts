@@ -1,4 +1,5 @@
-import type { Message } from "../lib/messageReducer";
+import type { InputState, Message } from "../lib/messageReducer";
+import type { EvidenceFile } from "../lib/evidenceRules";
 
 const TIMEOUT_MS = 15000;
 
@@ -13,14 +14,24 @@ async function withTimeout(input: string, init?: RequestInit): Promise<Response>
 }
 
 export const chatClient = {
-  async sendMessage(body: { conversationId?: string; surface: string; text: string }) {
+  async sendMessage(body: {
+    conversationId?: string;
+    surface: string;
+    text: string;
+    evidence?: EvidenceFile[];
+  }) {
     const res = await withTimeout("/api/chat/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversation_id: body.conversationId, surface: body.surface, text: body.text }),
+      body: JSON.stringify({
+        conversation_id: body.conversationId,
+        surface: body.surface,
+        text: body.text,
+        evidence: body.evidence,
+      }),
     });
     if (!res.ok) throw new Error(`send failed: ${res.status}`);
-    return (await res.json()) as { conversation_id: string; turn_id: string };
+    return (await res.json()) as { conversation_id: string; turn_id: string; input_state: InputState };
   },
   async listConversations(surface: string) {
     const res = await withTimeout(`/api/conversations?surface=${surface}`);
@@ -30,7 +41,7 @@ export const chatClient = {
   async listMessages(id: string) {
     const res = await withTimeout(`/api/conversations/${id}/messages`);
     if (!res.ok) throw new Error(`messages failed: ${res.status}`);
-    return (await res.json()) as Message[];
+    return (await res.json()) as { messages: Message[]; input_state: InputState };
   },
   async deleteConversation(id: string) {
     await withTimeout(`/api/conversations/${id}`, { method: "DELETE" });

@@ -123,5 +123,6 @@ class Notification(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     jira_key: Mapped[str | None] = mapped_column(String, nullable=True)
     job_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

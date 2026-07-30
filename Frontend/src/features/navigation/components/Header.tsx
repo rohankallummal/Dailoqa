@@ -1,5 +1,5 @@
-import { Bell } from "lucide-react";
 import { AskAiButton } from "@/features/chat";
+import { NotificationBell } from "@/features/notifications";
 import { SearchBar } from "./SearchBar";
 import { SearchHint } from "./SearchHint";
 
@@ -11,9 +11,7 @@ export function Header() {
 
         <SearchBar hint={<SearchHint />} />
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent transition-colors duration-200 hover:border-line hover:bg-hover">
-          <Bell className="h-[18px] w-[18px] text-ink-soft" />
-        </div>
+        <NotificationBell />
       </div>
     </header>
   );

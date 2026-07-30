@@ -1,12 +1,16 @@
 """Async Jira Cloud client routed through the scoped-token endpoint."""
 
+from pathlib import Path
+
 import httpx
 
 from app.config import Settings, get_settings
-from app.jira.adf import _to_adf
+from app.jira.adf import build_document
 
 _TENANT_INFO_PATH = "/_edge/tenant_info"
 _SCOPED_HOST = "https://api.atlassian.com/ex/jira"
+_DEFAULT_TIMEOUT = 30.0
+_UPLOAD_TIMEOUT = 180.0
 
 
 class JiraClient:
@@ -38,10 +42,12 @@ class JiraClient:
         cloud_id = await self.resolve_cloud_id()
         return f"{_SCOPED_HOST}/{cloud_id}/rest/api/3"
 
-    async def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
+    async def _request(
+        self, method: str, path: str, timeout: float = _DEFAULT_TIMEOUT, **kwargs
+    ) -> httpx.Response:
         """Send an authenticated request to the scoped Jira API and raise on error."""
         base = await self._api_base()
-        async with httpx.AsyncClient() as http:
+        async with httpx.AsyncClient(timeout=timeout) as http:
             response = await http.request(method, f"{base}{path}", auth=self._auth(), **kwargs)
             response.raise_for_status()
             return response
@@ -60,17 +66,19 @@ class JiraClient:
         summary: str,
         description: str,
         labels: list[str] | None = None,
+        evidence: list[dict] | None = None,
     ) -> dict:
         """Create a Jira issue and return its key and id.
 
-        issue_type is the display name (e.g. "Bug" or "Request"); description is
-        plain text converted to ADF. Returns {"key", "id"}.
+        issue_type is the display name (e.g. "Bug" or "Request"); description is plain
+        text converted to ADF, with an Evidence section appended when evidence is given.
+        Returns {"key", "id"}.
         """
         fields = {
             "project": {"key": self.project_key},
             "issuetype": {"name": issue_type},
             "summary": summary,
-            "description": _to_adf(description),
+            "description": build_document(description, evidence),
         }
         if labels:
             fields["labels"] = labels
@@ -96,9 +104,36 @@ class JiraClient:
 
     async def add_comment(self, issue_key: str, text: str) -> None:
         """Add a comment (ADF) to an existing issue."""
-        await self._request("POST", f"/issue/{issue_key}/comment", json={"body": _to_adf(text)})
+        await self._request("POST", f"/issue/{issue_key}/comment", json={"body": build_document(text)})
 
     async def add_labels(self, issue_key: str, labels: list[str]) -> None:
         """Add labels to an existing issue without removing existing ones."""
         update = {"labels": [{"add": label} for label in labels]}
         await self._request("PUT", f"/issue/{issue_key}", json={"update": update})
+
+    async def add_attachments(self, issue_key: str, paths: list[Path]) -> list[str]:
+        """Upload files to an issue and return the filenames Jira accepted.
+
+        Jira rejects multipart uploads without the X-Atlassian-Token: no-check header.
+        """
+        if not paths:
+            return []
+        files = [("file", (path.name, path.read_bytes())) for path in paths]
+        response = await self._request(
+            "POST",
+            f"/issue/{issue_key}/attachments",
+            timeout=_UPLOAD_TIMEOUT,
+            files=files,
+            headers={"X-Atlassian-Token": "no-check"},
+        )
+        return [item["filename"] for item in response.json()]
+
+    async def list_attachment_filenames(self, issue_key: str) -> set[str]:
+        """Return the filenames already attached to an issue.
+
+        Lets a retried job skip what a previous attempt already uploaded instead of
+        duplicating it.
+        """
+        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
+        attachments = response.json().get("fields", {}).get("attachment") or []
+        return {item["filename"] for item in attachments}

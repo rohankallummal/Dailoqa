@@ -7,12 +7,17 @@ export const metadata: Metadata = {
   title: "Ask AI — Dailoqa",
 };
 
-export default function AskAiPage() {
+export default async function AskAiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ conversation?: string }>;
+}) {
+  const { conversation } = await searchParams;
   return (
     <ChatStreamProvider>
       <ToastProvider>
         <NotificationsListener />
-        <AskAiWorkspace />
+        <AskAiWorkspace initialConversationId={conversation} />
       </ToastProvider>
     </ChatStreamProvider>
   );

@@ -2,18 +2,7 @@
 
 import type { Message } from "../lib/messageReducer";
 
-export function ChatMessages({
-  messages,
-  connected,
-  onSend,
-}: {
-  messages: Message[];
-  connected: boolean;
-  onSend: (text: string) => void;
-}) {
-  const last = messages[messages.length - 1];
-  const awaitingConfirm = last?.role === "assistant" && last.stage === "confirm";
-
+export function ChatMessages({ messages, connected }: { messages: Message[]; connected: boolean }) {
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
       {!connected && (
@@ -32,24 +21,6 @@ export function ChatMessages({
           </div>
         </div>
       ))}
-      {awaitingConfirm && (
-        <div className="flex justify-start gap-2 pl-1">
-          <button
-            type="button"
-            onClick={() => onSend("yes")}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90"
-          >
-            Yes, create it
-          </button>
-          <button
-            type="button"
-            onClick={() => onSend("no")}
-            className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors duration-200 hover:bg-hover hover:text-ink"
-          >
-            No
-          </button>
-        </div>
-      )}
     </div>
   );
 }

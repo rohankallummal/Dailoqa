@@ -15,9 +15,6 @@ build/
 dist/
 next-env.d.ts
 
-# ---- Testing / coverage ----
-coverage/
-
 # ---- TypeScript ----
 *.tsbuildinfo
 
@@ -47,8 +44,10 @@ __pycache__/
 .venv/
 venv/
 env/
-.pytest_cache/
 .mypy_cache/
+
+# ---- Uploaded bug-report evidence (transient) ----
+tmp/
 
 # ---- Editor / OS ----
 .vscode/

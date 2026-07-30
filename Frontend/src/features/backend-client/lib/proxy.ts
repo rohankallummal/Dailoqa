@@ -20,20 +20,34 @@ export async function proxyJson(method: string, path: string, body?: string): Pr
   });
 }
 
+const STREAM_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache, no-transform",
+  "X-Accel-Buffering": "no",
+  Connection: "keep-alive",
+};
+
+const STREAM_RETRY_MS = 3000;
+
+function retryStream(): Response {
+  return new Response(`retry: ${STREAM_RETRY_MS}\n\n`, { status: 200, headers: STREAM_HEADERS });
+}
+
 export async function proxyStream(path: string): Promise<Response> {
   const authorization = await authHeader();
   if (!authorization) return new Response("Unauthorized", { status: 401 });
-  const upstream = await fetch(`${getBackendUrl()}${path}`, {
-    headers: { Authorization: authorization, Accept: "text/event-stream" },
-    cache: "no-store",
-  });
-  return new Response(upstream.body, {
-    status: upstream.status,
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Accel-Buffering": "no",
-      Connection: "keep-alive",
-    },
-  });
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${getBackendUrl()}${path}`, {
+      headers: { Authorization: authorization, Accept: "text/event-stream" },
+      cache: "no-store",
+    });
+  } catch {
+    return retryStream();
+  }
+
+  if (!upstream.ok) return retryStream();
+
+  return new Response(upstream.body, { status: 200, headers: STREAM_HEADERS });
 }

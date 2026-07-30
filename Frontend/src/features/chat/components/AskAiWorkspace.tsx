@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PanelLeftOpen, Sparkles } from "lucide-react";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatPromptBar } from "./ChatPromptBar";
+import { ChatConfirmActions } from "./ChatConfirmActions";
+import { ChatErrorNotice } from "./ChatErrorNotice";
 import { ChatMessages } from "./ChatMessages";
+import { ChatPendingNotice } from "./ChatPendingNotice";
+import { EvidenceCard } from "./EvidenceCard";
 import { useChat } from "../hooks/useChat";
 
-export function AskAiWorkspace() {
+export function AskAiWorkspace({ initialConversationId }: { initialConversationId?: string }) {
   const [collapsed, setCollapsed] = useState(false);
   const toggle = () => setCollapsed((value) => !value);
-  const { messages, send, connected, newChat, openConversation, activeConversationId } = useChat("full");
+  const { messages, send, connected, inputState, error, newChat, openConversation, activeConversationId } =
+    useChat("full");
+
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || !initialConversationId) return;
+    opened.current = true;
+    void openConversation(initialConversationId);
+  }, [initialConversationId, openConversation]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-page">
@@ -49,17 +61,37 @@ export function AskAiWorkspace() {
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6">
             <h1 className="text-3xl font-semibold tracking-tight text-ink">What can I help with?</h1>
-            <ChatPromptBar onSend={send} />
+            <div className="flex w-full flex-col items-center">
+              <ChatPromptBar onSend={send} />
+              {error && <ChatErrorNotice message={error} />}
+            </div>
           </div>
         ) : (
           <>
             <div className="flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-3xl">
-                <ChatMessages messages={messages} connected={connected} onSend={send} />
+                <ChatMessages messages={messages} connected={connected} />
               </div>
             </div>
-            <div className="flex justify-center px-6 pb-6">
-              <ChatPromptBar onSend={send} />
+            <div className="flex flex-col px-6 pb-6">
+              {error && <ChatErrorNotice message={error} />}
+              <div className="flex justify-center">
+                {inputState === "awaiting_evidence" ? (
+                  <div className="w-full max-w-3xl">
+                    <EvidenceCard
+                      conversationId={activeConversationId}
+                      onSubmit={(text, evidence) => send(text, evidence)}
+                      onCancel={(text) => send(text)}
+                    />
+                  </div>
+                ) : inputState === "awaiting_confirm" ? (
+                  <ChatConfirmActions onDecide={send} />
+                ) : inputState === "pending" ? (
+                  <ChatPendingNotice />
+                ) : (
+                  <ChatPromptBar onSend={send} />
+                )}
+              </div>
             </div>
           </>
         )}

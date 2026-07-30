@@ -73,8 +73,13 @@ CREATE TABLE app.notifications (
     body text NOT NULL,
     jira_key varchar,
     job_id varchar,
+    delivered_at timestamp with time zone,
     read_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now(),
     CONSTRAINT uq_notification_job UNIQUE (job_id)
 );
-CREATE INDEX ix_notifications_user_sub ON app.notifications (user_sub);
+CREATE INDEX ix_notifications_user_created ON app.notifications (user_sub, created_at DESC);
+CREATE INDEX ix_notifications_unread ON app.notifications (user_sub, created_at DESC)
+    WHERE read_at IS NULL;
+CREATE INDEX ix_notifications_undelivered ON app.notifications (user_sub)
+    WHERE delivered_at IS NULL;
