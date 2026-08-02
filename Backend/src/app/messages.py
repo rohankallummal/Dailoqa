@@ -40,6 +40,8 @@ FEATURE_SUBMITTED = (
 
 TICKET_FAILED = "We couldn't create your ticket. Please contact support."
 
+TURN_FAILED = "Something went wrong on our side. Please send that again."
+
 _CONFIRMATIONS = {"bug": CONFIRM_BUG, "feature": CONFIRM_FEATURE}
 
 _OUTCOMES = {

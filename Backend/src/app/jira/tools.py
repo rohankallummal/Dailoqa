@@ -3,6 +3,7 @@
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
+from app.jira.adf import build_document
 from app.jira.client import JiraClient
 
 
@@ -30,7 +31,7 @@ def get_jira_tools(client: JiraClient | None = None) -> list:
         return await client.search_issues(jql, fields=["summary", "status", "labels"], max_results=max_results)
 
     async def _create(issue_type: str, summary: str, description: str, labels: list[str] | None = None):
-        return await client.create_issue(issue_type, summary, description, labels or [])
+        return await client.create_issue(issue_type, summary, build_document(description), labels or [])
 
     return [
         StructuredTool.from_function(

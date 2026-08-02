@@ -1,8 +1,17 @@
 "use client";
 
 import type { Message } from "../lib/messageReducer";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 
-export function ChatMessages({ messages, connected }: { messages: Message[]; connected: boolean }) {
+export function ChatMessages({
+  messages,
+  connected,
+  thinking,
+}: {
+  messages: Message[];
+  connected: boolean;
+  thinking?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
       {!connected && (
@@ -21,6 +30,7 @@ export function ChatMessages({ messages, connected }: { messages: Message[]; con
           </div>
         </div>
       ))}
+      {thinking && <ThinkingIndicator />}
     </div>
   );
 }

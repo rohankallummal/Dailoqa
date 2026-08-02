@@ -6,6 +6,8 @@ import { categorize, validateSelection, type EvidenceFile } from "../lib/evidenc
 
 export type EvidenceSelection = { file: File; url: string };
 
+const NOT_READY = "This chat isn't ready to receive files yet. Please try again in a moment.";
+
 export function useEvidenceUpload(conversationId: string | undefined) {
   const [items, setItems] = useState<EvidenceSelection[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -50,7 +52,11 @@ export function useEvidenceUpload(conversationId: string | undefined) {
 
   const submit = useCallback(async (): Promise<EvidenceFile[] | null> => {
     const files = itemsRef.current.map((item) => item.file);
-    if (!conversationId || files.length === 0) return null;
+    if (files.length === 0) return null;
+    if (!conversationId) {
+      setErrors([NOT_READY]);
+      return null;
+    }
     setUploading(true);
     setProgress(0);
     setErrors([]);

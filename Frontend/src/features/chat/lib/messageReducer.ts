@@ -1,6 +1,6 @@
 export type Message = { id: string; role: "user" | "assistant"; content: string; stage?: string };
 
-export type InputState = "open" | "awaiting_confirm" | "awaiting_evidence" | "pending";
+export type InputState = "open" | "awaiting_confirm" | "awaiting_evidence" | "pending" | "thinking";
 
 export type ChatEvent =
   | {

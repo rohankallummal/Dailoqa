@@ -20,7 +20,7 @@ def build_jql(kind: str, project_key: str, issue_type: str) -> str:
     return f'project = {project_key} AND issuetype = "{issue_type}" AND statusCategory != Done ORDER BY created DESC'
 
 
-async def find_duplicate(kind: str, fields: dict, client=None, model=None) -> DedupeVerdict:
+async def find_duplicate(kind: str, ticket: dict, client=None, model=None) -> DedupeVerdict:
     """Search Jira for candidates and ask the LLM whether any is a true duplicate."""
     client = client or JiraClient()
     model = model or get_chat_model("agent")
@@ -31,7 +31,7 @@ async def find_duplicate(kind: str, fields: dict, client=None, model=None) -> De
     if not candidates:
         return DedupeVerdict(match_key=None, confidence=0.0)
     structured = model.with_structured_output(DedupeVerdict)
-    prompt = f"New {kind} report: {fields}. Candidates: {candidates}. Which candidate, if any, is the same issue?"
+    prompt = f"New {kind} report: {ticket}. Candidates: {candidates}. Which candidate, if any, is the same issue?"
     verdict = await structured.ainvoke(prompt)
     if verdict.confidence < _CONFIDENCE_THRESHOLD:
         return DedupeVerdict(match_key=None, confidence=verdict.confidence)

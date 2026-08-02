@@ -24,10 +24,12 @@ function TitleSkeleton() {
 export function ChatHistoryList({
   surface,
   onOpen,
+  onDeleted,
   activeConversationId,
 }: {
   surface: string;
   onOpen: (id: string) => void;
+  onDeleted?: (id: string) => void;
   activeConversationId?: string;
 }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -89,7 +91,11 @@ export function ChatHistoryList({
   };
 
   const remove = async (id: string) => {
-    await chatClient.deleteConversation(id).catch(() => undefined);
+    const deleted = await chatClient
+      .deleteConversation(id)
+      .then(() => true)
+      .catch(() => false);
+    if (deleted) onDeleted?.(id);
     reload();
   };
 

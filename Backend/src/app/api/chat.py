@@ -29,6 +29,10 @@ logger = logging.getLogger(__name__)
 
 _title_tasks: set = set()
 
+_turn_tasks: set = set()
+
+_running_turns: set[str] = set()
+
 
 def _schedule_title(conversation_id: str, first_message: str) -> None:
     """Fire-and-forget: generate and persist a title without blocking the turn."""
@@ -61,6 +65,14 @@ class EvidenceFile(BaseModel):
     size: int
 
 
+class ClientEnvironmentInput(BaseModel):
+    """Device, browser, and operating system as reported by the reporter's browser."""
+
+    device: str = "Unknown"
+    browser: str = "Unknown"
+    operating_system: str = "Unknown"
+
+
 class SendRequest(BaseModel):
     """A user's message on a given surface, optionally carrying an evidence manifest."""
 
@@ -68,6 +80,7 @@ class SendRequest(BaseModel):
     surface: str
     text: str
     evidence: list[EvidenceFile] | None = None
+    client_environment: ClientEnvironmentInput | None = None
 
 
 def _is_affirmative(text: str) -> bool:
@@ -80,15 +93,14 @@ def _resume_value(interrupt_value: dict, text: str, evidence: list[dict] | None)
     """Shape the user's reply into the value the paused node expects.
 
     An evidence interrupt resumes with the manifest (an empty list means Cancel); a
-    gather interrupt (carrying ``missing``) resumes with a field->value dict; a confirm
-    interrupt resumes with a boolean decision.
+    gather interrupt (carrying ``missing``) resumes with the answer text, which the graph
+    appends to the transcript the composer reads; a confirm interrupt resumes with a
+    boolean decision.
     """
     if "evidence_request" in interrupt_value:
         return evidence or []
     if "missing" in interrupt_value:
-        missing = interrupt_value.get("missing") or []
-        field = missing[0] if missing else "detail"
-        return {field: text}
+        return text
     return _is_affirmative(text)
 
 
@@ -147,7 +159,13 @@ async def _start_turn(user_sub: str, conversation_id: str | None, surface: str, 
 
 
 async def _run_or_resume_graph(
-    conversation_id: str, surface: str, user_sub: str, text: str, evidence: list[dict] | None = None
+    conversation_id: str,
+    surface: str,
+    user_sub: str,
+    user_name: str,
+    text: str,
+    evidence: list[dict] | None = None,
+    client_environment: dict | None = None,
 ) -> dict:
     """Run a fresh turn, or resume a paused interrupt, over the checkpointed graph.
 
@@ -172,7 +190,10 @@ async def _run_or_resume_graph(
                 "surface": surface,
                 "user_sub": user_sub,
                 "conversation_id": conversation_id,
-                "fields": {},
+                "ticket": {},
+                "client_environment": client_environment or {},
+                "reporter": {"name": user_name, "oauth_id": user_sub},
+                "evidence": [],
                 "confirmed": False,
             },
             config,
@@ -188,7 +209,10 @@ async def _enqueue_confirmed(user_sub: str, conversation_id: str, result: dict) 
                 "user_sub": user_sub,
                 "conversation_id": conversation_id,
                 "kind": result.get("kind"),
-                "fields": result.get("fields", {}),
+                "ticket": result.get("ticket", {}),
+                "client_environment": result.get("client_environment", {}),
+                "reporter": result.get("reporter", {}),
+                "evidence": result.get("evidence", []),
                 "confirmed": True,
             },
         )
@@ -208,44 +232,132 @@ async def _persist_assistant(conversation_id: str, turn_id: str, delta: dict) ->
         await session.commit()
 
 
-async def run_turn(
+def _failure_delta(turn_id: str, conversation_id: str) -> dict:
+    """Build the delta published when a turn dies, releasing the caller's input.
+
+    Without it the composer stays locked on ``thinking`` until the stream reconnects,
+    which is the difference between a visible error and a chat that appears to hang.
+    """
+    return {
+        "type": "delta",
+        "turn_id": turn_id,
+        "conversation_id": conversation_id,
+        "text": messages.TURN_FAILED,
+        "stage": "error",
+        "input_state": "open",
+    }
+
+
+async def _finish_turn(
     user_sub: str,
+    user_name: str,
+    conversation_id: str,
+    turn_id: str,
+    surface: str,
+    text: str,
+    evidence: list[dict] | None,
+    client_environment: dict | None,
+    is_new: bool,
+) -> None:
+    """Run the graph for an accepted turn and publish its outcome over SSE.
+
+    Runs detached from the request that accepted the turn, so a client that navigates
+    away, reconnects, or times out cannot abandon a half-run graph. The SSE delta is the
+    only way the result reaches the user, so every exit path publishes exactly one --
+    a failure is surfaced rather than swallowed, and the running marker is always
+    released.
+    """
+    try:
+        result = await _run_or_resume_graph(
+            conversation_id, surface, user_sub, user_name, text, evidence, client_environment
+        )
+        delta, reached_enqueue = _surface(result, turn_id, conversation_id)
+        if reached_enqueue:
+            await _enqueue_confirmed(user_sub, conversation_id, result)
+        if delta["text"]:
+            await _persist_assistant(conversation_id, turn_id, delta)
+        await registry.publish(user_sub, delta)
+        if is_new:
+            _schedule_title(conversation_id, text)
+    except Exception as error:
+        logger.exception("turn %s failed for conversation %s: %s", turn_id, conversation_id, error)
+        delta = _failure_delta(turn_id, conversation_id)
+        try:
+            await _persist_assistant(conversation_id, turn_id, delta)
+        except Exception:
+            logger.exception("could not persist the failure notice for turn %s", turn_id)
+        await registry.publish(user_sub, delta)
+    finally:
+        _running_turns.discard(conversation_id)
+
+
+def _spawn_turn(*args) -> None:
+    """Run a turn in the background, holding a reference so it is not garbage collected."""
+    task = asyncio.create_task(_finish_turn(*args))
+    _turn_tasks.add(task)
+    task.add_done_callback(_turn_tasks.discard)
+
+
+async def accept_turn(
+    user_sub: str,
+    user_name: str,
     conversation_id: str | None,
     surface: str,
     text: str,
     evidence: list[dict] | None = None,
-) -> tuple[str, str, str]:
-    """Persist the user message, run/resume the graph, publish a delta; return ids and input state.
+    client_environment: dict | None = None,
+) -> tuple[str, str]:
+    """Persist the user message, start the turn in the background, return its ids.
 
-    Builds the compiled graph over the Postgres checkpointer keyed by
-    ``thread_id = conversation_id``. The surfaced output is persisted as an assistant
-    message and pushed to the user's SSE channel; on the confirmed path a durable job
-    is enqueued for the worker.
+    Returns as soon as the message is durable, so the caller never waits on the model.
+    Raises HTTPException(409) when a turn is already running for the conversation: the
+    graph is keyed by ``thread_id = conversation_id``, and two turns racing on one thread
+    interleave their interrupts and corrupt the report being collected. That is what a
+    user produced by pressing Send repeatedly against the old blocking endpoint.
+
+    The busy check runs before the message is persisted as well as after the id is
+    resolved. The early check keeps a rejected duplicate from leaving an orphan user
+    message in the history; the later one is the authoritative claim, since a brand-new
+    conversation has no id to check until _start_turn has created it.
+
+    _running_turns is process-local, which is sufficient while a single backend instance
+    serves a conversation. Running several instances would need the claim moved into
+    Postgres, an advisory lock keyed on the conversation being the natural fit.
     """
     turn_id = uuid.uuid4().hex
     is_new = conversation_id is None
+    if conversation_id is not None and conversation_id in _running_turns:
+        raise HTTPException(status_code=409, detail="a turn is already running")
     conversation_id = await _start_turn(user_sub, conversation_id, surface, text)
-    result = await _run_or_resume_graph(conversation_id, surface, user_sub, text, evidence)
+    if conversation_id in _running_turns:
+        raise HTTPException(status_code=409, detail="a turn is already running")
+    _running_turns.add(conversation_id)
+    _spawn_turn(
+        user_sub,
+        user_name,
+        conversation_id,
+        turn_id,
+        surface,
+        text,
+        evidence,
+        client_environment,
+        is_new,
+    )
+    return conversation_id, turn_id
 
-    delta, reached_enqueue = _surface(result, turn_id, conversation_id)
-    if reached_enqueue:
-        await _enqueue_confirmed(user_sub, conversation_id, result)
-    if delta["text"]:
-        await _persist_assistant(conversation_id, turn_id, delta)
 
-    await registry.publish(user_sub, delta)
-    if is_new:
-        _schedule_title(conversation_id, text)
-    return conversation_id, turn_id, delta["input_state"]
-
-
-@router.post("/chat/send")
+@router.post("/chat/send", status_code=202)
 async def chat_send(body: SendRequest, auth: AuthContext = Depends(require_auth)) -> dict:
-    """Start or resume a turn and return its identifiers; results stream over /events.
+    """Accept a turn and return immediately; results stream over /events.
 
     An existing conversation must belong to the caller. An evidence manifest is verified
-    against the files on disk before the graph is resumed, so a rejection leaves the
+    against the files on disk before the turn is accepted, so a rejection leaves the
     interrupt unconsumed and the card still shown.
+
+    The response means "accepted", not "answered": ``input_state`` is always ``thinking``
+    and the real state arrives as an SSE delta. Nothing here waits on the model, so a slow
+    turn can no longer time the caller out or leave the browser and the graph disagreeing
+    about what happened.
     """
     if body.conversation_id is not None:
         await _require_owned(body.conversation_id, auth.user_sub)
@@ -257,7 +369,14 @@ async def chat_send(body: SendRequest, auth: AuthContext = Depends(require_auth)
         if errors:
             raise HTTPException(status_code=400, detail={"errors": errors})
         manifest = normalize_manifest(auth.user_sub, body.conversation_id, manifest)
-    conversation_id, turn_id, input_state = await run_turn(
-        auth.user_sub, body.conversation_id, body.surface, body.text, manifest
+    environment = body.client_environment.model_dump() if body.client_environment else None
+    conversation_id, turn_id = await accept_turn(
+        auth.user_sub,
+        auth.user_name,
+        body.conversation_id,
+        body.surface,
+        body.text,
+        manifest,
+        environment,
     )
-    return {"conversation_id": conversation_id, "turn_id": turn_id, "input_state": input_state}
+    return {"conversation_id": conversation_id, "turn_id": turn_id, "input_state": "thinking"}

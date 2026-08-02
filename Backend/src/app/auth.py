@@ -13,12 +13,15 @@ logger = logging.getLogger(__name__)
 
 SERVICE_JWT_AUDIENCE = "backend"
 
+CLOCK_SKEW_LEEWAY_SECONDS = 60
+
 
 class AuthContext(BaseModel):
     """Identity derived from a verified service JWT."""
 
     user_sub: str
     user_id: str
+    user_name: str
 
 
 def verify_service_token(token: str) -> AuthContext:
@@ -26,15 +29,28 @@ def verify_service_token(token: str) -> AuthContext:
 
     Raises a jwt.InvalidTokenError subclass when the token is invalid,
     expired, or carries the wrong audience.
+
+    The name claim is optional and falls back to the subject, so a token minted before
+    the reporter's display name was carried still verifies.
+
+    Leeway absorbs clock drift between the frontend that mints the token and this
+    process. Tokens live two minutes, and without leeway a container running even a few
+    seconds ahead of its host rejects tokens that were valid when issued -- the cause of
+    the intermittent 401 bursts _reject_reason was added to diagnose.
     """
     payload = jwt.decode(
         token,
         get_settings().service_jwt_secret,
         algorithms=["HS256"],
         audience=SERVICE_JWT_AUDIENCE,
+        leeway=CLOCK_SKEW_LEEWAY_SECONDS,
         options={"require": ["sub", "userId", "exp"]},
     )
-    return AuthContext(user_sub=payload["sub"], user_id=payload["userId"])
+    return AuthContext(
+        user_sub=payload["sub"],
+        user_id=payload["userId"],
+        user_name=payload.get("name") or payload["sub"],
+    )
 
 
 def _reject_reason(token: str) -> str:

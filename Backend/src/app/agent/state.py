@@ -20,7 +20,10 @@ class AgentState(TypedDict, total=False):
     user_sub: str
     conversation_id: str
     kind: str
-    fields: dict
+    ticket: dict
+    client_environment: dict
+    reporter: dict
+    evidence: list
     confirmed: bool
     job_id: str | None
     reply: str

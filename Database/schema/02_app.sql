@@ -40,6 +40,7 @@ CREATE TABLE app.ticket_reporters (
     id varchar PRIMARY KEY,
     ticket_id varchar NOT NULL,
     user_sub varchar NOT NULL,
+    user_name varchar,
     added_at timestamp with time zone DEFAULT now(),
     CONSTRAINT uq_ticket_reporter UNIQUE (ticket_id, user_sub),
     CONSTRAINT fk_ticket_reporters_ticket_id_tickets

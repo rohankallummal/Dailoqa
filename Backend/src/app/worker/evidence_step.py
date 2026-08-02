@@ -7,7 +7,7 @@ EVIDENCE_FIELD = "evidence"
 
 def evidence_of(job) -> list[dict]:
     """Return the job's evidence manifest, or an empty list when it carries none."""
-    return (job.payload.get("fields") or {}).get(EVIDENCE_FIELD) or []
+    return job.payload.get(EVIDENCE_FIELD) or []
 
 
 async def attach_evidence(job, client, jira_key: str) -> None:

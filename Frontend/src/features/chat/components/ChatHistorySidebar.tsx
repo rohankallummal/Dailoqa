@@ -5,11 +5,13 @@ export function ChatHistorySidebar({
   collapsed,
   onToggle,
   onOpen,
+  onDeleted,
   activeConversationId,
 }: {
   collapsed: boolean;
   onToggle: () => void;
   onOpen: (id: string) => void;
+  onDeleted?: (id: string) => void;
   activeConversationId?: string;
 }) {
   return (
@@ -45,7 +47,12 @@ export function ChatHistorySidebar({
           </div>
 
           <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
-            <ChatHistoryList surface="full" onOpen={onOpen} activeConversationId={activeConversationId} />
+            <ChatHistoryList
+              surface="full"
+              onOpen={onOpen}
+              onDeleted={onDeleted}
+              activeConversationId={activeConversationId}
+            />
           </div>
         </div>
       </div>

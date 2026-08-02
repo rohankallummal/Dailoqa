@@ -5,7 +5,7 @@ import { mintServiceToken } from "./serviceJwt";
 async function authHeader(): Promise<string | null> {
   const session = await getSession();
   if (!session) return null;
-  return `Bearer ${await mintServiceToken(session.sub, session.userId)}`;
+  return `Bearer ${await mintServiceToken(session.sub, session.userId, session.name)}`;
 }
 
 export async function proxyJson(method: string, path: string, body?: string): Promise<Response> {

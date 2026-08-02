@@ -25,7 +25,7 @@ async def _resolve_ticket(session, job, client, model) -> tuple[str, str]:
             await create_ticket(session, job, client)
         return job.jira_key, job.action
 
-    verdict = await find_duplicate(job.payload["kind"], job.payload.get("fields", {}), client=client, model=model)
+    verdict = await find_duplicate(job.payload["kind"], job.payload.get("ticket", {}), client=client, model=model)
     if verdict.match_key:
         await link_ticket(session, job, client, verdict.match_key)
         return verdict.match_key, "link"

@@ -2,12 +2,12 @@
 
 import { useState, type KeyboardEvent } from "react";
 
-export function ChatPromptBar({ onSend }: { onSend: (text: string) => void }) {
+export function ChatPromptBar({ onSend, disabled }: { onSend: (text: string) => void; disabled?: boolean }) {
   const [value, setValue] = useState("");
 
   const submit = () => {
     const text = value.trim();
-    if (!text) return;
+    if (!text || disabled) return;
     onSend(text);
     setValue("");
   };
@@ -28,7 +28,8 @@ export function ChatPromptBar({ onSend }: { onSend: (text: string) => void }) {
         onKeyDown={handleKeyDown}
         placeholder="Ask AI anything…"
         aria-label="Message"
-        className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-ink-muted"
+        disabled={disabled}
+        className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-ink-muted disabled:opacity-50"
       />
     </div>
   );

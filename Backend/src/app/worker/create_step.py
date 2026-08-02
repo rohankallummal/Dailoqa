@@ -1,19 +1,31 @@
 """Idempotent Jira issue creation for a job."""
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.db.models import Ticket
-from app.worker.evidence_step import EVIDENCE_FIELD, attach_evidence, evidence_of
+from app.db.models import Ticket, TicketReporter
+from app.jira.adf import build_ticket_document
+from app.worker.evidence_step import attach_evidence, evidence_of
 from app.worker.queue import set_job_action
 
 
-def _describe(fields: dict) -> str:
-    """Render the ticket description, excluding the evidence manifest.
+async def record_reporter(session, ticket_id: str, user_sub: str, user_name: str) -> None:
+    """Record a reporter against a ticket exactly once.
 
-    The manifest becomes its own ADF section, so leaving it in would print a raw list
-    into the description body.
+    Every reporter is recorded, the one who filed the issue included, because the Similar
+    Reports spreadsheet must list them all once a second user reports the same problem.
     """
-    return "\n".join(f"{key}: {value}" for key, value in fields.items() if key != EVIDENCE_FIELD)
+    existing = (
+        await session.execute(
+            select(TicketReporter).where(
+                TicketReporter.ticket_id == ticket_id, TicketReporter.user_sub == user_sub
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return
+    session.add(TicketReporter(ticket_id=ticket_id, user_sub=user_sub, user_name=user_name))
+    await session.flush()
 
 
 async def create_ticket(session, job, client) -> str:
@@ -34,21 +46,31 @@ async def create_ticket(session, job, client) -> str:
         await attach_evidence(job, client, job.jira_key)
         return job.jira_key
     kind = job.payload["kind"]
-    fields = job.payload.get("fields", {})
-    summary = fields.get("summary", "Untitled")
-    description = _describe(fields)
-    issue_type = client.issue_type_for(kind)
-    result = await client.create_issue(
-        issue_type, summary, description, labels=["agent-filed"], evidence=evidence_of(job)
+    ticket = job.payload.get("ticket", {})
+    reporter = job.payload.get("reporter", {})
+    evidence = evidence_of(job)
+    title = ticket.get("title") or "Untitled"
+    document = build_ticket_document(
+        kind, ticket, job.payload.get("client_environment", {}), reporter, evidence
     )
+    issue_type = client.issue_type_for(kind)
+    result = await client.create_issue(issue_type, title, document, labels=["agent-filed"])
     key = result["key"]
     await set_job_action(session, job.id, "create", jira_key=key)
     await session.commit()
     await session.execute(
         insert(Ticket)
-        .values(jira_key=key, type=kind, title=summary, summary=description, conversation_id=job.conversation_id)
+        .values(
+            jira_key=key,
+            type=kind,
+            title=title,
+            summary=ticket.get("summary") or ticket.get("feature"),
+            conversation_id=job.conversation_id,
+        )
         .on_conflict_do_nothing(index_elements=["jira_key"])
     )
+    stored = (await session.execute(select(Ticket).where(Ticket.jira_key == key))).scalar_one()
+    await record_reporter(session, stored.id, job.user_sub, reporter.get("name") or job.user_sub)
     job.jira_key = key
     job.action = "create"
     await session.commit()

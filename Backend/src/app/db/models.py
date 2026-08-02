@@ -83,6 +83,7 @@ class TicketReporter(Base):
         ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False
     )
     user_sub: Mapped[str] = mapped_column(String, nullable=False)
+    user_name: Mapped[str | None] = mapped_column(String, nullable=True)
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

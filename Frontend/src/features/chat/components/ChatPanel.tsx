@@ -11,14 +11,37 @@ import { ChatMessages } from "./ChatMessages";
 import { ChatPendingNotice } from "./ChatPendingNotice";
 import { ChatHistoryList } from "./ChatHistoryList";
 import { EvidenceCard } from "./EvidenceCard";
+import { chatClient } from "../api/chatClient";
 import { useChat } from "../hooks/useChat";
+
+const SURFACE = "panel";
 
 export function ChatPanel() {
   const { open, closePanel } = useChatPanel();
   const { messages, send, connected, inputState, error, newChat, openConversation, activeConversationId } =
-    useChat("panel");
+    useChat(SURFACE);
   const [showHistory, setShowHistory] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const isActiveChat = messages.some((message) => message.role === "assistant");
+
+  const leaveHistory = async () => {
+    if (!activeConversationId) {
+      setShowHistory(false);
+      return;
+    }
+    setVerifying(true);
+    const stillExists = await chatClient
+      .listConversations(SURFACE)
+      .then((rows) => rows.some((row) => row.id === activeConversationId))
+      .catch(() => true);
+    setVerifying(false);
+    if (!stillExists) newChat();
+    setShowHistory(false);
+  };
+
+  const forgetIfActive = (id: string) => {
+    if (id === activeConversationId) newChat();
+  };
 
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
@@ -45,9 +68,10 @@ export function ChatPanel() {
             {showHistory ? (
               <button
                 type="button"
-                onClick={() => setShowHistory(false)}
+                onClick={leaveHistory}
+                disabled={verifying}
                 aria-label="Back to chat"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-ink-soft transition-colors duration-200 hover:border-line hover:bg-hover hover:text-ink disabled:opacity-40"
               >
                 <ArrowLeft className="h-[18px] w-[18px]" />
               </button>
@@ -106,18 +130,19 @@ export function ChatPanel() {
           {showHistory ? (
             <div className="p-3">
               <ChatHistoryList
-                surface="panel"
+                surface={SURFACE}
                 activeConversationId={activeConversationId}
                 onOpen={(id) => {
                   openConversation(id);
                   setShowHistory(false);
                 }}
+                onDeleted={forgetIfActive}
               />
             </div>
           ) : messages.length === 0 ? (
             <ChatEmptyState />
           ) : (
-            <ChatMessages messages={messages} connected={connected} />
+            <ChatMessages messages={messages} connected={connected} thinking={inputState === "thinking"} />
           )}
         </div>
 
@@ -135,7 +160,7 @@ export function ChatPanel() {
           ) : inputState === "pending" ? (
             <ChatPendingNotice />
           ) : (
-            <ChatComposer onSend={send} disabled={!connected} />
+            <ChatComposer onSend={send} disabled={inputState === "thinking"} />
           ))}
       </section>
     </aside>

@@ -1,7 +1,17 @@
 import type { InputState, Message } from "../lib/messageReducer";
 import type { EvidenceFile } from "../lib/evidenceRules";
+import type { ClientEnvironment } from "../lib/clientEnvironment";
 
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 30000;
+
+export class ChatRequestError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`chat request failed: ${status}`);
+    this.status = status;
+  }
+}
 
 async function withTimeout(input: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
@@ -19,6 +29,7 @@ export const chatClient = {
     surface: string;
     text: string;
     evidence?: EvidenceFile[];
+    clientEnvironment?: ClientEnvironment;
   }) {
     const res = await withTimeout("/api/chat/send", {
       method: "POST",
@@ -28,9 +39,10 @@ export const chatClient = {
         surface: body.surface,
         text: body.text,
         evidence: body.evidence,
+        client_environment: body.clientEnvironment,
       }),
     });
-    if (!res.ok) throw new Error(`send failed: ${res.status}`);
+    if (!res.ok) throw new ChatRequestError(res.status);
     return (await res.json()) as { conversation_id: string; turn_id: string; input_state: InputState };
   },
   async listConversations(surface: string) {
@@ -44,6 +56,7 @@ export const chatClient = {
     return (await res.json()) as { messages: Message[]; input_state: InputState };
   },
   async deleteConversation(id: string) {
-    await withTimeout(`/api/conversations/${id}`, { method: "DELETE" });
+    const res = await withTimeout(`/api/conversations/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new ChatRequestError(res.status);
   },
 };

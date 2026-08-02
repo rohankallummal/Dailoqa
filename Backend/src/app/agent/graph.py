@@ -5,8 +5,9 @@ from langgraph.types import interrupt
 
 from app import messages
 from app.agent.classify import classify_message
-from app.agent.gather import missing_fields, next_follow_up
+from app.agent.compose import compose_ticket, next_follow_up
 from app.agent.state import AgentState
+from app.agent.ticket import missing_sections
 from app.db.models import Job
 
 
@@ -19,12 +20,20 @@ async def enqueue_job(session, state: AgentState) -> str:
         user_sub=state["user_sub"],
         payload={
             "kind": state["kind"],
-            "fields": state.get("fields", {}),
+            "ticket": state.get("ticket", {}),
+            "client_environment": state.get("client_environment", {}),
+            "reporter": state.get("reporter", {}),
+            "evidence": state.get("evidence", []),
         },
     )
     session.add(job)
     await session.flush()
     return job.id
+
+
+def _gaps(state: AgentState) -> list[str]:
+    """Return the required sections still missing from the composed ticket."""
+    return missing_sections(state["kind"], state.get("ticket", {}), bool(state.get("evidence")))
 
 
 def build_graph(model_classifier=None, model_agent=None):
@@ -41,19 +50,22 @@ def build_graph(model_classifier=None, model_agent=None):
 
     async def evidence(state: AgentState) -> AgentState:
         provided = interrupt({"evidence_request": True})
-        return {"fields": {**state.get("fields", {}), "evidence": provided or []}}
+        return {"evidence": provided or []}
+
+    async def compose(state: AgentState) -> AgentState:
+        ticket = await compose_ticket(
+            state["kind"], state["messages"], bool(state.get("evidence")), model=model_agent
+        )
+        return {"ticket": ticket}
 
     async def gather(state: AgentState) -> AgentState:
-        missing = missing_fields(state["kind"], state.get("fields", {}))
-        if missing:
-            question = await next_follow_up(state["kind"], state.get("fields", {}), model=model_agent)
-            answer = interrupt({"question": question, "missing": missing})
-            fields = {**state.get("fields", {}), **answer}
-            return {"fields": fields}
-        return {}
+        missing = _gaps(state)
+        question = await next_follow_up(state["kind"], state.get("ticket", {}), missing, model=model_agent)
+        answer = interrupt({"question": question, "missing": missing})
+        return {"messages": [*state["messages"], answer]}
 
     async def confirm(state: AgentState) -> AgentState:
-        decision = interrupt({"kind": state["kind"], "summary": state.get("fields", {})})
+        decision = interrupt({"kind": state["kind"], "ticket": state.get("ticket", {})})
         return {"confirmed": bool(decision)}
 
     async def decline(state: AgentState) -> AgentState:
@@ -64,6 +76,7 @@ def build_graph(model_classifier=None, model_agent=None):
 
     builder.add_node("classify", classify)
     builder.add_node("evidence", evidence)
+    builder.add_node("compose", compose)
     builder.add_node("gather", gather)
     builder.add_node("confirm", confirm)
     builder.add_node("decline", decline)
@@ -73,21 +86,22 @@ def build_graph(model_classifier=None, model_agent=None):
         if state["kind"] == "bug":
             return "evidence"
         if state["kind"] == "feature":
-            return "gather"
+            return "compose"
         return END
 
     builder.add_edge(START, "classify")
     builder.add_conditional_edges(
         "classify",
         _after_classify,
-        {"evidence": "evidence", "gather": "gather", END: END},
+        {"evidence": "evidence", "compose": "compose", END: END},
     )
-    builder.add_edge("evidence", "gather")
+    builder.add_edge("evidence", "compose")
     builder.add_conditional_edges(
-        "gather",
-        lambda s: "gather" if missing_fields(s["kind"], s.get("fields", {})) else "confirm",
+        "compose",
+        lambda s: "gather" if _gaps(s) else "confirm",
         {"gather": "gather", "confirm": "confirm"},
     )
+    builder.add_edge("gather", "compose")
     builder.add_conditional_edges(
         "confirm",
         lambda s: "enqueue" if s.get("confirmed") else "decline",

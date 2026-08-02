@@ -30,6 +30,9 @@ export function AskAiWorkspace({ initialConversationId }: { initialConversationI
         collapsed={collapsed}
         onToggle={toggle}
         onOpen={openConversation}
+        onDeleted={(id) => {
+          if (id === activeConversationId) newChat();
+        }}
         activeConversationId={activeConversationId}
       />
 
@@ -70,7 +73,7 @@ export function AskAiWorkspace({ initialConversationId }: { initialConversationI
           <>
             <div className="flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-3xl">
-                <ChatMessages messages={messages} connected={connected} />
+                <ChatMessages messages={messages} connected={connected} thinking={inputState === "thinking"} />
               </div>
             </div>
             <div className="flex flex-col px-6 pb-6">
@@ -89,7 +92,7 @@ export function AskAiWorkspace({ initialConversationId }: { initialConversationI
                 ) : inputState === "pending" ? (
                   <ChatPendingNotice />
                 ) : (
-                  <ChatPromptBar onSend={send} />
+                  <ChatPromptBar onSend={send} disabled={inputState === "thinking"} />
                 )}
               </div>
             </div>

@@ -64,21 +64,20 @@ class JiraClient:
         self,
         issue_type: str,
         summary: str,
-        description: str,
+        description: dict,
         labels: list[str] | None = None,
-        evidence: list[dict] | None = None,
     ) -> dict:
         """Create a Jira issue and return its key and id.
 
-        issue_type is the display name (e.g. "Bug" or "Request"); description is plain
-        text converted to ADF, with an Evidence section appended when evidence is given.
-        Returns {"key", "id"}.
+        issue_type is the display name (e.g. "Bug" or "Request"); description is an ADF
+        document the caller has already built, so the section structure lives with the
+        renderer rather than here. Returns {"key", "id"}.
         """
         fields = {
             "project": {"key": self.project_key},
             "issuetype": {"name": issue_type},
             "summary": summary,
-            "description": build_document(description, evidence),
+            "description": description,
         }
         if labels:
             fields["labels"] = labels
@@ -128,12 +127,51 @@ class JiraClient:
         )
         return [item["filename"] for item in response.json()]
 
+    async def add_attachment_bytes(self, issue_key: str, filename: str, data: bytes) -> None:
+        """Upload one in-memory file to an issue.
+
+        The Similar Reports workbook is generated per link and never touches disk, so it
+        has no path for add_attachments to take.
+        """
+        await self._request(
+            "POST",
+            f"/issue/{issue_key}/attachments",
+            timeout=_UPLOAD_TIMEOUT,
+            files=[("file", (filename, data))],
+            headers={"X-Atlassian-Token": "no-check"},
+        )
+
+    async def list_attachments(self, issue_key: str) -> list[dict]:
+        """Return the issue's attachments as {"id", "filename"} entries."""
+        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
+        attachments = response.json().get("fields", {}).get("attachment") or []
+        return [{"id": item["id"], "filename": item["filename"]} for item in attachments]
+
     async def list_attachment_filenames(self, issue_key: str) -> set[str]:
         """Return the filenames already attached to an issue.
 
         Lets a retried job skip what a previous attempt already uploaded instead of
         duplicating it.
         """
-        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
-        attachments = response.json().get("fields", {}).get("attachment") or []
-        return {item["filename"] for item in attachments}
+        return {item["filename"] for item in await self.list_attachments(issue_key)}
+
+    async def delete_attachment(self, attachment_id: str) -> None:
+        """Delete one attachment, tolerating an id Jira no longer holds.
+
+        A retry that already removed the superseded spreadsheet must not fail the job.
+        """
+        try:
+            await self._request("DELETE", f"/attachment/{attachment_id}")
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code != 404:
+                raise
+
+    async def get_description(self, issue_key: str) -> dict:
+        """Return an issue's description as an ADF document, empty when it has none."""
+        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "description"})
+        description = response.json().get("fields", {}).get("description")
+        return description or {"type": "doc", "version": 1, "content": []}
+
+    async def update_description(self, issue_key: str, document: dict) -> None:
+        """Replace an issue's description with the given ADF document."""
+        await self._request("PUT", f"/issue/{issue_key}", json={"fields": {"description": document}})
