@@ -37,14 +37,18 @@ def _chunk_text(chunk) -> str:
 def _resume_value(interrupt_value, text: str, evidence: list[dict] | None):
     """Shape the user's reply into what the suspended point expects.
 
-    An evidence interrupt resumes with the manifest. A write gate resumes with a
-    HumanInTheLoopMiddleware decision list.
+    An evidence interrupt resumes with the manifest, which ``request_evidence`` reads
+    straight off ``interrupt``. A write gate resumes with the ``decisions`` envelope
+    HumanInTheLoopMiddleware unwraps, carrying one decision per tool call it is
+    holding — it raises if that count disagrees, so the count is read off the request
+    rather than assumed to be one.
     """
     if isinstance(interrupt_value, dict) and "evidence_request" in interrupt_value:
         return evidence or []
-    if _is_affirmative(text):
-        return [{"type": "approve"}]
-    return [{"type": "reject", "message": text}]
+    requests = interrupt_value.get("action_requests") if isinstance(interrupt_value, dict) else None
+    held = len(requests) if requests else 1
+    decision = {"type": "approve"} if _is_affirmative(text) else {"type": "reject", "message": text}
+    return {"decisions": [dict(decision) for _ in range(held)]}
 
 
 class _TurnStream:
