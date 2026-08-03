@@ -85,20 +85,25 @@ async def list_evidence_holding_conversation_ids(session) -> frozenset[str]:
     return frozenset(active.scalars().all()) | frozenset(pending.scalars().all())
 
 
-async def get_input_state(session, conversation_id: str) -> str:
-    """Derive whether the chat input is open, collecting evidence, awaiting a confirmation choice, or locked.
-
-    A job still in flight outranks everything: the confirmed turn writes no message, so
-    the confirmation prompt remains the latest assistant message while the worker runs.
-    """
-    active_job = (
+async def has_active_job(session, conversation_id: str) -> bool:
+    """Report whether a queued or running job is holding this conversation."""
+    row = (
         await session.execute(
             select(Job.id)
             .where(Job.conversation_id == conversation_id, Job.status.in_(ACTIVE_JOB_STATUSES))
             .limit(1)
         )
     ).first()
-    if active_job is not None:
+    return row is not None
+
+
+async def get_input_state(session, conversation_id: str) -> str:
+    """Derive whether the chat input is open, collecting evidence, awaiting a confirmation choice, or locked.
+
+    A job still in flight outranks everything: the confirmed turn writes no message, so
+    the confirmation prompt remains the latest assistant message while the worker runs.
+    """
+    if await has_active_job(session, conversation_id):
         return "pending"
 
     latest = (

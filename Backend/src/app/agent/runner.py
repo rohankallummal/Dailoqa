@@ -9,7 +9,7 @@ from app.agent.checkpointer import build_checkpointer
 from app.agent.context import TurnContext
 from app.agent.factory import build_agent
 from app.db.base import async_session
-from app.db.repositories import append_message
+from app.db.repositories import append_message, has_active_job
 from app.sse.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -106,6 +106,18 @@ def _terminal(interrupts) -> tuple[str, str, str]:
     return "confirm", "awaiting_confirm", _write_summary(value if isinstance(value, dict) else {})
 
 
+async def _settled_state(conversation_id: str) -> str:
+    """Return the composer state for a turn that ended without suspending.
+
+    A turn that approved a filing leaves a queued job behind, and ``get_input_state``
+    reports such a conversation as ``pending`` on every later resync. Publishing ``open``
+    here would let the composer take a message that a reload then locks out, so the job
+    row is consulted rather than assumed absent.
+    """
+    async with async_session() as session:
+        return "pending" if await has_active_job(session, conversation_id) else "open"
+
+
 async def _persist(conversation_id: str, turn_id: str, text: str, stage: str) -> None:
     """Store the turn's assistant text once, carrying the stage resync depends on.
 
@@ -159,6 +171,8 @@ async def run_turn(
                         await stream.token(_chunk_text(message_chunk))
             final = await agent.aget_state(config)
             stage, input_state, fallback = _terminal(final.interrupts)
+        if input_state == "open":
+            input_state = await _settled_state(conversation_id)
         trailing = "" if stream.text.strip() or not fallback else fallback
         if trailing:
             await stream.token(trailing)
