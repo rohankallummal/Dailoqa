@@ -67,21 +67,39 @@ class _TurnStream:
         await self.publish({"text": text, "stage": "token", "input_state": "thinking"})
 
 
+def _write_summary(value) -> str:
+    """Describe a pending ticket write in one line, from the args the model drafted."""
+    requests = (value or {}).get("action_requests") or []
+    if not requests:
+        return "Shall I send this to the DailoQA development team?"
+    request = requests[0]
+    args = request.get("args") or {}
+    if request.get("name") == "link_to_existing":
+        target = args.get("issue_key") or "the existing ticket"
+        return f"This looks like the same issue as {target}. Add your report to it?"
+    title = str(args.get("title") or "").strip()
+    if title:
+        return f'Ready to file this as "{title}". Send it?'
+    return "Shall I send this to the DailoQA development team?"
+
+
 def _terminal(interrupts) -> tuple[str, str, str]:
     """Return the (stage, input_state, fallback_text) a turn ends in.
 
-    The fallback text matters when the model calls a tool with no preceding prose.
-    ``EvidenceCard`` carries its own generic copy, so the card is never wholly
-    unexplained — but the conversation turn above it would be empty and ``_persist``
-    would store nothing, leaving a reconnecting client with a card floating above a
-    blank turn and no record of why it was asked for.
+    The fallback text matters when the model calls a tool with no preceding prose,
+    which it does often enough to matter. Both suspending tools render their own
+    control, so the choice is never wholly unexplained — but the conversation turn
+    above it would be empty and ``_persist`` would store nothing, leaving a
+    reconnecting client an open composer over a suspended thread and no record of
+    what it was being asked. The confirm line is built from the drafted arguments
+    rather than fixed, so it still describes this particular report.
     """
     if not interrupts:
         return "reply", "open", ""
     value = interrupts[0].value
     if isinstance(value, dict) and "evidence_request" in value:
         return "evidence", "awaiting_evidence", str(value.get("reason") or "")
-    return "confirm", "awaiting_confirm", ""
+    return "confirm", "awaiting_confirm", _write_summary(value if isinstance(value, dict) else {})
 
 
 async def _persist(conversation_id: str, turn_id: str, text: str, stage: str) -> None:
