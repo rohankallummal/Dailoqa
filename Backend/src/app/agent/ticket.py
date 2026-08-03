@@ -1,4 +1,4 @@
-"""Typed ticket documents matching the sections in Ticket-Structure.md."""
+"""Typed ticket documents shared by the agent's tools and the worker payload."""
 
 from pydantic import BaseModel, Field
 
@@ -42,38 +42,3 @@ class FeatureTicket(BaseModel):
     problem_statement: str = Field(
         description="The problem or pain point this feature solves, and why it would be valuable. Leave empty if the user has not explained it."
     )
-
-
-_MODELS: dict[str, type[BaseModel]] = {"bug": BugTicket, "feature": FeatureTicket}
-
-_REQUIRED_SECTIONS: dict[str, list[str]] = {
-    "bug": ["title", "summary", "issue_description"],
-    "feature": ["title", "feature", "problem_statement"],
-}
-
-
-def ticket_model_for(kind: str) -> type[BaseModel]:
-    """Return the ticket model for a classification kind."""
-    model = _MODELS.get(kind)
-    if model is None:
-        raise ValueError(f"unknown ticket kind: {kind}")
-    return model
-
-
-def _is_blank(value) -> bool:
-    """Report whether a composed section carries no usable content."""
-    if isinstance(value, list):
-        return not [item for item in value if str(item).strip()]
-    return not str(value or "").strip()
-
-
-def missing_sections(kind: str, ticket: dict, has_evidence: bool) -> list[str]:
-    """Return the required section names the composer could not fill.
-
-    Steps to reproduce are required only when no evidence was attached; supplied images
-    or video stand in for the walkthrough.
-    """
-    required = list(_REQUIRED_SECTIONS.get(kind, []))
-    if kind == "bug" and not has_evidence:
-        required.append("steps_to_reproduce")
-    return [name for name in required if _is_blank(ticket.get(name))]
