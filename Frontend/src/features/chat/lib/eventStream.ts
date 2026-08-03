@@ -10,6 +10,7 @@ export function parseEvent(data: string): ChatEvent | null {
         text: raw.text,
         conversationId: raw.conversation_id,
         stage: raw.stage,
+        tool: raw.tool ?? null,
         inputState: raw.input_state,
       };
     }

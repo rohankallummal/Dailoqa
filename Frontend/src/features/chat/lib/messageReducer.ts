@@ -1,4 +1,10 @@
-export type Message = { id: string; role: "user" | "assistant"; content: string; stage?: string };
+export type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  stage?: string;
+  streaming?: boolean;
+};
 
 export type InputState = "open" | "awaiting_confirm" | "awaiting_evidence" | "pending" | "thinking";
 
@@ -9,6 +15,7 @@ export type ChatEvent =
       text: string;
       conversationId: string;
       stage?: string;
+      tool?: string | null;
       inputState?: InputState;
     }
   | {
@@ -22,12 +29,22 @@ export type ChatEvent =
     };
 
 export function applyDelta(messages: Message[], event: Extract<ChatEvent, { type: "delta" }>): Message[] {
+  if (event.stage === "tool_status") return messages;
+  const streaming = event.stage === "token";
   const index = messages.findIndex((message) => message.id === event.turnId);
   if (index === -1) {
     if (!event.text) return messages;
-    return [...messages, { id: event.turnId, role: "assistant", content: event.text, stage: event.stage }];
+    return [
+      ...messages,
+      { id: event.turnId, role: "assistant", content: event.text, stage: event.stage, streaming },
+    ];
   }
   const next = [...messages];
-  next[index] = { ...next[index], content: next[index].content + event.text, stage: event.stage ?? next[index].stage };
+  next[index] = {
+    ...next[index],
+    content: next[index].content + event.text,
+    stage: event.stage ?? next[index].stage,
+    streaming,
+  };
   return next;
 }
