@@ -17,6 +17,7 @@ export function useChat(surface: string) {
   const [inputState, setInputState] = useState<InputState>("open");
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [toolStatus, setToolStatus] = useState<string | null>(null);
   const conversationRef = useRef<string | undefined>(undefined);
   const stallTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -67,6 +68,11 @@ export function useChat(surface: string) {
       if (!conversationRef.current && stallTimer.current === undefined) return;
       if (!conversationRef.current) track(event.conversationId);
       clearStallTimer();
+      if (event.stage === "tool_status") {
+        setToolStatus(event.text || null);
+        return;
+      }
+      if (event.stage !== "token") setToolStatus(null);
       setMessages((previous) => applyDelta(previous, event));
       if (event.inputState) setInputState(event.inputState);
     },
@@ -123,6 +129,7 @@ export function useChat(surface: string) {
     setMessages([]);
     setInputState("open");
     setError(null);
+    setToolStatus(null);
   }, [clearStallTimer, track]);
 
   const openConversation = useCallback(
@@ -130,6 +137,7 @@ export function useChat(surface: string) {
       clearStallTimer();
       track(id);
       setError(null);
+      setToolStatus(null);
       await load(id);
     },
     [clearStallTimer, load, track],
@@ -142,6 +150,7 @@ export function useChat(surface: string) {
     inputState,
     activeConversationId,
     error,
+    toolStatus,
     newChat,
     openConversation,
   };

@@ -18,8 +18,17 @@ const SURFACE = "panel";
 
 export function ChatPanel() {
   const { open, closePanel } = useChatPanel();
-  const { messages, send, connected, inputState, error, newChat, openConversation, activeConversationId } =
-    useChat(SURFACE);
+  const {
+    messages,
+    send,
+    connected,
+    inputState,
+    error,
+    toolStatus,
+    newChat,
+    openConversation,
+    activeConversationId,
+  } = useChat(SURFACE);
   const [showHistory, setShowHistory] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const isActiveChat = messages.some((message) => message.role === "assistant");
@@ -142,7 +151,12 @@ export function ChatPanel() {
           ) : messages.length === 0 ? (
             <ChatEmptyState />
           ) : (
-            <ChatMessages messages={messages} connected={connected} thinking={inputState === "thinking"} />
+            <ChatMessages
+              messages={messages}
+              connected={connected}
+              thinking={inputState === "thinking"}
+              toolStatus={toolStatus}
+            />
           )}
         </div>
 

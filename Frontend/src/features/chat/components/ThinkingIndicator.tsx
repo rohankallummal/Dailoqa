@@ -22,7 +22,7 @@ function useReducedMotion() {
   );
 }
 
-export function ThinkingIndicator() {
+export function ThinkingIndicator({ label }: { label?: string | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   const reducedMotion = useReducedMotion();
@@ -58,7 +58,7 @@ export function ThinkingIndicator() {
 
   return (
     <div className="flex justify-start">
-      <div role="status" aria-label="The assistant is thinking" className="flex items-center">
+      <div role="status" aria-label={label ?? "The assistant is thinking"} className="flex items-center gap-1.5">
         {showStatic ? (
           <span className="text-sm text-ink-muted">Thinking…</span>
         ) : (
@@ -68,6 +68,7 @@ export function ThinkingIndicator() {
             style={{ width: ANIMATION_WIDTH, height: Math.round(ANIMATION_WIDTH / ANIMATION_ASPECT) }}
           />
         )}
+        {label ? <span className="text-xs text-ink-muted">{label}…</span> : null}
       </div>
     </div>
   );

@@ -7,10 +7,12 @@ export function ChatMessages({
   messages,
   connected,
   thinking,
+  toolStatus,
 }: {
   messages: Message[];
   connected: boolean;
   thinking?: boolean;
+  toolStatus?: string | null;
 }) {
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
@@ -27,10 +29,13 @@ export function ChatMessages({
             }`}
           >
             {message.content}
+            {message.streaming ? (
+              <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-ink-muted" />
+            ) : null}
           </div>
         </div>
       ))}
-      {thinking && <ThinkingIndicator />}
+      {thinking && <ThinkingIndicator label={toolStatus} />}
     </div>
   );
 }

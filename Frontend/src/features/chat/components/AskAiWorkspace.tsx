@@ -14,8 +14,17 @@ import { useChat } from "../hooks/useChat";
 export function AskAiWorkspace({ initialConversationId }: { initialConversationId?: string }) {
   const [collapsed, setCollapsed] = useState(false);
   const toggle = () => setCollapsed((value) => !value);
-  const { messages, send, connected, inputState, error, newChat, openConversation, activeConversationId } =
-    useChat("full");
+  const {
+    messages,
+    send,
+    connected,
+    inputState,
+    error,
+    toolStatus,
+    newChat,
+    openConversation,
+    activeConversationId,
+  } = useChat("full");
 
   const opened = useRef(false);
   useEffect(() => {
@@ -73,7 +82,12 @@ export function AskAiWorkspace({ initialConversationId }: { initialConversationI
           <>
             <div className="flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-3xl">
-                <ChatMessages messages={messages} connected={connected} thinking={inputState === "thinking"} />
+                <ChatMessages
+                  messages={messages}
+                  connected={connected}
+                  thinking={inputState === "thinking"}
+                  toolStatus={toolStatus}
+                />
               </div>
             </div>
             <div className="flex flex-col px-6 pb-6">
