@@ -8,7 +8,6 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app import messages
 from app.config import get_settings
 from app.db.models import Job
 from app.db.notifications import purge_expired
@@ -16,6 +15,7 @@ from app.db.repositories import list_evidence_holding_conversation_ids
 from app.evidence.storage import delete_dir, sweep_orphans
 from app.jira.client import JiraClient
 from app.worker.notify import deliver_result
+from app.worker.outcome import TICKET_FAILED
 from app.worker.processor import process_job
 from app.worker.queue import claim_next_job, fail_job, find_stale_jobs
 
@@ -60,7 +60,7 @@ async def _record_attempt_failure(session, job_id: str, error_text: str) -> None
     job = (await session.execute(select(Job).where(Job.id == job_id))).scalar_one()
     if job.status == "failed":
         await deliver_result(
-            session, job, "ticket_failed", "Ticket creation failed", messages.TICKET_FAILED, None,
+            session, job, "ticket_failed", "Ticket creation failed", TICKET_FAILED, None,
         )
 
 

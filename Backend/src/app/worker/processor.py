@@ -1,10 +1,10 @@
 """Resume-aware orchestration of a single ticket-creation job."""
 
-from app import messages
 from app.worker.create_step import create_ticket
 from app.worker.dedupe import find_duplicate
 from app.worker.link_step import link_ticket
 from app.worker.notify import deliver_result
+from app.worker.outcome import outcome_body
 from app.worker.queue import complete_job
 
 
@@ -46,7 +46,7 @@ async def process_job(session, job, client, model=None, worker_id: str | None = 
     key, action = await _resolve_ticket(session, job, client, model)
     if not await complete_job(session, job.id, worker_id):
         return False
-    body = messages.outcome_for(job.payload["kind"], action)
+    body = await outcome_body(job.payload["kind"], action, key)
     if action == "create":
         await deliver_result(session, job, "ticket_created", "Ticket created", body, key)
     else:
