@@ -1,4 +1,9 @@
-"""Deduplication: find an existing Jira issue that matches the user's report."""
+"""Post-confirmation duplicate detection: the worker's authoritative safety net.
+
+The agent also checks for duplicates conversationally before asking the user to
+confirm. That check is advisory; this one is authoritative and prevents a double
+file when two users confirm the same issue concurrently.
+"""
 
 from pydantic import BaseModel, Field
 

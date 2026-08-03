@@ -6,7 +6,7 @@ WORKDIR /code
 COPY pyproject.toml ./
 COPY src ./src
 COPY entrypoint.sh worker-entrypoint.sh ./
-RUN pip install --no-cache-dir -e ".[providers]"
+RUN pip install --no-cache-dir -e .
 RUN chmod +x entrypoint.sh worker-entrypoint.sh
 
 EXPOSE 8000

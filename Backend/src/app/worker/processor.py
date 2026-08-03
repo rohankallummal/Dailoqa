@@ -1,8 +1,8 @@
 """Resume-aware orchestration of a single ticket-creation job."""
 
 from app import messages
-from app.agent.dedupe import find_duplicate
 from app.worker.create_step import create_ticket
+from app.worker.dedupe import find_duplicate
 from app.worker.link_step import link_ticket
 from app.worker.notify import deliver_result
 from app.worker.queue import complete_job
