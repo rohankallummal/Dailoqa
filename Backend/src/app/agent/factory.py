@@ -12,9 +12,11 @@ from langchain.agents.middleware import (
 )
 
 from app.agent.context import TurnContext
+from app.agent.middleware.grounding import require_documentation
 from app.agent.middleware.skills import skills_middleware
 from app.agent.middleware.streaming import StreamPublisherMiddleware
-from app.agent.tools import TOOLS
+from app.agent.tools import active_tools
+from app.config import get_settings
 from app.llm import get_chat_model
 
 _MAX_MODEL_CALLS = 12
@@ -48,17 +50,23 @@ def build_agent(checkpointer, publish):
         checkpointer: An AsyncPostgresSaver, keyed at run time by conversation id.
         publish: Coroutine taking one SSE event dict, used for tool status lines.
     """
+    middleware = [
+        skills_middleware,
+        _write_gate(),
+        SummarizationMiddleware(model=get_chat_model("titler")),
+        ToolRetryMiddleware(max_retries=2),
+        ModelCallLimitMiddleware(thread_limit=_MAX_MODEL_CALLS),
+        StreamPublisherMiddleware(publish),
+    ]
+    if get_settings().rag_enabled:
+        # Gated with the documentation tools it polices: without them, its correction
+        # would tell the model to call a tool that is not bound.
+        middleware.insert(1, require_documentation)
+
     return create_agent(
         model=get_chat_model("agent"),
-        tools=TOOLS,
+        tools=active_tools(),
         context_schema=TurnContext,
         checkpointer=checkpointer,
-        middleware=[
-            skills_middleware,
-            _write_gate(),
-            SummarizationMiddleware(model=get_chat_model("titler")),
-            ToolRetryMiddleware(max_retries=2),
-            ModelCallLimitMiddleware(thread_limit=_MAX_MODEL_CALLS),
-            StreamPublisherMiddleware(publish),
-        ],
+        middleware=middleware,
     )
