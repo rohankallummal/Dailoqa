@@ -15,6 +15,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from pgvector.sqlalchemy import Vector
+
 from app.db.base import Base
 
 
@@ -126,4 +128,25 @@ class Notification(Base):
     job_id: Mapped[str | None] = mapped_column(String, nullable=True)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DocChunk(Base):
+    """An embedded slice of a documentation page; the corpus the doc tools retrieve from.
+
+    ``content_tsv`` is a Postgres GENERATED column (title + heading + content) and is
+    therefore DB-managed: it is intentionally not mapped here so inserts never try to
+    write it. The lexical arm of the hybrid search reads it directly in SQL.
+    """
+
+    __tablename__ = "doc_chunks"
+    __table_args__ = (UniqueConstraint("source_path", "chunk_index", name="uq_doc_chunks_source_path"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    source_path: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    heading: Mapped[str | None] = mapped_column(String, nullable=True)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(384), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -1,0 +1,27 @@
+{
+  "positives": [
+    {"q": "What is a Skill?", "source": "deepagents-overview.mdx", "section": "Skills"},
+    {"q": "How are skills loaded into a deep agent?", "source": "deepagents-overview.mdx", "section": "Skills"},
+    {"q": "How do MCP servers connect to the platform?", "source": "deepagents-overview.mdx", "section": "Tools and MCP"},
+    {"q": "What filesystem operations can the backend tools perform?", "source": "deepagents-overview.mdx", "section": "Virtual filesystem"},
+    {"q": "How does memory work in Deep Agents?", "source": "deepagents-overview.mdx", "section": "Memory"},
+    {"q": "What is prompt caching?", "source": "deepagents-overview.mdx", "section": "Prompt caching"},
+    {"q": "How do subagents work?", "source": "deepagents-overview.mdx", "section": "Subagents"},
+    {"q": "What tool is used for task planning?", "source": "deepagents-overview.mdx", "section": "Task planning"},
+    {"q": "How does human in the loop approval work?", "source": "deepagents-overview.mdx", "section": "Steering"},
+    {"q": "How do I control which files an agent can read or write?", "source": "deepagents-overview.mdx", "section": "permissions"},
+    {"q": "How can an agent execute shell commands in a sandbox?", "source": "deepagents-overview.mdx", "section": "Code execution"},
+    {"q": "How does summarization and context offloading work?", "source": "deepagents-overview.mdx", "section": "Summarization"},
+    {"q": "How do I create an agent with a custom tool in LangChain?", "source": "langchain-overview.mdx", "section": "Create an agent"},
+    {"q": "What is LangGraph used for?", "source": "langgraph-overview.mdx", "section": null},
+    {"q": "How do I install LangGraph?", "source": "langgraph-overview.mdx", "section": "Install"},
+    {"q": "What are the core benefits of LangGraph?", "source": "langgraph-overview.mdx", "section": "Core benefits"},
+    {"q": "What are the built-in capabilities of Deep Agents?", "source": "deepagents-overview.mdx", "section": "Core capabilities"}
+  ],
+  "negatives": [
+    {"q": "How do I create a Playbook?"},
+    {"q": "What is the monthly pricing plan?"},
+    {"q": "How do I reset my account password?"},
+    {"q": "asdf qwerty zzz nonsense gibberish"}
+  ]
+}

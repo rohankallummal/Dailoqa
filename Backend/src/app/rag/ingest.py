@@ -1,0 +1,166 @@
+"""Ingest the documentation corpus into ``app.doc_chunks``.
+
+Run from the Backend directory:
+
+    python -m app.rag.ingest
+
+Walks ``DOCS_PATH`` for Markdown/MDX, strips frontmatter and MDX/JSX, splits by heading
+then by token count (so no chunk exceeds bge's 512-token limit), re-prepends the heading
+trail to each sub-chunk for context, embeds the passages locally, and replaces each file's
+chunks transactionally. A pre-flight sweep removes chunks whose source file no longer exists,
+so the table never accumulates ghosts. Idempotent: safe to re-run after doc edits.
+"""
+
+import asyncio
+import re
+import sys
+from pathlib import Path
+
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+
+from app.config import get_settings
+from app.db.base import async_session
+from app.rag.embeddings import aembed_documents, get_tokenizer
+from app.rag.store import ChunkRow, delete_missing_sources, upsert_chunks
+
+# Leave headroom under bge's 512-token limit for the prepended "<title> > <heading>" line.
+_TOKENS_PER_CHUNK = 400
+_CHUNK_OVERLAP = 40
+
+_HEADERS_TO_SPLIT_ON = [("#", "h1"), ("##", "h2"), ("###", "h3")]
+
+_FRONTMATTER_RE = re.compile(r"^﻿?---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+_TITLE_RE = re.compile(r"^title:\s*(.+?)\s*$", re.MULTILINE)
+_IMPORT_EXPORT_RE = re.compile(r"^(import|export)\s.+$", re.MULTILINE)
+_MDX_COMMENT_RE = re.compile(r"\{/\*.*?\*/\}", re.DOTALL)
+_JSX_TAG_RE = re.compile(r"<[^>]+>")
+_DIRECTIVE_RE = re.compile(r"^:::.*$", re.MULTILINE)  # MDX/Docusaurus fences (:::python, :::, ...)
+_BLANK_LINES_RE = re.compile(r"\n{3,}")
+
+
+def _docs_dir() -> Path:
+    """Resolve the docs directory (``DOCS_PATH``), relative to the Backend root if not absolute."""
+    configured = Path(get_settings().docs_path)
+    if configured.is_absolute():
+        return configured
+    backend_root = Path(__file__).resolve().parents[3]  # .../Backend
+    return backend_root / configured
+
+
+def _parse_frontmatter(text: str) -> tuple[str, str | None]:
+    """Strip a leading YAML frontmatter block; return (body, title-or-None)."""
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        return text, None
+    title_match = _TITLE_RE.search(match.group(1))
+    title = title_match.group(1).strip().strip("\"'") if title_match else None
+    return text[match.end():], title
+
+
+def _flatten_mdx(text: str) -> str:
+    """Reduce MDX to plain Markdown: drop import/export, comments, and JSX tags."""
+    text = _IMPORT_EXPORT_RE.sub("", text)
+    text = _MDX_COMMENT_RE.sub("", text)
+    text = _JSX_TAG_RE.sub("", text)
+    text = _DIRECTIVE_RE.sub("", text)
+    return _BLANK_LINES_RE.sub("\n\n", text).strip()
+
+
+def _heading_trail(metadata: dict) -> str | None:
+    """Join the present header levels into a single trail, e.g. 'Core capabilities > Skills'."""
+    parts = [metadata[key] for key in ("h1", "h2", "h3") if metadata.get(key)]
+    return " > ".join(parts) if parts else None
+
+
+def _chunk_file(path: Path, docs_dir: Path) -> list[dict]:
+    """Split one doc into ordered chunk dicts (source_path, title, heading, text)."""
+    raw = path.read_text(encoding="utf-8")
+    body, title = _parse_frontmatter(raw)
+    title = title or path.stem
+    cleaned = _flatten_mdx(body)
+
+    header_splitter = MarkdownHeaderTextSplitter(_HEADERS_TO_SPLIT_ON, strip_headers=True)
+    # Measure length with the model tokenizer but split on the ORIGINAL text, so the
+    # stored/embedded content is never round-tripped (and corrupted) through WordPiece.
+    token_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+        get_tokenizer(),
+        chunk_size=_TOKENS_PER_CHUNK,
+        chunk_overlap=_CHUNK_OVERLAP,
+    )
+
+    source_path = path.relative_to(docs_dir).as_posix()
+    chunks: list[dict] = []
+    for section in header_splitter.split_text(cleaned):
+        heading = _heading_trail(section.metadata)
+        section_text = section.page_content.strip()
+        if not section_text:
+            continue
+        for piece in token_splitter.split_text(section_text):
+            piece = piece.strip()
+            if piece:
+                chunks.append({"source_path": source_path, "title": title, "heading": heading, "text": piece})
+    return chunks
+
+
+def _context_prefixed(title: str, heading: str | None, text: str) -> str:
+    """Prepend the heading trail so a mid-section chunk keeps its context when embedded."""
+    header = f"{title} > {heading}" if heading else title
+    return f"{header}\n\n{text}"
+
+
+async def ingest() -> int:
+    """Ingest every Markdown/MDX doc under ``DOCS_PATH``; return total chunks written."""
+    docs_dir = _docs_dir()
+    if not docs_dir.is_dir():
+        raise SystemExit(f"DOCS_PATH does not exist: {docs_dir}")
+
+    files = sorted(p for p in docs_dir.rglob("*") if p.suffix.lower() in (".md", ".mdx"))
+    if not files:
+        raise SystemExit(f"No .md/.mdx files found under {docs_dir}")
+
+    print(f"Ingesting {len(files)} file(s) from {docs_dir}")
+    valid_paths = [f.relative_to(docs_dir).as_posix() for f in files]
+
+    total = 0
+    async with async_session() as session:
+        removed = await delete_missing_sources(session, valid_paths)
+        if removed:
+            print(f"  stale sweep: removed {removed} orphan chunk(s)")
+
+        for path in files:
+            chunks = _chunk_file(path, docs_dir)
+            if not chunks:
+                print(f"  {path.name}: no content, skipped")
+                continue
+            texts = [_context_prefixed(c["title"], c["heading"], c["text"]) for c in chunks]
+            embeddings = await aembed_documents(texts)
+            rows = [
+                ChunkRow(
+                    source_path=chunk["source_path"],
+                    title=chunk["title"],
+                    heading=chunk["heading"],
+                    chunk_index=index,
+                    content=text,
+                    embedding=embedding,
+                )
+                for index, (chunk, text, embedding) in enumerate(zip(chunks, texts, embeddings))
+            ]
+            await upsert_chunks(session, rows[0].source_path, rows)
+            total += len(rows)
+            print(f"  {path.name}: {len(rows)} chunk(s)")
+
+        await session.commit()
+
+    print(f"Done. {total} chunk(s) across {len(files)} file(s).")
+    return total
+
+
+def main() -> None:
+    """CLI entry point. Pins a SelectorEventLoop on Windows for psycopg async."""
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.run(ingest())
+
+
+if __name__ == "__main__":
+    main()
