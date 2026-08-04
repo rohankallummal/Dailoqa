@@ -40,9 +40,17 @@ def _registry() -> dict[str, tuple[str, Path]]:
     return found
 
 
-def skill_descriptions() -> list[tuple[str, str]]:
-    """Return (name, description) for every registered skill, name-sorted."""
-    return [(name, description) for name, (description, _) in sorted(_registry().items())]
+def skill_descriptions(exclude: frozenset[str] = frozenset()) -> list[tuple[str, str]]:
+    """Return (name, description) for every registered skill, name-sorted.
+
+    ``exclude`` hides skills whose capability is switched off, so the catalogue never
+    offers instructions for tools the agent has not been given.
+    """
+    return [
+        (name, description)
+        for name, (description, _) in sorted(_registry().items())
+        if name not in exclude
+    ]
 
 
 @lru_cache
