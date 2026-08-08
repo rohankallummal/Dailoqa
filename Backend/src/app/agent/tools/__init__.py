@@ -10,11 +10,4 @@ from app.agent.tools.skills import load_skill
 
 TOOLS = [load_skill, search_existing_issues, request_evidence, create_ticket, link_to_existing]
 
-__all__ = [
-    "TOOLS",
-    "create_ticket",
-    "link_to_existing",
-    "load_skill",
-    "request_evidence",
-    "search_existing_issues",
-]
+__all__ = ["TOOLS"]

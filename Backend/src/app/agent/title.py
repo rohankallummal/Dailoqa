@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_WORDS = 6
 _PROMPT = (
-    "Write a title of 3 to 6 words that clearly describes the topic of the "
+    "Write a title of 4 to 6 words that clearly describes the topic of the "
     "message below. Use Title Case. Return only the title with no surrounding "
     "quotes, no trailing punctuation, and no preamble.\n\nMessage:\n{message}"
 )

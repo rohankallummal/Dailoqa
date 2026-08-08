@@ -1,7 +1,7 @@
 ---
 name: bug-report-creation
 description: >-
-  Turn a user's bug report into a well-structured Jira bug ticket. Use this whenever a user says something is broken, not working, throwing an error, crashing, behaving unexpectedly, showing wrong data, or "should I file a bug" — even if they don't say the word "bug" or "Jira". Always run the duplicate check before creating anything so we associate the report with an existing ticket instead of filing a copy.
+  Turn a user's bug report into a well-structured Jira bug ticket. Use this whenever a user says something is broken, not working, throwing an error, crashing, behaving unexpectedly, showing wrong data, or "should I file a bug" — even if they don't say the word "bug" or "Jira". Always run the duplicate check before creating anything so we associate the report with an existing ticket instead of filing a copy, or tell the user when they have already reported it themselves.
 ---
 
 # Bug Report Creation
@@ -42,31 +42,41 @@ Use `search_existing_issues` to search existing bugs.
 Call `search_existing_issues` with the distinctive words from the report — the error
 text, the affected feature, the page name — not generic words like "error" or "bug".
 
-Look at the top few results and judge whether any describe the *same underlying
-problem* — same symptom in the same area — not just overlapping words. When you
-have a likely match, show it to the user and confirm in one line rather than
-merging silently:
+Look at the top few results and judge whether any describes the *same underlying
+problem* — same symptom in the same area — not just overlapping words. Make that
+judgement yourself. The user cannot see the development team's tracker, so asking
+them to confirm a match against an issue they have no way to open tells them
+nothing and stalls the report.
 
-> "This looks like it might be the same as **BUG-482 — 'Checkout total shows £0
-> on Safari'**. Is that the issue you're hitting?"
+Ticket IDs, issue keys, and tracker links are internal. Never put one in a message
+to the user, and never quote an existing issue's summary back to them. All they
+need to know is that their report reached the team.
 
-A confirmed match avoids a bad merge; a quick "no" costs nothing.
+Every result also carries `already_reported_by_you`. When that is true on a result, this
+user has already filed a report against that issue — take the first branch of Step 4.
 
-## Step 4 — Decide: associate or create
+## Step 4 — Decide: associate, create, or stop
 
-- **Confirmed match (same issue, already reported):** do **not** create a new
-  ticket. Associate this user's report with the existing one (Step 5a).
-- **No match, or the user says it's different / it's a distinct problem:** create
-  a new bug ticket (Step 5b).
-- **Ambiguous / low-confidence match the user can't confirm:** prefer creating a
-  new ticket and mention the possibly-related one in the description with a
-  "possible duplicate of BUG-XXX" note, so a triager can merge later. A missed
-  merge is cheap to fix; a wrong silent merge hides a real bug.
+- **Already reported by this user** (`already_reported_by_you: true` on the matched issue):
+  do **not** create a ticket and do **not** associate. They are already recorded on that
+  ticket, so there is nothing to file. Reply with exactly this and nothing more:
+
+  > You have already reported this issue. Our team is currently investigating it. Thank you for your patience.
+
+- **Same problem somebody else already reported:** do **not** create a new ticket.
+  Associate this user's report with the existing one (Step 5a).
+- **No match:** create a new bug ticket (Step 5b).
+- **Ambiguous or low-confidence match:** prefer creating a new ticket and mention the
+  possibly-related one in the description with a "possible duplicate of BUG-XXX"
+  note, so a triager can merge later. That note is written into the ticket for the
+  team; it is never something you say to the user. A missed merge is cheap to fix; a
+  wrong silent merge hides a real bug.
 
 ## Step 5a — Associate with the existing ticket
 
 Call `link_to_existing` with the matched `issue_key` and `kind="bug"`. The user is
-recorded against that issue so the team can see it is affecting more people.
+recorded against that issue so the team can see it is affecting more people. The
+key is an argument to the tool, not something you repeat back to the user.
 
 Write `note` as what *this* reporter adds — a different trigger, extra detail, or
 "same as described". Their browser, identity, and any attachments are carried over
@@ -95,7 +105,13 @@ whole site is down").
 ## Step 6 — Confirm back
 
 Tell the user their report is in, in one line. Keep it short — don't recap the whole
-ticket, and don't ask them to attach anything they already gave you.
+ticket, don't name a ticket ID, and don't ask them to attach anything they already
+gave you.
+
+Say the same thing whether you created a ticket or associated the report with an
+existing one: it has been recorded and passed to the team. Do not tell the user their
+report was a duplicate, and do not describe what it was merged into. Associating is a
+bookkeeping detail on our side, not news they can act on.
 
 ## Edge cases
 

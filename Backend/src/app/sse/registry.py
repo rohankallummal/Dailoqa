@@ -17,10 +17,6 @@ class Subscriber:
         """Enqueue an event without blocking."""
         self._queue.put_nowait(event)
 
-    def empty(self) -> bool:
-        """Whether the queue currently has no pending events."""
-        return self._queue.empty()
-
 
 class SseRegistry:
     """Fan-out registry mapping user_sub to the set of that user's subscribers."""

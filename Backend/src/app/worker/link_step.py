@@ -19,6 +19,15 @@ from app.worker.queue import set_job_action
 logger = logging.getLogger(__name__)
 
 
+def _is_repeat_report(existing, job_created_at) -> bool:
+    """Whether a reporter row predates its job, meaning an earlier report wrote it.
+
+    A row written after the job was created belongs to this job's own earlier attempt, so a
+    resumed first-time link is not mistaken for the same user reporting twice.
+    """
+    return existing is not None and existing.added_at < job_created_at
+
+
 async def _reporter_rows(session, ticket_id: str) -> list[dict]:
     """Return every recorded reporter for a ticket, oldest first."""
     rows = (
@@ -77,8 +86,12 @@ async def update_similar_reports(session, client, ticket_id: str, issue_key: str
         logger.warning("similar reports update failed for %s: %s", issue_key, error)
 
 
-async def link_ticket(session, job, client, match_key: str) -> None:
+async def link_ticket(session, job, client, match_key: str) -> bool:
     """Attach the reporter to an existing issue: comment + label + reporter row, once.
+
+    Returns whether this link should be reported as fresh. False means the same user had
+    already reported the issue before this job existed, which the caller turns into the
+    already-reported outcome rather than a link.
 
     The ticket_reporters (ticket_id, user_sub) unique row is the authoritative link
     marker and makes this safe to retry (a rare duplicate comment is tolerated).
@@ -103,6 +116,7 @@ async def link_ticket(session, job, client, match_key: str) -> None:
             )
         )
     ).scalar_one_or_none()
+    repeat = _is_repeat_report(existing, job.created_at)
     await set_job_action(session, job.id, "link", jira_key=match_key)
     await attach_evidence(job, client, match_key)
     if existing is None:
@@ -112,3 +126,4 @@ async def link_ticket(session, job, client, match_key: str) -> None:
         await client.add_labels(match_key, ["also-affected"])
         await record_reporter(session, ticket.id, job.user_sub, reporter_name)
     await update_similar_reports(session, client, ticket.id, match_key)
+    return not repeat

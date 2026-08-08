@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AskAiWorkspace, ChatStreamProvider } from "@/features/chat";
 import { NotificationsListener } from "@/features/notifications";
+import { SessionBoundary } from "@/features/auth";
 import { ToastProvider } from "@/shared/ui";
 
 export const metadata: Metadata = {
@@ -14,11 +15,13 @@ export default async function AskAiPage({
 }) {
   const { conversation } = await searchParams;
   return (
-    <ChatStreamProvider>
-      <ToastProvider>
-        <NotificationsListener />
-        <AskAiWorkspace initialConversationId={conversation} />
-      </ToastProvider>
-    </ChatStreamProvider>
+    <SessionBoundary>
+      <ChatStreamProvider>
+        <ToastProvider>
+          <NotificationsListener />
+          <AskAiWorkspace initialConversationId={conversation} />
+        </ToastProvider>
+      </ChatStreamProvider>
+    </SessionBoundary>
   );
 }

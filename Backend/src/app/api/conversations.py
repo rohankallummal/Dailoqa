@@ -17,6 +17,7 @@ from app.db.repositories import (
     get_owned_conversation,
     list_conversations,
     list_messages,
+    list_unfinished_conversation_ids,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,29 +91,21 @@ async def delete_conversation(conversation_id: str, auth: AuthContext = Depends(
 
 
 class AbandonRequest(BaseModel):
-    """Marks unconfirmed in-progress conversations abandoned on logout."""
+    """Marks conversations left at an unanswered agent prompt abandoned on logout."""
 
     conversation_ids: list[str] | None = None
 
 
 @router.post("/conversations/abandon")
 async def abandon_conversations(body: AbandonRequest, auth: AuthContext = Depends(require_auth)) -> dict:
-    """On logout, hide unconfirmed drafts without deleting messages.
+    """On logout, hide reports the agent was mid-way through collecting.
 
-    A job row exists only once the user has confirmed, so "has no job at all" is exactly
-    "never confirmed". Matching on active jobs instead would abandon conversations whose
-    ticket already succeeded, hiding completed reports from chat history for good.
+    Only a conversation still waiting on an evidence upload or a confirmation choice is a
+    draft. Everything that reached a plain reply stays in history, whether it filed a
+    ticket, linked to one, or told the user they had already reported the issue.
     """
     async with async_session() as session:
-        select_stmt = select(Conversation.id).where(
-            Conversation.user_sub == auth.user_sub,
-            Conversation.status == "active",
-            Conversation.deleted_at.is_(None),
-            ~Conversation.id.in_(select(Job.conversation_id)),
-        )
-        if body.conversation_ids:
-            select_stmt = select_stmt.where(Conversation.id.in_(body.conversation_ids))
-        ids = list((await session.execute(select_stmt)).scalars().all())
+        ids = await list_unfinished_conversation_ids(session, auth.user_sub, body.conversation_ids)
         if ids:
             await session.execute(
                 update(Conversation).where(Conversation.id.in_(ids)).values(status="abandoned")

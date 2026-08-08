@@ -2,9 +2,11 @@
 
 from sqlalchemy import select
 
-from app.db.models import Conversation, Job, Message
+from app.db.models import Conversation, Job, Message, Ticket, TicketReporter
 
 ACTIVE_JOB_STATUSES = ("queued", "running")
+
+INTERRUPT_STATES = {"confirm": "awaiting_confirm", "evidence": "awaiting_evidence"}
 
 
 async def create_conversation(session, user_sub: str, surface: str, title: str | None = None) -> Conversation:
@@ -56,6 +58,41 @@ async def list_conversations(session, user_sub: str, surface: str) -> list[Conve
         )
         .order_by(Conversation.updated_at.desc())
     )
+    return list((await session.execute(stmt)).scalars().all())
+
+
+def _latest_assistant_stage():
+    """Correlated subquery yielding a conversation's most recent assistant message stage."""
+    return (
+        select(Message.meta["stage"].astext)
+        .where(Message.conversation_id == Conversation.id, Message.role == "assistant")
+        .order_by(Message.created_at.desc(), Message.id.desc())
+        .limit(1)
+        .correlate(Conversation)
+        .scalar_subquery()
+    )
+
+
+async def list_unfinished_conversation_ids(
+    session, user_sub: str, conversation_ids: list[str] | None = None
+) -> list[str]:
+    """List conversations the agent is still waiting on the user to answer.
+
+    A conversation is unfinished only while it sits at an unanswered evidence or
+    confirmation prompt with no job ever enqueued. One that reached a plain reply is
+    finished and belongs in history, however it ended: the duplicate-detection path
+    deliberately enqueues no job, so treating "has no job" as "never confirmed" hid every
+    completed duplicate report from chat history permanently.
+    """
+    stmt = select(Conversation.id).where(
+        Conversation.user_sub == user_sub,
+        Conversation.status == "active",
+        Conversation.deleted_at.is_(None),
+        ~Conversation.id.in_(select(Job.conversation_id)),
+        _latest_assistant_stage().in_(tuple(INTERRUPT_STATES)),
+    )
+    if conversation_ids:
+        stmt = stmt.where(Conversation.id.in_(conversation_ids))
     return list((await session.execute(stmt)).scalars().all())
 
 
@@ -114,13 +151,9 @@ async def get_input_state(session, conversation_id: str) -> str:
             .limit(1)
         )
     ).scalar_one_or_none()
-    if latest is not None:
-        stage = (latest.meta or {}).get("stage")
-        if stage == "confirm":
-            return "awaiting_confirm"
-        if stage == "evidence":
-            return "awaiting_evidence"
-    return "open"
+    if latest is None:
+        return "open"
+    return INTERRUPT_STATES.get((latest.meta or {}).get("stage"), "open")
 
 
 async def set_conversation_title(session, conversation_id: str, title: str) -> None:
@@ -128,3 +161,23 @@ async def set_conversation_title(session, conversation_id: str, title: str) -> N
     conversation = await session.get(Conversation, conversation_id)
     if conversation is not None:
         conversation.title = title
+
+
+async def reported_issue_keys(session, user_sub: str, jira_keys: list[str]) -> frozenset[str]:
+    """Return which of the given Jira keys this user is already recorded against.
+
+    A ticket_reporters row is written once per (ticket, reporter) and is what generates both
+    the Similar Reports spreadsheet and the Reported By section, so it answers "has this user
+    already reported this" without reading either artifact back out of Jira.
+
+    Callers pass candidates the JQL has already narrowed to open issues, so a closed ticket
+    never reaches this query and a regression is free to file as a new report.
+    """
+    if not jira_keys:
+        return frozenset()
+    stmt = (
+        select(Ticket.jira_key)
+        .join(TicketReporter, TicketReporter.ticket_id == Ticket.id)
+        .where(TicketReporter.user_sub == user_sub, Ticket.jira_key.in_(jira_keys))
+    )
+    return frozenset((await session.execute(stmt)).scalars().all())

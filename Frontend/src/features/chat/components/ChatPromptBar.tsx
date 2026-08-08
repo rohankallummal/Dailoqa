@@ -26,7 +26,6 @@ export function ChatPromptBar({ onSend, disabled }: { onSend: (text: string) => 
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask AI anything…"
         aria-label="Message"
         disabled={disabled}
         className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-ink-muted disabled:opacity-50"

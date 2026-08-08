@@ -13,6 +13,17 @@ logger = logging.getLogger(__name__)
 
 TICKET_FAILED = "We couldn't create your ticket. Please contact support."
 
+ALREADY_REPORTED = {
+    "bug": (
+        "You have already reported this issue. Our team is currently investigating it. "
+        "Thank you for your patience."
+    ),
+    "feature": (
+        "You have already requested this. Our team is currently reviewing it. "
+        "Thank you for your patience."
+    ),
+}
+
 _FALLBACK = {
     "create": "Your report has been submitted to the DailoQA development team.",
     "link": "Your report was added to an existing ticket the team is already reviewing.",
@@ -23,9 +34,10 @@ async def outcome_body(kind: str, action: str, jira_key: str) -> str:
     """Write one short sentence telling the user what happened to their report."""
     verb = "filed as a new ticket" if action == "create" else "added to an existing ticket"
     prompt = (
-        f"A user's {kind} report was {verb} ({jira_key}). "
-        "Write one short, warm sentence telling them so. No greeting, no sign-off, "
-        "no ticket key, no markdown. Plain sentence only."
+        f"A user's {kind} report was {verb}. "
+        "Write one short, warm sentence telling them their report is with the team. "
+        "No greeting, no sign-off, no ticket key or identifier of any kind, no "
+        "markdown. Plain sentence only."
     )
     try:
         response = await get_chat_model("titler").ainvoke(prompt)

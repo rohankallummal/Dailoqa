@@ -10,6 +10,7 @@ import { ChatMessages } from "./ChatMessages";
 import { ChatPendingNotice } from "./ChatPendingNotice";
 import { EvidenceCard } from "./EvidenceCard";
 import { useChat } from "../hooks/useChat";
+import { Logo } from "@/shared/ui";
 
 export function AskAiWorkspace({ initialConversationId }: { initialConversationId?: string }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -72,7 +73,10 @@ export function AskAiWorkspace({ initialConversationId }: { initialConversationI
 
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6">
-            <h1 className="text-3xl font-semibold tracking-tight text-ink">What can I help with?</h1>
+            <div className="flex flex-col items-center gap-1">
+              <Logo collapsed className="h-24 w-auto mix-blend-multiply" />
+              <h1 className="text-3xl font-semibold tracking-tight text-ink">What can I help with?</h1>
+            </div>
             <div className="flex w-full flex-col items-center">
               <ChatPromptBar onSend={send} />
               {error && <ChatErrorNotice message={error} />}

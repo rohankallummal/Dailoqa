@@ -72,15 +72,20 @@ class _TurnStream:
 
 
 def _write_summary(value) -> str:
-    """Describe a pending ticket write in one line, from the args the model drafted."""
+    """Describe a pending ticket write in one line, from the args the model drafted.
+
+    A link reads exactly like a fresh filing. The user has no access to the team's
+    tracker, so naming the issue their report would join asks them to vouch for
+    something they cannot open, and whether we merged or filed is bookkeeping they
+    have no use for.
+    """
     requests = (value or {}).get("action_requests") or []
     if not requests:
         return "Shall I send this to the DailoQA development team?"
     request = requests[0]
     args = request.get("args") or {}
     if request.get("name") == "link_to_existing":
-        target = args.get("issue_key") or "the existing ticket"
-        return f"This looks like the same issue as {target}. Add your report to it?"
+        return "Ready to send this to the DailoQA development team. Send it?"
     title = str(args.get("title") or "").strip()
     if title:
         return f'Ready to file this as "{title}". Send it?'

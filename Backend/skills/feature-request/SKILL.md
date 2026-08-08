@@ -32,9 +32,19 @@ that gets built and one that gets closed as unclear.
 ## Step 3 — Check it is not already requested
 
 Call `search_existing_issues` with `kind="feature"` and the distinctive words from
-their idea. If a candidate plausibly describes the same capability, show it and ask
-in one line whether that is what they mean. On a confirmed match, call
+their idea. Judge for yourself whether a candidate describes the same capability —
+the user cannot see the development team's tracker, so asking them to confirm a match
+against a request they have no way to open tells them nothing. On a match, call
 `link_to_existing` instead of creating a duplicate.
+
+Ticket IDs, issue keys, and tracker links are internal. Never put one in a message to
+the user.
+
+Every result also carries `already_reported_by_you`. When it is true on a candidate, this
+user has already requested that capability. Do **not** create and do **not** link. Reply with
+exactly this and nothing more:
+
+> You have already requested this. Our team is currently reviewing it. Thank you for your patience.
 
 ## Step 4 — File it
 
@@ -47,7 +57,12 @@ Call `create_ticket` with `kind="feature"`:
 
 ## Step 5 — Confirm back
 
-Give the key and link in one line. Do not recap the request.
+Tell them in one line that their request is with the team. Do not recap the request
+and do not name a ticket ID.
+
+Say the same thing whether you filed a new request or linked it to an existing one:
+it has been recorded and passed to the team. Do not tell the user their request was a
+duplicate, and do not describe what it was linked to.
 
 ## Edge cases
 

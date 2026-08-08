@@ -1,4 +1,5 @@
 import { logout } from "../api/actions";
+import { broadcastSignOut } from "./sessionChannel";
 
 export async function signOut(): Promise<void> {
   try {
@@ -8,5 +9,6 @@ export async function signOut(): Promise<void> {
       body: JSON.stringify({}),
     });
   } catch {}
+  broadcastSignOut();
   await logout();
 }

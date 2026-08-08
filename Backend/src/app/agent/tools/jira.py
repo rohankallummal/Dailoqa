@@ -5,14 +5,18 @@ worker do the creation, so a dropped connection or a crashed request can never l
 a report the user already confirmed.
 """
 
+import logging
 from typing import Literal
 
 from langchain.tools import ToolRuntime, tool
 
 from app.db.base import async_session
 from app.db.models import Job
+from app.db.repositories import reported_issue_keys
 from app.evidence.storage import evidence_dir, normalize_manifest
 from app.jira.client import JiraClient
+
+logger = logging.getLogger(__name__)
 
 _MAX_CANDIDATES = 20
 
@@ -32,15 +36,43 @@ def _candidate_jql(keywords: list[str], issue_type: str, project_key: str) -> st
     return f"{query} ORDER BY updated DESC"
 
 
+def _mark_reported(issues: list[dict], reported: frozenset[str]) -> list[dict]:
+    """Attach already_reported_by_you to every candidate, leaving the input untouched."""
+    return [{**issue, "already_reported_by_you": issue.get("key") in reported} for issue in issues]
+
+
+async def _flag_own_reports(user_sub: str, issues: list[dict]) -> list[dict]:
+    """Mark which candidates this user has already filed a report against.
+
+    A lookup failure marks nothing rather than failing the search. The Jira results are
+    already in hand, refusing here would block filing outright, and the worker runs the
+    authoritative check before any ticket is written.
+    """
+    keys = [issue["key"] for issue in issues if issue.get("key")]
+    if not keys:
+        return _mark_reported(issues, frozenset())
+    try:
+        async with async_session() as session:
+            reported = await reported_issue_keys(session, user_sub, keys)
+    except Exception as error:
+        logger.warning("own-report lookup failed for %s: %s", user_sub, error)
+        reported = frozenset()
+    return _mark_reported(issues, reported)
+
+
 @tool
 async def search_existing_issues(
     keywords: list[str],
     kind: Literal["bug", "feature"],
+    runtime: ToolRuntime,
 ) -> list[dict]:
     """Search Jira for open issues that may already cover the user's report.
 
     Always run this before filing anything. Filing a duplicate is worse than filing
     nothing.
+
+    Every result carries ``already_reported_by_you``. When it is true, this same user has
+    already filed a report against that issue.
 
     Args:
         keywords: Distinctive words from the report — the error text, the affected
@@ -49,7 +81,8 @@ async def search_existing_issues(
     """
     client = JiraClient()
     jql = _candidate_jql(keywords, client.issue_type_for(kind), client.project_key)
-    return await client.search_issues(jql, fields=["summary", "status"], max_results=_MAX_CANDIDATES)
+    issues = await client.search_issues(jql, fields=["summary", "status"], max_results=_MAX_CANDIDATES)
+    return await _flag_own_reports(runtime.context.user_sub, issues)
 
 
 async def _enqueue(runtime: ToolRuntime, payload: dict, jira_key: str | None, action: str | None) -> str:
@@ -150,11 +183,12 @@ async def link_to_existing(
 ) -> str:
     """Attach this user's report to an existing Jira issue instead of filing a duplicate.
 
-    Only call this once the user has confirmed the existing issue is the same problem
-    they are hitting.
+    Call this once you have judged that an existing issue is the same problem the user
+    is describing. That judgement is yours to make — the user cannot see the tracker,
+    so do not ask them to confirm the match.
 
     Args:
-        issue_key: The Jira key of the confirmed match, e.g. "KAN-482".
+        issue_key: The Jira key of the matching issue, e.g. "KAN-482".
         note: What this reporter adds — a different trigger, extra detail, or
             "same as described".
         kind: "bug" or "feature", matching the existing issue.
@@ -162,4 +196,4 @@ async def link_to_existing(
     ticket = {"title": issue_key, "summary": note, "issue_description": note, "steps_to_reproduce": []}
     payload = _payload(runtime, kind, ticket)
     job_id = await _enqueue(runtime, payload, issue_key, "link")
-    return f"Queued to link onto {issue_key} as job {job_id}. Tell the user their report was added."
+    return f"Queued as job {job_id}. Tell the user their report was recorded and is with the team."
