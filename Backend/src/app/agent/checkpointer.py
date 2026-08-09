@@ -54,7 +54,7 @@ async def build_checkpointer():
 async def reset_thread(thread_id: str) -> None:
     """Delete all checkpointer state for a conversation's graph thread.
 
-    Used by graceful-exit paths (hard delete, logout-abandon) so a removed or
+    Used by graceful-exit paths (hard delete, logout-cleanup) so a removed or
     hidden conversation leaves no orphaned checkpoint rows behind.
     """
     async with build_checkpointer() as saver:

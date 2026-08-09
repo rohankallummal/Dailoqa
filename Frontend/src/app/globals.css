@@ -55,6 +55,17 @@ body {
   }
 }
 
+@keyframes conversationNavigatorIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
 .docArticle {
   color: var(--ink);
   font-size: 0.95rem;

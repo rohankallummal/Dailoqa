@@ -140,7 +140,7 @@ async def run_forever(poll_interval: float = 2.0) -> None:
     """Continuously drain the queue; sleep briefly when idle.
 
     Three periodic chores run alongside the drain: expired job leases are reaped,
-    evidence directories orphaned by abandoned conversations are swept, and notifications
+    evidence directories orphaned by discarded conversations are swept, and notifications
     past their retention window are purged. None may abort the loop, so all three swallow
     their failures. LEASE_SECONDS must stay
     comfortably above the worst-case job duration -- dedupe, issue creation, and an

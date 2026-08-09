@@ -3,7 +3,6 @@ CREATE TABLE app.conversations (
     user_sub varchar NOT NULL,
     surface varchar NOT NULL,
     title varchar,
-    status varchar NOT NULL DEFAULT 'active',
     deleted_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
@@ -30,7 +29,6 @@ CREATE TABLE app.tickets (
     type varchar NOT NULL,
     title varchar NOT NULL,
     summary text,
-    status varchar,
     conversation_id varchar,
     created_at timestamp with time zone DEFAULT now(),
     CONSTRAINT uq_ticket_jira_key UNIQUE (jira_key)

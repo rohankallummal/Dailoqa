@@ -8,12 +8,14 @@ import { ChatConfirmActions } from "./ChatConfirmActions";
 import { ChatErrorNotice } from "./ChatErrorNotice";
 import { ChatMessages } from "./ChatMessages";
 import { ChatPendingNotice } from "./ChatPendingNotice";
+import { ConversationNavigator } from "./ConversationNavigator";
 import { EvidenceCard } from "./EvidenceCard";
 import { useChat } from "../hooks/useChat";
 import { Logo } from "@/shared/ui";
 
 export function AskAiWorkspace({ initialConversationId }: { initialConversationId?: string }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const toggle = () => setCollapsed((value) => !value);
   const {
     messages,
@@ -84,15 +86,21 @@ export function AskAiWorkspace({ initialConversationId }: { initialConversationI
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto">
-              <div className="mx-auto w-full max-w-3xl">
-                <ChatMessages
-                  messages={messages}
-                  connected={connected}
-                  thinking={inputState === "thinking"}
-                  toolStatus={toolStatus}
-                />
+            <div className="relative min-h-0 flex-1">
+              <div
+                ref={setScroller}
+                className="h-full overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-scrollbar [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
+              >
+                <div className="mx-auto w-full max-w-3xl">
+                  <ChatMessages
+                    messages={messages}
+                    connected={connected}
+                    thinking={inputState === "thinking"}
+                    toolStatus={toolStatus}
+                  />
+                </div>
               </div>
+              <ConversationNavigator scroller={scroller} messages={messages} />
             </div>
             <div className="flex flex-col px-6 pb-6">
               {error && <ChatErrorNotice message={error} />}

@@ -24,7 +24,9 @@ export function ChatMessages({
       {messages.map((message) => (
         <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
           <div
-            className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+            data-message-id={message.id}
+            tabIndex={-1}
+            className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               message.role === "user" ? "bg-accent text-white" : "border border-line bg-white text-ink"
             }`}
           >

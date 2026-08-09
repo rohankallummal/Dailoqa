@@ -1,26 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AnimationItem } from "lottie-web";
+import { useReducedMotion } from "../hooks/useMediaQuery";
 
 const ANIMATION_PATH = "/animation/thinking.json";
 const ANIMATION_WIDTH = 64;
 const ANIMATION_ASPECT = 800 / 600;
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
-function subscribeToReducedMotion(onChange: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-function useReducedMotion() {
-  return useSyncExternalStore(
-    subscribeToReducedMotion,
-    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
-    () => false,
-  );
-}
 
 export function ThinkingIndicator({ label }: { label?: string | null }) {
   const containerRef = useRef<HTMLDivElement>(null);

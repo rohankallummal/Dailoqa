@@ -6,7 +6,14 @@ from app.db.models import Conversation, Job, Message, Ticket, TicketReporter
 
 ACTIVE_JOB_STATUSES = ("queued", "running")
 
-INTERRUPT_STATES = {"confirm": "awaiting_confirm", "evidence": "awaiting_evidence"}
+STAGE_INPUT_STATES = {
+    "reply": "open",
+    "error": "open",
+    "evidence": "awaiting_evidence",
+    "confirm": "awaiting_confirm",
+}
+
+DELETABLE_STAGES = ("evidence", "confirm")
 
 
 async def create_conversation(session, user_sub: str, surface: str, title: str | None = None) -> Conversation:
@@ -47,14 +54,13 @@ async def get_owned_conversation(session, conversation_id: str, user_sub: str) -
 
 
 async def list_conversations(session, user_sub: str, surface: str) -> list[Conversation]:
-    """List a user's visible conversations for a surface (excludes deleted/abandoned)."""
+    """List a user's visible conversations for a surface (excludes soft-deleted ones)."""
     stmt = (
         select(Conversation)
         .where(
             Conversation.user_sub == user_sub,
             Conversation.surface == surface,
             Conversation.deleted_at.is_(None),
-            Conversation.status != "abandoned",
         )
         .order_by(Conversation.updated_at.desc())
     )
@@ -81,15 +87,20 @@ async def list_unfinished_conversation_ids(
     A conversation is unfinished only while it sits at an unanswered evidence or
     confirmation prompt with no job ever enqueued. One that reached a plain reply is
     finished and belongs in history, however it ended: the duplicate-detection path
-    deliberately enqueues no job, so treating "has no job" as "never confirmed" hid every
-    completed duplicate report from chat history permanently.
+    deliberately enqueues no job, so treating "has no job" as "never confirmed" swept up
+    every completed duplicate report along with the drafts.
+
+    Logout deletes what this returns, so a false positive costs the user a real
+    conversation. Two rules keep that from recurring. Job absence alone never makes a
+    conversation disposable -- it only ever narrows a set already chosen by stage. And
+    DELETABLE_STAGES is an allowlist, so a stage introduced by a future capability is
+    preserved until someone evaluates it and adds it deliberately.
     """
     stmt = select(Conversation.id).where(
         Conversation.user_sub == user_sub,
-        Conversation.status == "active",
         Conversation.deleted_at.is_(None),
         ~Conversation.id.in_(select(Job.conversation_id)),
-        _latest_assistant_stage().in_(tuple(INTERRUPT_STATES)),
+        _latest_assistant_stage().in_(DELETABLE_STAGES),
     )
     if conversation_ids:
         stmt = stmt.where(Conversation.id.in_(conversation_ids))
@@ -105,21 +116,19 @@ async def list_messages(session, conversation_id: str) -> list[Message]:
 async def list_evidence_holding_conversation_ids(session) -> frozenset[str]:
     """Return ids of conversations whose evidence the orphan sweep must not delete.
 
-    Two groups qualify. A conversation that is still active and not deleted can be
+    Two groups qualify. A conversation that is still present and not soft-deleted can be
     returned to, so an open evidence or confirmation prompt is still resumable. A
     conversation with a queued or running job has evidence the worker has not uploaded
-    yet. Everything else -- deleted, or abandoned on logout -- is the sweep's business.
+    yet. Everything else -- soft-deleted, or gone because logout discarded the draft --
+    is the sweep's business.
     """
-    active = await session.execute(
-        select(Conversation.id).where(
-            Conversation.status == "active",
-            Conversation.deleted_at.is_(None),
-        )
+    live = await session.execute(
+        select(Conversation.id).where(Conversation.deleted_at.is_(None))
     )
     pending = await session.execute(
         select(Job.conversation_id).where(Job.status.in_(ACTIVE_JOB_STATUSES))
     )
-    return frozenset(active.scalars().all()) | frozenset(pending.scalars().all())
+    return frozenset(live.scalars().all()) | frozenset(pending.scalars().all())
 
 
 async def has_active_job(session, conversation_id: str) -> bool:
@@ -139,6 +148,10 @@ async def get_input_state(session, conversation_id: str) -> str:
 
     A job still in flight outranks everything: the confirmed turn writes no message, so
     the confirmation prompt remains the latest assistant message while the worker runs.
+
+    Every stage a turn can persist is spelled out in STAGE_INPUT_STATES. The default
+    survives for a stage added without one, and resolves it to an open composer rather
+    than a locked one, so an unregistered stage strands nobody.
     """
     if await has_active_job(session, conversation_id):
         return "pending"
@@ -153,7 +166,7 @@ async def get_input_state(session, conversation_id: str) -> str:
     ).scalar_one_or_none()
     if latest is None:
         return "open"
-    return INTERRUPT_STATES.get((latest.meta or {}).get("stage"), "open")
+    return STAGE_INPUT_STATES.get((latest.meta or {}).get("stage"), "open")
 
 
 async def set_conversation_title(session, conversation_id: str, title: str) -> None:

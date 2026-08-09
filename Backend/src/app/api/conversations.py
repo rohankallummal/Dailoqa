@@ -1,4 +1,4 @@
-"""Conversation listing, messages, and graceful-exit delete/abandon."""
+"""Conversation listing, messages, and graceful-exit delete/cleanup."""
 
 import logging
 from datetime import datetime, timezone
@@ -90,27 +90,31 @@ async def delete_conversation(conversation_id: str, auth: AuthContext = Depends(
     return {"soft_deleted": has_job}
 
 
-class AbandonRequest(BaseModel):
-    """Marks conversations left at an unanswered agent prompt abandoned on logout."""
+class CleanupRequest(BaseModel):
+    """Discards conversations left at an unanswered agent prompt on logout."""
 
     conversation_ids: list[str] | None = None
 
 
-@router.post("/conversations/abandon")
-async def abandon_conversations(body: AbandonRequest, auth: AuthContext = Depends(require_auth)) -> dict:
-    """On logout, hide reports the agent was mid-way through collecting.
+@router.post("/conversations/cleanup")
+async def cleanup_conversations(body: CleanupRequest, auth: AuthContext = Depends(require_auth)) -> dict:
+    """On logout, delete reports the agent was mid-way through collecting.
 
     Only a conversation still waiting on an evidence upload or a confirmation choice is a
-    draft. Everything that reached a plain reply stays in history, whether it filed a
-    ticket, linked to one, or told the user they had already reported the issue.
+    draft. Everything that reached a plain reply is kept, whether it filed a ticket, linked
+    to one, or told the user they had already reported the issue.
+
+    A draft is deleted outright rather than flagged. Flagging leaves the owner data they
+    cannot list, read, or delete, and no chore ever sweeps it, so the rows accumulate for
+    the life of the deployment. The messages go with the conversation, the graph thread is
+    reset, and the evidence directory falls to the worker's orphan sweep.
     """
     async with async_session() as session:
         ids = await list_unfinished_conversation_ids(session, auth.user_sub, body.conversation_ids)
         if ids:
-            await session.execute(
-                update(Conversation).where(Conversation.id.in_(ids)).values(status="abandoned")
-            )
+            await session.execute(delete(Message).where(Message.conversation_id.in_(ids)))
+            await session.execute(delete(Conversation).where(Conversation.id.in_(ids)))
             await session.commit()
     for conversation_id in ids:
         await _reset_thread_quietly(conversation_id)
-    return {"abandoned": len(ids)}
+    return {"deleted": len(ids)}
