@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # change to the corpus to re-tune them.
     rag_enabled: bool = True
     docs_path: str = "docs"
+    # Which ":::<lang>" arm of the upstream docs to keep. LangChain writes most concepts
+    # twice (python and js); indexing both wastes a quarter of the corpus and lets a
+    # Python question be answered in TypeScript.
+    docs_language: str = "python"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     rag_top_k: int = 5
     rag_candidates: int = 20

@@ -8,8 +8,10 @@ without them: ``rag_enabled`` turns the documentation capability off as a unit.
 """
 
 from app.agent.tools.docs import (
+    CITING_DOC_TOOLS,
     DOC_SKILL_NAME,
     DOC_TOOL_NAMES,
+    citable_passages_retrieved,
     documentation_skill_loaded,
     documentation_tool_used,
     fetch_document_section,
@@ -44,12 +46,14 @@ def active_tools() -> list:
 
 
 __all__ = [
+    "CITING_DOC_TOOLS",
     "DOC_SKILL_NAME",
     "DOC_TOOLS",
     "DOC_TOOL_NAMES",
     "TICKET_TOOLS",
     "TOOLS",
     "active_tools",
+    "citable_passages_retrieved",
     "documentation_skill_loaded",
     "documentation_tool_used",
     "create_ticket",

@@ -67,6 +67,23 @@ async def test_fetching_without_searching_still_counts_as_consulting(turn_contex
     assert "[Doc 1]" in final.content
 
 
+async def test_browsing_the_inventory_alone_does_not_justify_a_citation(turn_context, scripted_model):
+    # The hole this closes: list_documentation_sources returns titles and headings, never
+    # passages. Counting it as evidence let a model read a title, invent `[Doc 1]`, and
+    # pass the citation-integrity check.
+    final = await _run(
+        scripted_model,
+        [
+            AIMessage(content="", tool_calls=[{"name": "list_documentation_sources", "args": {}, "id": "a"}]),
+            AIMessage(content="Skills package workflows [Doc 1]."),
+            AIMessage(content="Corrected after actually searching [Doc 1]."),
+        ],
+        turn_context,
+    )
+    assert turn_context.grounding_corrections == 1
+    assert "Corrected" in final.content
+
+
 async def test_a_model_that_will_not_comply_still_terminates(turn_context, scripted_model):
     # One correction, then the answer is allowed through: a persistent offender must not
     # be able to loop the turn forever.

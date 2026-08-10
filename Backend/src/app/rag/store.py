@@ -12,6 +12,7 @@ parallel and merge cleanly. Phase 0 ships only the skeleton (types + signatures)
 
 import logging
 import time
+from pathlib import PurePosixPath
 from dataclasses import dataclass
 
 from sqlalchemy import delete, func, select, text
@@ -28,6 +29,8 @@ __all__ = [
     "SourceOutline",
     "DocSection",
     "INTRO_HEADING",
+    "context_prefix",
+    "citation_label",
     "strip_context_prefix",
     "upsert_chunks",
     "delete_missing_sources",
@@ -82,16 +85,47 @@ class DocSection:
     truncated: bool
 
 
-# Ingestion prepends a context line to every chunk ("<title> > <heading>" or just
-# "<title>" for a document intro). Reassembling a section verbatim would repeat that
-# line once per chunk, so it is stripped from each and re-emitted once by the caller.
-def strip_context_prefix(content: str, title: str | None, heading: str | None) -> str:
-    """Remove the ingestion-added "<title> > <heading>" line from one chunk's text.
+def _topic(source_path: str) -> str:
+    """The vault folder a page lives in, e.g. 'deep-agents' — '' for a root-level note."""
+    parent = PurePosixPath(source_path).parent.as_posix()
+    return "" if parent in (".", "/", "") else parent
+
+
+def context_prefix(source_path: str, title: str | None, heading: str | None) -> str:
+    """The single definition of a chunk's context line.
+
+    **Ingestion writes this line and retrieval strips it, so both must derive it here.**
+    Two functions kept in sync by discipline would eventually drift, and the failure is
+    invisible in tests but obvious in production: the prefix leaks into every passage a
+    user reads.
+
+    The topic folder is included because page titles collide across topics — upstream
+    ships a `Quickstart` for each of Deep Agents, LangChain and LangGraph, so the title
+    alone neither disambiguates a citation nor discriminates for the embedding.
+    """
+    topic = _topic(source_path)
+    head = f"{topic}/{title}" if topic and title else (title or topic)
+    return f"{head} > {heading}" if heading else head
+
+
+def citation_label(source_path: str, title: str | None, heading: str | None) -> str:
+    """The human-readable half of a `[Doc N: ...]` tag, disambiguated by topic folder."""
+    topic = _topic(source_path)
+    head = f"{topic}/{title}" if topic and title else (title or topic or "documentation")
+    return f"{head} - {heading}" if heading else head
+
+
+# Ingestion prepends the context line to every chunk. Reassembling a section verbatim
+# would repeat it once per chunk, so it is stripped from each and re-emitted once.
+def strip_context_prefix(
+    content: str, source_path: str, title: str | None, heading: str | None
+) -> str:
+    """Remove the ingestion-added context line from one chunk's text.
 
     Also used when presenting search hits, where the tools render the same information
     in the citation tag and would otherwise show it twice.
     """
-    prefix = f"{title} > {heading}" if heading else (title or "")
+    prefix = context_prefix(source_path, title, heading)
     body = content
     if prefix and body.startswith(prefix):
         body = body[len(prefix):]
@@ -170,7 +204,9 @@ async def fetch_section(session: AsyncSession, source_path: str, heading: str | 
     if not rows:
         return None
 
-    body = "\n\n".join(strip_context_prefix(row.content, row.title, row.heading) for row in rows)
+    body = "\n\n".join(
+        strip_context_prefix(row.content, row.source_path, row.title, row.heading) for row in rows
+    )
     truncated = len(body) > _MAX_SECTION_CHARS
     if truncated:
         body = body[:_MAX_SECTION_CHARS].rstrip() + "\n\n[section truncated]"

@@ -17,6 +17,7 @@ from app.db.base import async_session
 from app.rag.embeddings import aembed_query
 from app.rag.store import (
     INTRO_HEADING,
+    citation_label,
     fetch_section,
     list_sources,
     search,
@@ -26,14 +27,20 @@ from app.rag.store import (
 DOC_SKILL_NAME = "documentation-qa"
 """The skill whose instructions drive these tools; hidden when the capability is off."""
 
-DOC_TOOL_NAMES = frozenset(
-    {"search_documentation", "list_documentation_sources", "fetch_document_section"}
-)
-"""Every tool that reads the documentation.
+CITING_DOC_TOOLS = frozenset({"search_documentation", "fetch_document_section"})
+"""The tools that hand the model passages it can legitimately cite.
 
-The grounding middleware treats a call to any of these as evidence the agent consulted
-the docs, so a new documentation tool must be added here or citations produced through it
-would be read as unsourced.
+The grounding middleware counts **only** these. ``list_documentation_sources`` returns an
+inventory of titles and headings — no passages — so an answer citing `[Doc 1]` after an
+inventory call alone is citing something it never read. Counting the inventory tool as
+evidence would let exactly that through.
+"""
+
+DOC_TOOL_NAMES = frozenset(CITING_DOC_TOOLS | {"list_documentation_sources"})
+"""Every tool that reads the documentation, citing or not.
+
+Used to decide whether the documentation skill's instructions should be auto-loaded: any
+documentation activity implies the agent needs the procedure, even a bare inventory call.
 """
 
 NO_MATCH = (
@@ -59,19 +66,21 @@ def documentation_tool_used(messages) -> bool:
     return any(call.get("name") in DOC_TOOL_NAMES for call in _tool_calls(messages))
 
 
+def citable_passages_retrieved(messages) -> bool:
+    """Whether the thread ever received passages the model could legitimately cite.
+
+    Deliberately narrower than :func:`documentation_tool_used`: browsing the inventory is
+    documentation activity, but it hands over no passages, so it cannot justify a `[Doc N]`.
+    """
+    return any(call.get("name") in CITING_DOC_TOOLS for call in _tool_calls(messages))
+
+
 def documentation_skill_loaded(messages) -> bool:
     """Whether the documentation skill's instructions are already in the transcript."""
     return any(
         call.get("name") == _LOAD_SKILL and (call.get("args") or {}).get("name") == DOC_SKILL_NAME
         for call in _tool_calls(messages)
     )
-
-
-def _label(title: str | None, heading: str | None) -> str:
-    """Render the human-readable half of a citation tag."""
-    if title and heading:
-        return f"{title} - {heading}"
-    return title or heading or "documentation"
 
 
 def _cite(runtime: ToolRuntime, chunk_ids: list[str]) -> int:
@@ -118,8 +127,9 @@ async def search_documentation(query: str, runtime: ToolRuntime) -> str:
     blocks = []
     for chunk in chunks:
         number = _cite(runtime, [chunk.id])
-        body = strip_context_prefix(chunk.content, chunk.title, chunk.heading)
-        blocks.append(f"[Doc {number}: {_label(chunk.title, chunk.heading)}]\n{body}")
+        body = strip_context_prefix(chunk.content, chunk.source_path, chunk.title, chunk.heading)
+        label = citation_label(chunk.source_path, chunk.title, chunk.heading)
+        blocks.append(f"[Doc {number}: {label}]\n{body}")
     return "\n\n".join(blocks)
 
 
@@ -168,5 +178,5 @@ async def fetch_document_section(source_path: str, heading: str, runtime: ToolRu
         )
 
     number = _cite(runtime, section.chunk_ids)
-    label = _label(section.title, section.heading or INTRO_HEADING)
+    label = citation_label(section.source_path, section.title, section.heading or INTRO_HEADING)
     return f"[Doc {number}: {label}]\n{section.content}"

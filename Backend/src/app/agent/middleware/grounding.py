@@ -17,7 +17,7 @@ import re
 from langchain.agents.middleware import after_model
 from langchain_core.messages import SystemMessage
 
-from app.agent.tools import documentation_tool_used
+from app.agent.tools import citable_passages_retrieved
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +55,8 @@ def require_documentation(state, runtime):
         return None  # still working; only final answers are inspected
     if not _CITATION.search(_text(last)):
         return None  # no citations claimed, nothing to verify
-    if documentation_tool_used(messages):
-        return None  # the citations are backed by a real lookup
+    if citable_passages_retrieved(messages):
+        return None  # the citations are backed by passages the agent actually received
 
     context = runtime.context
     corrections = getattr(context, "grounding_corrections", 0)

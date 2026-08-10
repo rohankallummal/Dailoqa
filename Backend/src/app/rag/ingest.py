@@ -21,7 +21,7 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 from app.config import get_settings
 from app.db.base import async_session
 from app.rag.embeddings import aembed_documents, get_tokenizer
-from app.rag.store import ChunkRow, delete_missing_sources, upsert_chunks
+from app.rag.store import ChunkRow, context_prefix, delete_missing_sources, upsert_chunks
 
 # Leave headroom under bge's 512-token limit for the prepended "<title> > <heading>" line.
 _TOKENS_PER_CHUNK = 400
@@ -33,9 +33,34 @@ _FRONTMATTER_RE = re.compile(r"^﻿?---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _TITLE_RE = re.compile(r"^title:\s*(.+?)\s*$", re.MULTILINE)
 _IMPORT_EXPORT_RE = re.compile(r"^(import|export)\s.+$", re.MULTILINE)
 _MDX_COMMENT_RE = re.compile(r"\{/\*.*?\*/\}", re.DOTALL)
-_JSX_TAG_RE = re.compile(r"<[^>]+>")
-_DIRECTIVE_RE = re.compile(r"^:::.*$", re.MULTILINE)  # MDX/Docusaurus fences (:::python, :::, ...)
+
+# Only JSX *components* — Mintlify's are capitalised (<CodeGroup>, <Tip>, <Accordion>) —
+# plus the handful of lowercase HTML tags these pages actually use. The old blanket
+# `<[^>]+>` also ate CommonMark autolinks such as <https://x.com> and <a@b.com>.
+_JSX_TAG_RE = re.compile(r"</?[A-Z][\w.]*(?:\s[^>]*)?/?>|</?(?:br|hr|img|a|p|div|span)(?:\s[^>]*)?/?>")
+
+# LangChain's own language switches. A :::python/:::js pair states the same concept twice,
+# so the unwanted language is dropped whole rather than merely unmarked.
+_DIRECTIVE_BLOCK_RE = re.compile(r"^:::(\w+)[ \t]*\n(.*?)^:::[ \t]*$\n?", re.DOTALL | re.MULTILINE)
+_STRAY_DIRECTIVE_RE = re.compile(r"^:::.*$", re.MULTILINE)
+
+# `[Text](/oss/langchain/agents)` otherwise pushes the URL's path segments into the
+# english tsvector as though they were prose. Images are dropped outright.
+_MD_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+_MD_LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+
 _BLANK_LINES_RE = re.compile(r"\n{3,}")
+
+# Fenced and inline code are masked before any substitution runs and restored after, so a
+# rule written for prose cannot reach into a code sample. Without this, `<[^>]+>` silently
+# turned `std::vector<int>` into `std::vector` and `#include <vector>` into `#include`.
+# The trailing newline is deliberately left in place: swallowing it would put the next
+# line (often a closing ":::") at the end of the mask instead of at a line start, and the
+# line-anchored rules would then miss it.
+_FENCE_RE = re.compile(r"^([ \t]*)(`{3,}|~{3,})[^\n]*\n.*?^\1?\2[ \t]*$", re.DOTALL | re.MULTILINE)
+_INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)", re.DOTALL)
+_MASK = "\x00MASK{}\x00"
+_MASK_RE = re.compile(r"\x00MASK(\d+)\x00")
 
 
 def _docs_dir() -> Path:
@@ -57,13 +82,57 @@ def _parse_frontmatter(text: str) -> tuple[str, str | None]:
     return text[match.end():], title
 
 
+def _mask_code(text: str) -> tuple[str, list[str]]:
+    """Replace fenced and inline code with placeholders; return the text and the originals.
+
+    Every prose rule runs against the masked text, so no substitution can reach inside a
+    code sample. Fences are masked before inline code, or a lone backtick inside a fence
+    would pair with another and corrupt the block.
+    """
+    saved: list[str] = []
+
+    def keep(match: re.Match) -> str:
+        saved.append(match.group(0))
+        return _MASK.format(len(saved) - 1)
+
+    return _INLINE_CODE_RE.sub(keep, _FENCE_RE.sub(keep, text)), saved
+
+
+def _unmask_code(text: str, saved: list[str]) -> str:
+    """Restore masked code verbatim."""
+    return _MASK_RE.sub(lambda m: saved[int(m.group(1))], text)
+
+
+def _select_language(text: str, keep: str) -> str:
+    """Unwrap ``:::<keep>`` blocks and drop every other language block entirely.
+
+    LangChain documents most concepts twice, once per language. Keeping both would spend a
+    quarter of the corpus restating the same idea and let a Python question be answered in
+    TypeScript, so only the configured language survives.
+    """
+
+    def resolve(match: re.Match) -> str:
+        language, body = match.group(1), match.group(2)
+        return body if language == keep else ""
+
+    return _DIRECTIVE_BLOCK_RE.sub(resolve, text)
+
+
 def _flatten_mdx(text: str) -> str:
-    """Reduce MDX to plain Markdown: drop import/export, comments, and JSX tags."""
+    """Reduce Mintlify MDX to plain Markdown, leaving code samples untouched.
+
+    Masking comes first and unmasking last; everything between operates only on prose.
+    """
+    text, saved = _mask_code(text)
+    text = _select_language(text, get_settings().docs_language)
     text = _IMPORT_EXPORT_RE.sub("", text)
     text = _MDX_COMMENT_RE.sub("", text)
     text = _JSX_TAG_RE.sub("", text)
-    text = _DIRECTIVE_RE.sub("", text)
-    return _BLANK_LINES_RE.sub("\n\n", text).strip()
+    text = _STRAY_DIRECTIVE_RE.sub("", text)  # unpaired markers the block rule could not match
+    text = _MD_IMAGE_RE.sub("", text)
+    text = _MD_LINK_RE.sub(r"\1", text)
+    text = _BLANK_LINES_RE.sub("\n\n", text).strip()
+    return _unmask_code(text, saved)
 
 
 def _heading_trail(metadata: dict) -> str | None:
@@ -102,10 +171,13 @@ def _chunk_file(path: Path, docs_dir: Path) -> list[dict]:
     return chunks
 
 
-def _context_prefixed(title: str, heading: str | None, text: str) -> str:
-    """Prepend the heading trail so a mid-section chunk keeps its context when embedded."""
-    header = f"{title} > {heading}" if heading else title
-    return f"{header}\n\n{text}"
+def _context_prefixed(source_path: str, title: str, heading: str | None, text: str) -> str:
+    """Prepend the context line so a mid-section chunk keeps its context when embedded.
+
+    The line itself is defined by ``store.context_prefix`` — the same function retrieval
+    strips with, so the writer and the stripper cannot drift apart.
+    """
+    return f"{context_prefix(source_path, title, heading)}\n\n{text}"
 
 
 async def ingest() -> int:
@@ -132,7 +204,10 @@ async def ingest() -> int:
             if not chunks:
                 print(f"  {path.name}: no content, skipped")
                 continue
-            texts = [_context_prefixed(c["title"], c["heading"], c["text"]) for c in chunks]
+            texts = [
+                _context_prefixed(c["source_path"], c["title"], c["heading"], c["text"])
+                for c in chunks
+            ]
             embeddings = await aembed_documents(texts)
             rows = [
                 ChunkRow(
