@@ -15,13 +15,15 @@ class Settings(BaseSettings):
 
     llm_key: str | None = None
 
-    # Anthropic is the team default; a local checkout can point at another vendor
-    # (e.g. google_genai) without code changes. Per-role overrides are optional and
+    # The Dailoqa LiteLLM gateway (Azure GPT-4o-mini) is the default; a checkout can
+    # point at another vendor without code changes. Per-role overrides are optional and
     # fall back to the provider's defaults in llm.py.
-    llm_provider: str = "anthropic"
+    llm_provider: str = "litellm"
     llm_model_classifier: str | None = None
     llm_model_agent: str | None = None
     llm_model_titler: str | None = None
+    # Required for OpenAI-compatible gateways (llm_provider="litellm"); unused otherwise.
+    llm_base_url: str | None = None
 
     jira_site_url: str
     jira_email: str | None = None
