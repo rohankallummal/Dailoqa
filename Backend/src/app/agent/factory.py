@@ -49,14 +49,14 @@ def build_agent(checkpointer, publish):
         publish: Coroutine taking one SSE event dict, used for tool status lines.
     """
     return create_agent(
-        model=get_chat_model("agent"),
+        model=get_chat_model(),
         tools=TOOLS,
         context_schema=TurnContext,
         checkpointer=checkpointer,
         middleware=[
             skills_middleware,
             _write_gate(),
-            SummarizationMiddleware(model=get_chat_model("titler")),
+            SummarizationMiddleware(model=get_chat_model()),
             ToolRetryMiddleware(max_retries=2),
             ModelCallLimitMiddleware(thread_limit=_MAX_MODEL_CALLS),
             StreamPublisherMiddleware(publish),

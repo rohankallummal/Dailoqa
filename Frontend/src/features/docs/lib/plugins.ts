@@ -1,4 +1,4 @@
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import GithubSlugger from "github-slugger";
 
 export type TocItem = { depth: 2 | 3; text: string; slug: string };
@@ -14,6 +14,10 @@ type UnistNode = {
   children?: UnistNode[];
   data?: Record<string, unknown>;
 };
+
+type SourceFile = { value?: unknown };
+
+type SourceSpan = { start?: { offset?: number }; end?: { offset?: number } };
 
 function jsxAttribute(name: string, value: string) {
   return { type: "mdxJsxAttribute", name, value };
@@ -34,6 +38,33 @@ export function remarkStripEsm() {
     if (Array.isArray(tree.children)) {
       tree.children = tree.children.filter((node) => node.type !== "mdxjsEsm");
     }
+  };
+}
+
+const commentExpression = /^\s*\/\*[\s\S]*\*\/\s*$/;
+
+export function remarkLiteralExpressions() {
+  return (tree: UnistNode) => {
+    visit(tree, (node: UnistNode, index, parent: UnistNode | undefined) => {
+      if (
+        node.type !== "mdxTextExpression" &&
+        node.type !== "mdxFlowExpression"
+      ) {
+        return;
+      }
+      if (!parent?.children || typeof index !== "number") return;
+
+      if (commentExpression.test(node.value ?? "")) {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+
+      const text: UnistNode = { type: "text", value: `{${node.value ?? ""}}` };
+      parent.children[index] =
+        node.type === "mdxFlowExpression"
+          ? { type: "paragraph", children: [text] }
+          : text;
+    });
   };
 }
 
@@ -66,6 +97,52 @@ export function remarkLangBlocks() {
       node.type = "mdxJsxFlowElement";
       node.name = "LangBlock";
       node.attributes = [jsxAttribute("lang", lang)];
+    });
+  };
+}
+
+const jsxElementTypes = new Set(["mdxJsxFlowElement", "mdxJsxTextElement"]);
+const droppedJsxAttributes = new Set(["noZoom"]);
+
+export function remarkStripJsxAttributes() {
+  return (tree: UnistNode) => {
+    visit(tree, (node: UnistNode) => {
+      if (!jsxElementTypes.has(node.type)) return;
+      if (!Array.isArray(node.attributes)) return;
+      const name = node.name ?? "";
+      if (name !== name.toLowerCase()) return;
+
+      node.attributes = node.attributes.filter((attribute) => {
+        const attributeName = (attribute as { name?: string })?.name;
+        return !attributeName || !droppedJsxAttributes.has(attributeName);
+      });
+    });
+  };
+}
+
+const directiveTypes = new Set([
+  "textDirective",
+  "leafDirective",
+  "containerDirective",
+]);
+
+export function remarkLiteralDirectives() {
+  return (tree: UnistNode, file: SourceFile) => {
+    const source = typeof file?.value === "string" ? file.value : "";
+    visit(tree, (node: UnistNode, index, parent: UnistNode | undefined) => {
+      if (!directiveTypes.has(node.type)) return;
+      if (!parent?.children || typeof index !== "number") return;
+
+      const span = (node as { position?: SourceSpan }).position;
+      const start = span?.start?.offset;
+      const end = span?.end?.offset;
+      const literal =
+        source && typeof start === "number" && typeof end === "number"
+          ? source.slice(start, end)
+          : `:${node.name ?? ""}`;
+
+      parent.children[index] = { type: "text", value: literal };
+      return [SKIP, index];
     });
   };
 }

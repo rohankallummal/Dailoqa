@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     service_jwt_secret: str
 
     llm_key: str | None = None
+    llm_base_url: str = "https://dev4-broccoli-apillmgov.dailoqa.com/apillmgov/v1"
+    llm_model: str = "azure-gpt-4o-mini"
 
     jira_site_url: str
     jira_email: str | None = None

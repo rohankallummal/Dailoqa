@@ -28,7 +28,7 @@ def build_jql(project_key: str, issue_type: str) -> str:
 async def find_duplicate(kind: str, ticket: dict, client=None, model=None) -> DedupeVerdict:
     """Search Jira for candidates and ask the LLM whether any is a true duplicate."""
     client = client or JiraClient()
-    model = model or get_chat_model("agent")
+    model = model or get_chat_model()
     issue_type = client.issue_type_for(kind)
     candidates = await client.search_issues(
         build_jql(client.project_key, issue_type), fields=["summary"], max_results=20

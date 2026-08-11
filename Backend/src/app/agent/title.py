@@ -31,7 +31,7 @@ async def generate_title(first_message: str) -> str | None:
     if not first_message.strip():
         return None
     try:
-        model = get_chat_model("titler")
+        model = get_chat_model()
         response = await model.ainvoke(_PROMPT.format(message=first_message))
     except Exception as error:
         logger.warning("title LLM call failed: %s", error)

@@ -40,7 +40,7 @@ async def outcome_body(kind: str, action: str, jira_key: str) -> str:
         "markdown. Plain sentence only."
     )
     try:
-        response = await get_chat_model("titler").ainvoke(prompt)
+        response = await get_chat_model().ainvoke(prompt)
         body = response.text().strip() if hasattr(response, "text") else str(response.content).strip()
         return body or _FALLBACK[action]
     except Exception as error:

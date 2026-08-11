@@ -1,4 +1,4 @@
-import { LanguageProvider, LanguageToggle, OverviewCards } from "@/features/docs";
+import { LanguageToggle, OverviewCards } from "@/features/docs";
 
 export default function Page() {
   return (
@@ -17,12 +17,10 @@ export default function Page() {
         based on how much control you need:
       </p>
 
-      <LanguageProvider storageKey="overviewLang">
-        <div className="mt-6">
-          <LanguageToggle />
-        </div>
-        <OverviewCards />
-      </LanguageProvider>
+      <div className="mt-6">
+        <LanguageToggle />
+      </div>
+      <OverviewCards />
     </div>
   );
 }

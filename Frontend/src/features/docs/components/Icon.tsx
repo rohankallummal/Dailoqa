@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   Ban,
   Circle,
@@ -6,6 +7,7 @@ import {
   ExternalLink,
   Filter,
   Network,
+  Play,
   Plug,
   RefreshCw,
   Rocket,
@@ -29,6 +31,7 @@ const iconMap: Record<string, LucideIcon> = {
   adjustments: SlidersHorizontal,
   terminal: Terminal,
   "plug-connected": Plug,
+  "player-play": Play,
   "external-link": ExternalLink,
   wand: Wand2,
   star: Star,
@@ -49,7 +52,19 @@ export function Icon({
   size?: number;
   className?: string;
 }) {
-  if (!icon || isImagePath(icon)) return null;
+  if (!icon) return null;
+  if (isImagePath(icon)) {
+    return (
+      <Image
+        src={icon}
+        alt=""
+        width={size}
+        height={size}
+        className={className}
+        aria-hidden
+      />
+    );
+  }
   const Glyph = iconMap[icon] ?? Circle;
   return <Glyph size={size} className={className} aria-hidden />;
 }

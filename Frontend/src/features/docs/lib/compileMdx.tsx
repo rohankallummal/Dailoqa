@@ -11,13 +11,16 @@ import {
   remarkCodeBlocks,
   remarkCollectToc,
   remarkLangBlocks,
+  remarkLiteralDirectives,
+  remarkLiteralExpressions,
   remarkStripEsm,
+  remarkStripJsxAttributes,
   type TocItem,
 } from "./plugins";
 
 export type MdxComponent = ComponentType<{ components?: Record<string, unknown> }>;
 
-export type RenderedPage = {
+type RenderedPage = {
   title: string;
   description: string;
   toc: TocItem[];
@@ -47,8 +50,11 @@ export async function compileSource(
     remarkGfm,
     remarkDirective,
     remarkStripEsm,
+    remarkStripJsxAttributes,
+    remarkLiteralExpressions,
     remarkApiRef,
     remarkLangBlocks,
+    remarkLiteralDirectives,
     remarkCodeBlocks,
     ...(collectToc ? [remarkCollectToc(collectToc)] : []),
   ];

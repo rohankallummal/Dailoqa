@@ -10,11 +10,13 @@ from app.agent.context import TurnContext
 from app.agent.factory import build_agent
 from app.db.base import async_session
 from app.db.repositories import append_message, has_active_job
+from app.llm import is_unavailable
 from app.sse.registry import registry
 
 logger = logging.getLogger(__name__)
 
 TURN_FAILED = "Something went wrong on our side. Please send that again."
+SERVICE_UNAVAILABLE = "Unable to connect to the service right now. Please try again in a few minutes."
 
 _AFFIRMATIVE = {"yes", "y", "yeah", "yep", "yup", "confirm", "ok", "okay", "sure", "create", "approve", "go"}
 
@@ -185,8 +187,9 @@ async def run_turn(
         await stream.publish({"text": "", "stage": stage, "input_state": input_state})
     except Exception as error:
         logger.exception("turn %s failed for conversation %s: %s", turn_id, conversation_id, error)
+        notice = SERVICE_UNAVAILABLE if is_unavailable(error) else TURN_FAILED
         try:
-            await _persist(conversation_id, turn_id, TURN_FAILED, "error")
+            await _persist(conversation_id, turn_id, notice, "error")
         except Exception:
             logger.exception("could not persist the failure notice for turn %s", turn_id)
-        await stream.publish({"text": TURN_FAILED, "stage": "error", "input_state": "open"})
+        await stream.publish({"text": notice, "stage": "error", "input_state": "open"})
