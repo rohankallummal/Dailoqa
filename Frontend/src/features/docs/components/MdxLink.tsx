@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { isDeadLink, isExternal } from "../lib/links";
+import Link from "next/link";
+import { isDeadLink, resolveDocHref } from "../lib/links";
+
+const linkClass =
+  "font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent";
 
 export function MdxLink({
   href,
@@ -11,23 +15,18 @@ export function MdxLink({
   if (isDeadLink(href)) {
     return <span>{children}</span>;
   }
-  if (isExternal(href)) {
+
+  const resolved = resolveDocHref(href);
+  if (resolved) {
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
-      >
+      <Link href={resolved} className={linkClass}>
         {children}
-      </a>
+      </Link>
     );
   }
+
   return (
-    <a
-      href={href}
-      className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
-    >
+    <a href={href} className={linkClass}>
       {children}
     </a>
   );

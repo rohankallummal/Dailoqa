@@ -28,6 +28,10 @@ export function Grid({
   );
 }
 
+export function AccordionGroup({ children }: { children: ReactNode }) {
+  return <div className="my-4">{children}</div>;
+}
+
 export function CardGroup({
   cols,
   children,

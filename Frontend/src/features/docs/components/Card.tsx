@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { Icon } from "./Icon";
-import { isDeadLink, isExternal } from "../lib/links";
+import { isDeadLink, resolveDocHref } from "../lib/links";
 
 export function Card({
   title,
@@ -51,13 +51,8 @@ export function Card({
     return <div className={base}>{inner}</div>;
   }
 
-  const external = isExternal(href);
   return (
-    <a
-      href={href}
-      {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
-      className={base + interactive}
-    >
+    <a href={resolveDocHref(href) ?? href} className={base + interactive}>
       {inner}
     </a>
   );
