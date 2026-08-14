@@ -39,7 +39,7 @@ Subagents solve the **context bloat problem**. When agents use tools with large 
 
 ## Configuration
 
-`subagents` should be a list of dictionaries or @[`CompiledSubAgent`] objects. There are two types:
+`subagents` should be a list of dictionaries or `CompiledSubAgent` objects. There are two types:
 
 ### Default subagent
 
@@ -58,7 +58,7 @@ To run an agent without the `task` tool, do two things:
 1. Set `general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False)` on the active harness profile.
 2. Pass no synchronous subagents via `subagents=` on `create_deep_agent`.
 
-Deep Agents only attaches @[`SubAgentMiddleware`] (and the `task` tool) when at least one synchronous subagent exists. With neither the default nor a caller-provided one, the agent runs without delegation.
+Deep Agents only attaches `SubAgentMiddleware` (and the `task` tool) when at least one synchronous subagent exists. With neither the default nor a caller-provided one, the agent runs without delegation.
 
 Async subagents are unaffected—they flow through their own middleware and tools, described in Async subagents.
 
@@ -72,7 +72,7 @@ For most use cases, define subagents as dictionaries with SubAgent dictionaries.
 
 ### SubAgent (Dictionary-based)
 
-Define subagents as dictionaries matching the @[`SubAgent`] spec with the following fields:
+Define subagents as dictionaries matching the `SubAgent` spec with the following fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -81,15 +81,15 @@ Define subagents as dictionaries matching the @[`SubAgent`] spec with the follow
 | `system_prompt` | `str` | Required. Instructions for the subagent. Custom subagents must define their own. Include tool usage guidance and output format requirements.Does not inherit from main agent. |
 | `tools` | `list[Callable]` | Optional. Tools the subagent can use. Keep this minimal and include only what's needed.Inherits from main agent by default. When specified, overrides the inherited tools entirely. |
 | `model` | `str` \| `BaseChatModel` | Optional. Overrides the main agent's model. Omit to use the main agent's model.Inherits from main agent by default. You can pass either a model identifier string like `'openai:gpt-5.5'` (using the `'provider:model'` format) or a LangChain chat model object (`init_chat_model("gpt-5.5")` or `ChatOpenAI(model="gpt-5.5")`). |
-| `middleware` | `list[Middleware]` | Optional. Additional middleware for custom behavior, logging, or rate limiting.Does not inherit from the main agent. Merged into the synchronous subagent stack: an instance whose `.name` matches a default replaces it in place, anything else lands after the last core middleware entry and before profile, prompt-caching, and memory. See Override a default middleware instance. For example, include a @[`FilesystemMiddleware`] instance with a `tools` allowlist here to restrict the subagent's filesystem tools independently of the main agent. For more information, see the "Restricting filesystem tools" section under Virtual filesystem access. |
+| `middleware` | `list[Middleware]` | Optional. Additional middleware for custom behavior, logging, or rate limiting.Does not inherit from the main agent. Merged into the synchronous subagent stack: an instance whose `.name` matches a default replaces it in place, anything else lands after the last core middleware entry and before profile, prompt-caching, and memory. See Override a default middleware instance. For example, include a `FilesystemMiddleware` instance with a `tools` allowlist here to restrict the subagent's filesystem tools independently of the main agent. For more information, see the "Restricting filesystem tools" section under Virtual filesystem access. |
 | `interrupt_on` | `dict[str, bool \| InterruptOnConfig]` | Optional. Configure human-in-the-loop for specific tools. Options:`True`, `False`, or an `InterruptOnConfig` with `allowed_decisions`. Requires checkpointer.Inherits from main agent by default. Subagent value overrides the default. |
-| `skills` | `list[str]` | Optional. Skills source paths. When specified, the subagent will load skills from these directories (e.g., `["/skills/research/", "/skills/web-search/"]`). This allows subagents to have different skill sets than the main agent.Does not inherit from main agent. Only the general-purpose subagent inherits the main agent's skills. When a subagent has skills, it runs its own independent @[`SkillsMiddleware`] instance. Skill state is fully isolated—a subagent's loaded skills are not visible to the parent, and vice versa. |
+| `skills` | `list[str]` | Optional. Skills source paths. When specified, the subagent will load skills from these directories (e.g., `["/skills/research/", "/skills/web-search/"]`). This allows subagents to have different skill sets than the main agent.Does not inherit from main agent. Only the general-purpose subagent inherits the main agent's skills. When a subagent has skills, it runs its own independent `SkillsMiddleware` instance. Skill state is fully isolated—a subagent's loaded skills are not visible to the parent, and vice versa. |
 | `response_format` | `ResponseFormat` | Optional. Structured output schema for the subagent. When set, the parent receives the subagent's result as JSON instead of free-form text. Accepts Pydantic models, `ToolStrategy(...)`, `ProviderStrategy(...)`, or a raw schema type. See Structured output. |
 | `permissions` | `list[FilesystemPermission]` | Optional. Filesystem permission rules for the subagent. When set, **replaces** the parent agent's permissions entirely.Inherits from main agent by default. |
 
 ### CompiledSubAgent
 
-For complex workflows, use a prebuilt LangGraph graph as a @[`CompiledSubAgent`]:
+For complex workflows, use a prebuilt LangGraph graph as a `CompiledSubAgent`:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -141,8 +141,8 @@ agent = create_deep_agent(
 
 ## Using CompiledSubAgent
 
-For more complex use cases, you can provide your custom subagents with @[`CompiledSubAgent`].
-You can create a custom subagent using LangChain's @[`create_agent`] or by making a custom LangGraph graph using the graph API.
+For more complex use cases, you can provide your custom subagents with `CompiledSubAgent`.
+You can create a custom subagent using LangChain's `create_agent` or by making a custom LangGraph graph using the graph API.
 
 If you're creating a custom LangGraph graph, make sure that the graph has a state key called `"messages"`:
 
@@ -1028,7 +1028,7 @@ Subagents support structured output, so the parent agent receives predictable, p
 
     Structured output for subagents requires `deepagents>=0.5.3`.
 
-Pass `response_format` on the subagent config. When the subagent finishes, its structured response is JSON-serialized and returned as the `ToolMessage` content to the parent agent. The schema accepts anything supported by @[`create_agent`]: Pydantic models, `ToolStrategy(...)`, `ProviderStrategy(...)`, or a raw schema type.
+Pass `response_format` on the subagent config. When the subagent finishes, its structured response is JSON-serialized and returned as the `ToolMessage` content to the parent agent. The schema accepts anything supported by `create_agent`: Pydantic models, `ToolStrategy(...)`, `ProviderStrategy(...)`, or a raw schema type.
 
     ```python Google
     import asyncio

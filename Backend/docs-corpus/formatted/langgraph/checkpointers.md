@@ -88,7 +88,7 @@ graph.invoke({"foo": "", "bar":[]}, config)
 
 After you run the graph, there will be exactly 4 checkpoints:
 
-* Empty checkpoint with @[`START`] as the next node to be executed
+* Empty checkpoint with `START` as the next node to be executed
 * Checkpoint with the user input `{'foo': '', 'bar': []}` and `node_a` as the next node to be executed
 * Checkpoint with the outputs of `node_a` `{'foo': 'a', 'bar': ['a']}` and `node_b` as the next node to be executed
 * Checkpoint with the outputs of `node_b` `{'foo': 'b', 'bar': ['a', 'b']}` and no next nodes to be executed
@@ -157,14 +157,14 @@ StateSnapshot(
 
 ### Get state history
 
-You can get the full history of the graph execution for a given thread by calling @[`graph.get_state_history(config)`][get_state_history]. This will return a list of `StateSnapshot` objects associated with the thread ID provided in the config. Importantly, the checkpoints will be ordered chronologically with the most recent checkpoint / `StateSnapshot` being the first in the list.
+You can get the full history of the graph execution for a given thread by calling `graph.get_state_history(config)`[get_state_history]. This will return a list of `StateSnapshot` objects associated with the thread ID provided in the config. Importantly, the checkpoints will be ordered chronologically with the most recent checkpoint / `StateSnapshot` being the first in the list.
 
 ```python
 config = {"configurable": {"thread_id": "1"}}
 list(graph.get_state_history(config))
 ```
 
-In this example, the output of @[`get_state_history`] will look like this:
+In this example, the output of `get_state_history` will look like this:
 
 ```
 [
@@ -238,7 +238,7 @@ See Time travel for full details and code examples on replaying past executions.
 
 ### Update state
 
-You can edit the graph state using @[`update_state`]. This creates a new checkpoint with the updated values — it does not modify the original checkpoint. The update is treated the same as a node update: values are passed through reducer functions when defined, so channels with reducers _accumulate_ values rather than overwrite them.
+You can edit the graph state using `update_state`. This creates a new checkpoint with the updated values — it does not modify the original checkpoint. The update is treated the same as a node update: values are passed through reducer functions when defined, so channels with reducers _accumulate_ values rather than overwrite them.
 
 You can optionally specify `as_node` to control which node the update is treated as coming from, which affects which node executes next. See Time travel: `as_node` for details.
 
@@ -263,24 +263,24 @@ The durability modes, from least to most durable, are as follows:
 
 By default, LangGraph checkpoints write the full value of every state channel at each super-step. For long-running threads with large accumulations—such as multi-turn conversations—this can produce significant storage growth over time.
 
-@[`DeltaChannel`] stores only incremental deltas instead of the full accumulated value, substantially reducing checkpoint size for append-heavy channels. See DeltaChannel for usage and the storage-vs-latency tradeoff.
+`DeltaChannel` stores only incremental deltas instead of the full accumulated value, substantially reducing checkpoint size for append-heavy channels. See DeltaChannel for usage and the storage-vs-latency tradeoff.
 
 `DeltaChannel` requires `langgraph>=1.2` and is currently in beta. The API may change in future releases.
 
 ## Checkpointer libraries
 
-Under the hood, checkpointing is powered by checkpointer objects that conform to @[`BaseCheckpointSaver`] interface. LangGraph provides several checkpointer implementations, all implemented via standalone, installable libraries.
+Under the hood, checkpointing is powered by checkpointer objects that conform to `BaseCheckpointSaver` interface. LangGraph provides several checkpointer implementations, all implemented via standalone, installable libraries.
 
 See checkpointer integrations for available providers.
 
-* `langgraph-checkpoint`: The base interface for checkpointer savers (@[`BaseCheckpointSaver`]) and serialization/deserialization interface (@[`SerializerProtocol`]). Includes in-memory checkpointer implementation (@[`InMemorySaver`]) for experimentation. LangGraph comes with `langgraph-checkpoint` included.
-* `langgraph-checkpoint-sqlite`: An implementation of LangGraph checkpointer that uses SQLite database (@[`SqliteSaver`] / @[`AsyncSqliteSaver`]). Ideal for experimentation and local workflows. Needs to be installed separately.
-* `langgraph-checkpoint-postgres`: An advanced checkpointer that uses Postgres database (@[`PostgresSaver`] / @[`AsyncPostgresSaver`]), used in LangSmith. Ideal for using in production. Needs to be installed separately.
-* `langchain-azure-cosmosdb`: An implementation of LangGraph checkpointer that uses Azure Cosmos DB for NoSQL (@[`CosmosDBSaverSync`] / @[`CosmosDBSaver`]). Ideal for using in production with Azure. Supports both sync and async operations, with Microsoft Entra ID authentication. Needs to be installed separately.
+* `langgraph-checkpoint`: The base interface for checkpointer savers (`BaseCheckpointSaver`) and serialization/deserialization interface (`SerializerProtocol`). Includes in-memory checkpointer implementation (`InMemorySaver`) for experimentation. LangGraph comes with `langgraph-checkpoint` included.
+* `langgraph-checkpoint-sqlite`: An implementation of LangGraph checkpointer that uses SQLite database (`SqliteSaver` / `AsyncSqliteSaver`). Ideal for experimentation and local workflows. Needs to be installed separately.
+* `langgraph-checkpoint-postgres`: An advanced checkpointer that uses Postgres database (`PostgresSaver` / `AsyncPostgresSaver`), used in LangSmith. Ideal for using in production. Needs to be installed separately.
+* `langchain-azure-cosmosdb`: An implementation of LangGraph checkpointer that uses Azure Cosmos DB for NoSQL (`CosmosDBSaverSync` / `CosmosDBSaver`). Ideal for using in production with Azure. Supports both sync and async operations, with Microsoft Entra ID authentication. Needs to be installed separately.
 
 ### Checkpointer interface
 
-Each checkpointer conforms to @[`BaseCheckpointSaver`] interface and implements the following methods:
+Each checkpointer conforms to `BaseCheckpointSaver` interface and implements the following methods:
 
 * `.put` - Store a checkpoint with its configuration and metadata.
 * `.put_writes` - Store intermediate writes linked to a checkpoint (i.e. pending writes).
@@ -289,20 +289,20 @@ Each checkpointer conforms to @[`BaseCheckpointSaver`] interface and implements 
 
 If the checkpointer is used with asynchronous graph execution (i.e. executing the graph via `.ainvoke`, `.astream`, `.abatch`), asynchronous versions of the above methods will be used (`.aput`, `.aput_writes`, `.aget_tuple`, `.alist`).
 
-For running your graph asynchronously, you can use @[`InMemorySaver`], or async versions of Sqlite/Postgres checkpointers -- @[`AsyncSqliteSaver`] / @[`AsyncPostgresSaver`] checkpointers.
+For running your graph asynchronously, you can use `InMemorySaver`, or async versions of Sqlite/Postgres checkpointers -- `AsyncSqliteSaver` / `AsyncPostgresSaver` checkpointers.
 
 ### Serializer
 
 When checkpointers save the graph state, they need to serialize the channel values in the state. This is done using serializer objects.
 
-`langgraph_checkpoint` defines @[protocol][SerializerProtocol] for implementing serializers provides a default implementation (@[`JsonPlusSerializer`]) that handles a wide variety of types, including LangChain and LangGraph primitives, datetimes, enums and more.
+`langgraph_checkpoint` defines protocol[SerializerProtocol] for implementing serializers provides a default implementation (`JsonPlusSerializer`) that handles a wide variety of types, including LangChain and LangGraph primitives, datetimes, enums and more.
 
 #### Serialization with `pickle`
 
-The default serializer, @[`JsonPlusSerializer`], uses ormsgpack and JSON under the hood, which is not suitable for all types of objects.
+The default serializer, `JsonPlusSerializer`, uses ormsgpack and JSON under the hood, which is not suitable for all types of objects.
 
 If you want to fallback to pickle for objects not currently supported by the msgpack encoder (such as Pandas dataframes),
-you can use the `pickle_fallback` argument of the @[`JsonPlusSerializer`]:
+you can use the `pickle_fallback` argument of the `JsonPlusSerializer`:
 
 ```python
 from langgraph.checkpoint.memory import InMemorySaver
@@ -316,7 +316,7 @@ graph.compile(
 
 #### Encryption
 
-Checkpointers can optionally encrypt all persisted state. To enable this, pass an instance of @[`EncryptedSerializer`] to the `serde` argument of any @[`BaseCheckpointSaver`] implementation. The easiest way to create an encrypted serializer is via @[`from_pycryptodome_aes`], which reads the AES key from the `LANGGRAPH_AES_KEY` environment variable (or accepts a `key` argument):
+Checkpointers can optionally encrypt all persisted state. To enable this, pass an instance of `EncryptedSerializer` to the `serde` argument of any `BaseCheckpointSaver` implementation. The easiest way to create an encrypted serializer is via `from_pycryptodome_aes`, which reads the AES key from the `LANGGRAPH_AES_KEY` environment variable (or accepts a `key` argument):
 
 ```python
 import sqlite3
@@ -337,7 +337,7 @@ checkpointer = PostgresSaver.from_conn_string("postgresql://...", serde=serde)
 checkpointer.setup()
 ```
 
-When running on LangSmith, encryption is automatically enabled whenever `LANGGRAPH_AES_KEY` is present, so you only need to provide the environment variable. Other encryption schemes can be used by implementing @[`CipherProtocol`] and supplying it to @[`EncryptedSerializer`].
+When running on LangSmith, encryption is automatically enabled whenever `LANGGRAPH_AES_KEY` is present, so you only need to provide the environment variable. Other encryption schemes can be used by implementing `CipherProtocol` and supplying it to `EncryptedSerializer`.
 
 ## Build a custom checkpointer
 

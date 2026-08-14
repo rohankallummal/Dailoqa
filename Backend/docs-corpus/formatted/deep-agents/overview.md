@@ -263,13 +263,13 @@ The `delete` tool requires `deepagents>=0.7`. Backends that do not support delet
     )
     ```
 
-    Removing @[`FilesystemMiddleware`] itself via `excluded_middleware` is intentionally rejected—it is required scaffolding in the Deep Agents stack. Use `excluded_tools` to hide only the model-visible tool surface and leave the middleware in place. To remove the `task` tool, see Running without subagents.
+    Removing `FilesystemMiddleware` itself via `excluded_middleware` is intentionally rejected—it is required scaffolding in the Deep Agents stack. Use `excluded_tools` to hide only the model-visible tool surface and leave the middleware in place. To remove the `task` tool, see Running without subagents.
 
     
     The `tools` allowlist on `FilesystemMiddleware` requires `deepagents>=0.7`.
     
 
-    To expose only a subset of the filesystem tools listed above, instead of hiding them all, pass a `tools` allowlist to @[`FilesystemMiddleware`] and provide the instance through `middleware=`. Any built-in filesystem tool left out of the list is removed from the model's tool list.
+    To expose only a subset of the filesystem tools listed above, instead of hiding them all, pass a `tools` allowlist to `FilesystemMiddleware` and provide the instance through `middleware=`. Any built-in filesystem tool left out of the list is removed from the model's tool list.
 
     ```python
     from deepagents import create_deep_agent
@@ -286,7 +286,7 @@ The `delete` tool requires `deepagents>=0.7`. Backends that do not support delet
 
     `read_file` must always be included in the list—omitting it raises `ValueError` when the agent is created. The `execute` and `delete` tools are also dropped from the tool surface whenever the configured backend doesn't support them, whether or not you include them in `tools`. Custom tools you add through `create_deep_agent`'s own `tools=` argument are never affected by this allowlist.
 
-    Passing your own @[`FilesystemMiddleware`] instance this way replaces the default one for the main agent and the general-purpose subagent inherits the same restriction. See Override a default middleware instance for more information. Declarative subagents don't inherit it: include a `FilesystemMiddleware(tools=...)` instance in that subagent's own `middleware` field to restrict it independently.
+    Passing your own `FilesystemMiddleware` instance this way replaces the default one for the main agent and the general-purpose subagent inherits the same restriction. See Override a default middleware instance for more information. Declarative subagents don't inherit it: include a `FilesystemMiddleware(tools=...)` instance in that subagent's own `middleware` field to restrict it independently.
 
 The virtual filesystem is used by several other harness capabilities such as skills, memory, code execution, and context management.
 You can also use the file system when building custom tools and middleware for Deep Agents.
@@ -397,7 +397,7 @@ Planning is often useful for:
 - Less capable models that benefit from an explicit accountability tool
 - UIs that stream progress from agent state (see Todo list)
 
-Pass @[`TodoListMiddleware`] to the middleware parameter to give the agent a `write_todos` tool for maintaining a structured task list during execution.
+Pass `TodoListMiddleware` to the middleware parameter to give the agent a `write_todos` tool for maintaining a structured task list during execution.
 
     ```python Google
     from deepagents import create_deep_agent
@@ -485,7 +485,7 @@ Subagent execution provides:
 - **Stateless messaging**: Subagents are stateless and cannot send multiple messages back.
 - **Context and token efficiency**: Heavy subtask work stays isolated and is compressed into a compact result.
 
-    To run an agent without the `task` tool, see Running without subagents. Do not try removing @[`SubAgentMiddleware`] via `excluded_middleware`—that is intentionally rejected. Instead, disable the auto-added subagent via the harness profile and pass no synchronous subagents via `subagents=`. Async subagents are unaffected. See the full stack for the complete ordering.
+    To run an agent without the `task` tool, see Running without subagents. Do not try removing `SubAgentMiddleware` via `excluded_middleware`—that is intentionally rejected. Instead, disable the auto-added subagent via the harness profile and pass no synchronous subagents via `subagents=`. Async subagents are unaffected. See the full stack for the complete ordering.
 
 For more information, see Subagents.
 

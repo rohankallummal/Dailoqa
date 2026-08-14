@@ -16,9 +16,9 @@ The `thread_id` you choose is effectively your persistent cursor. Reusing it res
 
 ## Pause using `interrupt`
 
-The @[`interrupt`] function pauses graph execution and returns a value to the caller. When you call @[`interrupt`] within a node, LangGraph saves the current graph state and waits for you to resume execution with input.
+The `interrupt` function pauses graph execution and returns a value to the caller. When you call `interrupt` within a node, LangGraph saves the current graph state and waits for you to resume execution with input.
 
-To use @[`interrupt`], you need:
+To use `interrupt`, you need:
 1. A **checkpointer** to persist the graph state (use a durable checkpointer in production)
 2. A **thread ID** in your config so the runtime knows which state to resume from
 3. To call `interrupt()` where you want to pause (payload must be JSON-serializable)
@@ -34,9 +34,9 @@ def approval_node(state: State):
     return {"approved": approved}
 ```
 
-When you call @[`interrupt`], here's what happens:
+When you call `interrupt`, here's what happens:
 
-1. **Graph execution gets suspended** at the exact point where @[`interrupt`] is called
+1. **Graph execution gets suspended** at the exact point where `interrupt` is called
 2. **State is saved** using the checkpointer so execution can be resumed later, In production, this should be a persistent checkpointer (e.g. backed by a database)
 3. **Value is returned** to the caller on `stream.interrupts` when using event streaming (`graph.stream_events(..., version="v3")`), or under `__interrupt__` with the default `invoke()` API; it can be any JSON-serializable value (string, object, array, etc.)
 4. **Graph waits indefinitely** until you resume execution with a response
@@ -76,8 +76,8 @@ The default `graph.invoke(...)` API still works and surfaces interrupts under `r
 **Key points about resuming:**
 
 - You must use the **same thread ID** when resuming that was used when the interrupt occurred
-- The value passed to `Command(resume=...)` becomes the return value of the @[`interrupt`] call
-- The node restarts from the beginning of the node where the @[`interrupt`] was called when resumed, so any code before the @[`interrupt`] runs again
+- The value passed to `Command(resume=...)` becomes the return value of the `interrupt` call
+- The node restarts from the beginning of the node where the `interrupt` was called when resumed, so any code before the `interrupt` runs again
 - You can pass any JSON-serializable value as the resume value
 
 `Command(resume=...)` is the **only** `Command` pattern intended as input to `invoke()`/`stream()`/`stream_events()`. The other `Command` parameters (`update`, `goto`, `graph`) are designed for returning from node functions. Do not pass `Command(update=...)` as input to continue multi-turn conversations—pass a plain input dict instead.
@@ -468,7 +468,7 @@ print(final_state.output["generated_text"])  # -> "Improved draft after review"
 
 You can also place interrupts directly inside tool functions. This makes the tool itself pause for approval whenever it's called, and allows for human review and editing of the tool call before it is executed.
 
-First, define a tool that uses @[`interrupt`]:
+First, define a tool that uses `interrupt`:
 
 ```python
 from langchain.tools import tool
@@ -848,15 +848,15 @@ print(final.output["age"])  # -> 30
 
 ## Rules of interrupts
 
-When you call @[`interrupt`] within a node, LangGraph suspends execution by raising an exception that signals the runtime to pause. This exception propagates up through the call stack and is caught by the runtime, which notifies the graph to save the current state and wait for external input.
+When you call `interrupt` within a node, LangGraph suspends execution by raising an exception that signals the runtime to pause. This exception propagates up through the call stack and is caught by the runtime, which notifies the graph to save the current state and wait for external input.
 
-When execution resumes (after you provide the requested input), the runtime restarts the entire node from the beginning—it does not resume from the exact line where @[`interrupt`] was called. This means any code that ran before the @[`interrupt`] will execute again. Because of this, there's a few important rules to follow when working with interrupts to ensure they behave as expected.
+When execution resumes (after you provide the requested input), the runtime restarts the entire node from the beginning—it does not resume from the exact line where `interrupt` was called. This means any code that ran before the `interrupt` will execute again. Because of this, there's a few important rules to follow when working with interrupts to ensure they behave as expected.
 
 ### Do not wrap `interrupt` calls in try/except
 
-The way that @[`interrupt`] pauses execution at the point of the call is by throwing a special exception. If you wrap the @[`interrupt`] call in a try/except block, you will catch this exception and the interrupt will not be passed back to the graph.
+The way that `interrupt` pauses execution at the point of the call is by throwing a special exception. If you wrap the `interrupt` call in a try/except block, you will catch this exception and the interrupt will not be passed back to the graph.
 
-* ✅ Separate @[`interrupt`] calls from error-prone code
+* ✅ Separate `interrupt` calls from error-prone code
 * ✅ Use specific exception types in try/except blocks
 
 ```python Separating logic
@@ -882,7 +882,7 @@ def node_a(state: State):
     return state
 ```
 
-* 🔴 Do not wrap @[`interrupt`] calls in bare try/except blocks
+* 🔴 Do not wrap `interrupt` calls in bare try/except blocks
 
 ```python
 def node_a(state: State):
@@ -901,7 +901,7 @@ It's common to use multiple interrupts in a single node, however this can lead t
 
 When a node contains multiple interrupt calls, LangGraph keeps a list of resume values specific to the task executing the node. Whenever execution resumes, it starts at the beginning of the node. For each interrupt encountered, LangGraph checks if a matching value exists in the task's resume list. Matching is **strictly index-based**, so the order of interrupt calls within the node is important.
 
-* ✅ Keep @[`interrupt`] calls consistent across node executions
+* ✅ Keep `interrupt` calls consistent across node executions
 
 ```python
 def node_a(state: State):
@@ -917,8 +917,8 @@ def node_a(state: State):
     }
 ```
 
-* 🔴 Do not conditionally skip @[`interrupt`] calls within a node
-* 🔴 Do not loop @[`interrupt`] calls using logic that isn't deterministic across executions, including `while True` validation loops. Use a conditional edge instead (see Validating human input)
+* 🔴 Do not conditionally skip `interrupt` calls within a node
+* 🔴 Do not loop `interrupt` calls using logic that isn't deterministic across executions, including `while True` validation loops. Use a conditional edge instead (see Validating human input)
 
 ```python Skipping interrupts
 def node_a(state: State):
@@ -950,7 +950,7 @@ def node_a(state: State):
 
 Depending on which checkpointer is used, complex values may not be serializable (e.g. you can't serialize a function). To make your graphs adaptable to any deployment, it's best practice to only use values that can be reasonably serialized.
 
-* ✅ Pass simple, JSON-serializable types to @[`interrupt`]
+* ✅ Pass simple, JSON-serializable types to `interrupt`
 * ✅ Pass dictionaries/objects with simple values
 
 ```python Simple values
@@ -974,7 +974,7 @@ def node_a(state: State):
     return {"user": response}
 ```
 
-* 🔴 Do not pass functions, class instances, or other complex objects to @[`interrupt`]
+* 🔴 Do not pass functions, class instances, or other complex objects to `interrupt`
 
 ```python Functions
 def validate_input(value):
@@ -1008,12 +1008,12 @@ def node_a(state: State):
 
 ### Side effects called before `interrupt` must be idempotent
 
-Because interrupts work by re-running the nodes they were called from, side effects called before @[`interrupt`] should (ideally) be idempotent. For context, idempotency means that the same operation can be applied multiple times without changing the result beyond the initial execution.
+Because interrupts work by re-running the nodes they were called from, side effects called before `interrupt` should (ideally) be idempotent. For context, idempotency means that the same operation can be applied multiple times without changing the result beyond the initial execution.
 
-As an example, you might have an API call to update a record inside of a node. If @[`interrupt`] is called after that call is made, it will be re-run multiple times when the node is resumed, potentially overwriting the initial update or creating duplicate records.
+As an example, you might have an API call to update a record inside of a node. If `interrupt` is called after that call is made, it will be re-run multiple times when the node is resumed, potentially overwriting the initial update or creating duplicate records.
 
-* ✅ Use idempotent operations before @[`interrupt`]
-* ✅ Place side effects after @[`interrupt`] calls
+* ✅ Use idempotent operations before `interrupt`
+* ✅ Place side effects after `interrupt` calls
 * ✅ Separate side effects into separate nodes when possible
 
 ```python Idempotent operations
@@ -1062,7 +1062,7 @@ def notification_node(state: State):
     return state
 ```
 
-* 🔴 Do not perform non-idempotent operations before @[`interrupt`]
+* 🔴 Do not perform non-idempotent operations before `interrupt`
 * 🔴 Do not create new records without checking if they exist
 
 ```python Creating records
@@ -1092,7 +1092,7 @@ def node_a(state: State):
 
 ## Using with subgraphs called as functions
 
-When invoking a subgraph within a node, the parent graph will resume execution from the **beginning of the node** where the subgraph was invoked and the @[`interrupt`] was triggered. Similarly, the **subgraph** will also resume from the beginning of the node where @[`interrupt`] was called.
+When invoking a subgraph within a node, the parent graph will resume execution from the **beginning of the node** where the subgraph was invoked and the `interrupt` was triggered. Similarly, the **subgraph** will also resume from the beginning of the node where `interrupt` was called.
 
 ```python
 def node_in_parent_graph(state: State):
@@ -1112,7 +1112,7 @@ def node_in_subgraph(state: State):
 
 To debug and test a graph, you can use static interrupts as breakpoints to step through the graph execution one node at a time. Static interrupts are triggered at defined points either before or after a node executes. You can set these by specifying `interrupt_before` and `interrupt_after` when compiling the graph.
 
-    Static interrupts are **not** recommended for human-in-the-loop workflows. Use the @[`interrupt`] function instead.
+    Static interrupts are **not** recommended for human-in-the-loop workflows. Use the `interrupt` function instead.
 
     
         :::python

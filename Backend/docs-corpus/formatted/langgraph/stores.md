@@ -8,13 +8,13 @@ Stores let agents persist information across threads, including user preferences
 **Agent Server handles stores automatically**
 When using the Agent Server, you do not need to implement or configure stores manually. The API handles all storage infrastructure for you behind the scenes.
 
-@[InMemoryStore] is suitable for development and testing. For production, use a persistent store like `PostgresStore`, `MongoDBStore`, `RedisStore`, or `UpstashStore`. All implementations extend @[BaseStore], which is the type annotation to use in node function signatures.
+InMemoryStore is suitable for development and testing. For production, use a persistent store like `PostgresStore`, `MongoDBStore`, `RedisStore`, or `UpstashStore`. All implementations extend BaseStore, which is the type annotation to use in node function signatures.
 
 See store integrations for the full list of available providers.
 
 ## Basic usage
 
-The following code snippet shows the @[InMemoryStore] in isolation without using LangGraph:
+The following code snippet shows the InMemoryStore in isolation without using LangGraph:
 
 ```python
 from langgraph.store.memory import InMemoryStore
@@ -291,7 +291,7 @@ See the deployment guide for more details and configuration options.
 
 ## Build a custom store
 
-To use a storage backend other than the built-in implementations, subclass @[BaseStore] and implement its required methods. The built-in @[InMemoryStore] is the simplest reference implementation.
+To use a storage backend other than the built-in implementations, subclass BaseStore and implement its required methods. The built-in InMemoryStore is the simplest reference implementation.
 
 ### Base contract
 
@@ -351,7 +351,7 @@ If your backend does not support vector search, raise `NotImplementedError` when
 
 ### Testing
 
-There is currently no conformance suite for custom stores. Test against @[InMemoryStore] as the reference:
+There is currently no conformance suite for custom stores. Test against InMemoryStore as the reference:
 
 ```python
 import pytest

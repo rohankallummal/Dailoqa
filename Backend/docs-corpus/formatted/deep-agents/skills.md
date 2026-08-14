@@ -131,7 +131,7 @@ The following diagram shows what appears in agent context at a given moment. At 
 
 As the agent works through a task, it loads skill information in layers:
 
-In Deep Agents, @[`SkillsMiddleware`] (part of the Deep Agents stack when you pass `skills`) handles the first two levels, with the third level being handled by the LLM:
+In Deep Agents, `SkillsMiddleware` (part of the Deep Agents stack when you pass `skills`) handles the first two levels, with the third level being handled by the LLM:
 
 1. **Discovery** (level 1): At agent start, the middleware scans the configured skill paths, parses each `SKILL.md` frontmatter, and injects the `name` and `description` fields into the system prompt.
 2. **Read** (level 2): When the agent invokes a skill, it reads the full `SKILL.md` content via `read_file`.
@@ -619,7 +619,7 @@ This works well when skills live on disk or in a shared backend and you just nee
 
 ### Namespaced skills
 
-For multi-tenant applications where each user's skill set is managed independently, route `/skills/` to a @[StoreBackend] with a namespace factory. Populate each namespace with only the skills that user should have access to, and the middleware resolves to the correct set at runtime:
+For multi-tenant applications where each user's skill set is managed independently, route `/skills/` to a StoreBackend with a namespace factory. Populate each namespace with only the skills that user should have access to, and the middleware resolves to the correct set at runtime:
 
 ```python
 from deepagents import create_deep_agent
@@ -679,7 +679,7 @@ Production deployments usually need to control three things: which skills each u
 
 ### Share skills across users
 
-To give every user access to the same curated library, route `/skills/` to a shared @[StoreBackend] and seed it from your application code or an admin workflow. Use an organization-scoped namespace so all agents in that org resolve to the same store:
+To give every user access to the same curated library, route `/skills/` to a shared StoreBackend and seed it from your application code or an admin workflow. Use an organization-scoped namespace so all agents in that org resolve to the same store:
 
 - Namespace by org ID for workspace-wide skills (see Enforce read-only skills).
 - Namespace by user ID when each user needs an independent library (namespaced skills).

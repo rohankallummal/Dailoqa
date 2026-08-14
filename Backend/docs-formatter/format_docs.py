@@ -55,6 +55,11 @@ _STRAY_DIRECTIVE_RE = re.compile(r"^:::.*$", re.MULTILINE)
 _MD_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 _MD_LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]*\)")
 
+# `@[`create_deep_agent`]` is Mintlify's API-reference link. The brackets carry no meaning once
+# the page is plain text, and they would enter the tsvector as punctuation noise around the one
+# token a reader actually searches for, so keep the symbol and drop the wrapper.
+_API_REF_RE = re.compile(r"@\[(`[^`\]]+`|[^\]]+)\]")
+
 _BLANK_LINES_RE = re.compile(r"\n{3,}")
 
 # Snippet plumbing. `import Foo from '/snippets/x-py.mdx';` pairs with a `<Foo />` in the body;
@@ -137,6 +142,7 @@ def flatten_mdx(text: str, language: str) -> str:
     text = _MDX_COMMENT_RE.sub("", text)
     text = _JSX_TAG_RE.sub("", text)
     text = _STRAY_DIRECTIVE_RE.sub("", text)  # unpaired markers the block rule could not match
+    text = _API_REF_RE.sub(r"\1", text)  # before the link rule: @[x] has no (target) to match on
     text = _MD_IMAGE_RE.sub("", text)
     text = _MD_LINK_RE.sub(r"\1", text)
     text = _BLANK_LINES_RE.sub("\n\n", text).strip()

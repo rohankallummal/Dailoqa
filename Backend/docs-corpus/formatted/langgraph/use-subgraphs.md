@@ -376,7 +376,7 @@ When the parent graph and subgraph **share state keys**, you can pass a compiled
 If your subgraph shares state keys with the parent graph, you can follow these steps to add it to your graph:
 
 1. Define the subgraph workflow (`subgraph_builder` in the example below) and compile it
-2. Pass compiled subgraph to the @[`add_node`] method when defining the parent graph workflow
+2. Pass compiled subgraph to the `add_node` method when defining the parent graph workflow
 
 ```python
 from typing_extensions import TypedDict
@@ -527,7 +527,7 @@ Per-invocation is the right choice for most applications, including multi-agent 
 
 The parent graph must be compiled with a checkpointer for subgraph persistence features (interrupts, state inspection, per-thread memory) to work. See persistence.
 
-The examples below use LangChain's @[`create_agent`], which is a common way to build agents. `create_agent` produces a LangGraph graph under the hood, so all subgraph persistence concepts apply directly. If you're building with raw LangGraph `StateGraph`, the same patterns and configuration options apply—see the Graph API for details.
+The examples below use LangChain's `create_agent`, which is a common way to build agents. `create_agent` produces a LangGraph graph under the hood, so all subgraph persistence concepts apply directly. If you're building with raw LangGraph `StateGraph`, the same patterns and configuration options apply—see the Graph API for details.
 
 ### Stateful
 

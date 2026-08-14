@@ -544,7 +544,7 @@ In addition to the tools you provide, every Deep Agent comes with a built-in set
 | `execute` | Run shell commands (sandbox backends only). |
 | `task` | Spawn a subagent to handle a delegated task. |
 
-To add structured task planning with `write_todos`, opt in with @[`TodoListMiddleware`]. See Task planning.
+To add structured task planning with `write_todos`, opt in with `TodoListMiddleware`. See Task planning.
 
 For a full breakdown of what each built-in tool does, see Harness overview.
 

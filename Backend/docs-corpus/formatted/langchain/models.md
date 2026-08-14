@@ -34,7 +34,7 @@ The same model interface works in both contexts, which gives you the flexibility
 
 ### Initialize a model
 
-The easiest way to get started with a standalone model in LangChain is to use @[`init_chat_model`] to initialize one from a chat model provider of your choice (examples below):
+The easiest way to get started with a standalone model in LangChain is to use `init_chat_model` to initialize one from a chat model provider of your choice (examples below):
 
     
         👉 Read the OpenAI chat model integration docs
@@ -282,7 +282,7 @@ The easiest way to get started with a standalone model in LangChain is to use @[
 response = model.invoke("Why do parrots talk?")
 ```
 
-See @[`init_chat_model`][init_chat_model] for more detail, including information on how to pass model parameters.
+See `init_chat_model`[init_chat_model] for more detail, including information on how to pass model parameters.
 
 ### Supported providers and models
 
@@ -316,7 +316,7 @@ A chat model takes parameters that can be used to configure its behavior. The fu
 
     The maximum number of attempts the system will make to resend a request if it fails due to issues like network timeouts or rate limits. Retries use exponential backoff with jitter. Network errors, rate limits (429), and server errors (5xx) are retried automatically. Client errors such as 401 (unauthorized) or 404 are not retried. For long-running agent tasks on unreliable networks, consider increasing this to 10–15.
 
-Using @[`init_chat_model`], pass these parameters as inline `**kwargs`:
+Using `init_chat_model`, pass these parameters as inline `**kwargs`:
 
 ```python Initialize using model parameters
 model = init_chat_model(
@@ -349,7 +349,7 @@ model = init_chat_model(
 
     Each chat model integration may have additional params used to control provider-specific functionality.
 
-    For example, @[`ChatOpenAI`] has `use_responses_api` to dictate whether to use the OpenAI Responses or Completions API.
+    For example, `ChatOpenAI` has `use_responses_api` to dictate whether to use the OpenAI Responses or Completions API.
 
     To find all the parameters supported by a given chat model, head to the chat model integrations page.
 
@@ -361,7 +361,7 @@ A chat model must be invoked to generate an output. There are three primary invo
 
 ### Invoke
 
-The most straightforward way to call a model is to use @[`invoke()`][BaseChatModel.invoke] with a single message or a list of messages.
+The most straightforward way to call a model is to use `invoke()`[BaseChatModel.invoke] with a single message or a list of messages.
 
 ```python Single message
 response = model.invoke("Why do parrots have colorful feathers?")
@@ -397,13 +397,13 @@ response = model.invoke(conversation)
 print(response)  # AIMessage("J'adore créer des applications.")
 ```
 
-    If the return type of your invocation is a string, ensure that you are using a chat model as opposed to an LLM. Legacy, text-completion LLMs return strings directly. LangChain chat models are prefixed with "Chat", e.g., @`ChatOpenAI`.
+    If the return type of your invocation is a string, ensure that you are using a chat model as opposed to an LLM. Legacy, text-completion LLMs return strings directly. LangChain chat models are prefixed with "Chat", e.g., `ChatOpenAI`(/oss/integrations/chat/openai).
 
 ### Stream
 
 Most models can stream their output content while it is being generated. By displaying output progressively, streaming significantly improves user experience, particularly for longer responses.
 
-Calling @[`stream()`][BaseChatModel.stream] returns an iterator that yields output chunks as they are produced. You can use a loop to process each chunk in real-time:
+Calling `stream()`[BaseChatModel.stream] returns an iterator that yields output chunks as they are produced. You can use a loop to process each chunk in real-time:
 
     ```python Basic text streaming
     for chunk in model.stream("Why do parrots have colorful feathers?"):
@@ -423,7 +423,7 @@ Calling @[`stream()`][BaseChatModel.stream] returns an iterator that yields outp
                 ...
     ```
 
-As opposed to `invoke()`, which returns a single @[`AIMessage`][AIMessage] after the model has finished generating its full response, `stream()` returns multiple @[`AIMessageChunk`][AIMessageChunk] objects, each containing a portion of the output text. Importantly, each chunk in a stream is designed to be gathered into a full message via summation:
+As opposed to `invoke()`, which returns a single `AIMessage`[AIMessage] after the model has finished generating its full response, `stream()` returns multiple `AIMessageChunk`[AIMessageChunk] objects, each containing a portion of the output text. Importantly, each chunk in a stream is designed to be gathered into a full message via summation:
 
 ```python Construct an AIMessage
 full = None  # None | AIMessageChunk
@@ -480,7 +480,7 @@ The resulting message can be treated the same as a message that was generated wi
         ```
 
         
-            See the @[`astream_events()`][BaseChatModel.astream_events] reference for event types and other details.
+            See the `astream_events()`[BaseChatModel.astream_events] reference for event types and other details.
         
         :::
 
@@ -516,7 +516,7 @@ The resulting message can be treated the same as a message that was generated wi
         Full message: Hi there! How can I help today?
         ```
 
-        See the @[`streamEvents()`][BaseChatModel.streamEvents] reference for event types and other details.
+        See the `streamEvents()`[BaseChatModel.streamEvents] reference for event types and other details.
         :::
     
     
@@ -526,7 +526,7 @@ The resulting message can be treated the same as a message that was generated wi
 
         #### How it works
 
-        When you `invoke()` a chat model, LangChain will automatically switch to an internal streaming mode if it detects that you are trying to stream the overall application. The result of the invocation will be the same as far as the code that was using invoke is concerned; however, while the chat model is being streamed, LangChain will take care of invoking @[`on_llm_new_token`] events in LangChain's callback system.
+        When you `invoke()` a chat model, LangChain will automatically switch to an internal streaming mode if it detects that you are trying to stream the overall application. The result of the invocation will be the same as far as the code that was using invoke is concerned; however, while the chat model is being streamed, LangChain will take care of invoking `on_llm_new_token` events in LangChain's callback system.
 
         :::python
         Callback events allow LangGraph `stream()` and `astream_events()` to surface the chat model's output in real-time.
@@ -550,11 +550,11 @@ for response in responses:
     print(response)
 ```
 
-    This section describes a chat model method @[`batch()`][BaseChatModel.batch], which parallelizes model calls client-side.
+    This section describes a chat model method `batch()`[BaseChatModel.batch], which parallelizes model calls client-side.
 
     It is **distinct** from batch APIs supported by inference providers, such as OpenAI or Anthropic.
 
-By default, @[`batch()`][BaseChatModel.batch] will only return the final output for the entire batch. If you want to receive the output for each individual input as it finishes generating, you can stream results with @[`batch_as_completed()`][BaseChatModel.batch_as_completed]:
+By default, `batch()`[BaseChatModel.batch] will only return the final output for the entire batch. If you want to receive the output for each individual input as it finishes generating, you can stream results with `batch_as_completed()`[BaseChatModel.batch_as_completed]:
 
 ```python Yield batch responses upon completion
 for response in model.batch_as_completed([
@@ -565,9 +565,9 @@ for response in model.batch_as_completed([
     print(response)
 ```
 
-    When using @[`batch_as_completed()`][BaseChatModel.batch_as_completed], results may arrive out of order. Each includes the input index for matching to reconstruct the original order as needed.
+    When using `batch_as_completed()`[BaseChatModel.batch_as_completed], results may arrive out of order. Each includes the input index for matching to reconstruct the original order as needed.
 
-    When processing a large number of inputs using @[`batch()`][BaseChatModel.batch] or @[`batch_as_completed()`][BaseChatModel.batch_as_completed], you may want to control the maximum number of parallel calls. This can be done by setting the @[`max_concurrency`][RunnableConfig(max_concurrency)] attribute in the @[`RunnableConfig`] dictionary.
+    When processing a large number of inputs using `batch()`[BaseChatModel.batch] or `batch_as_completed()`[BaseChatModel.batch_as_completed], you may want to control the maximum number of parallel calls. This can be done by setting the `max_concurrency`[RunnableConfig(max_concurrency)] attribute in the `RunnableConfig` dictionary.
 
     ```python Batch with max concurrency
     model.batch(
@@ -578,9 +578,9 @@ for response in model.batch_as_completed([
     )
     ```
 
-    See the @[`RunnableConfig`] reference for a full list of supported attributes.
+    See the `RunnableConfig` reference for a full list of supported attributes.
 
-For more details on batching, see the @[reference][BaseChatModel.batch].
+For more details on batching, see the reference[BaseChatModel.batch].
 
 ---
 
@@ -618,7 +618,7 @@ sequenceDiagram
     M->>U: "SF: 72°F sunny, NYC: 68°F cloudy"
 ```
 
-To make tools that you have defined available for use by a model, you must bind them using @[`bind_tools`][BaseChatModel.bind_tools]. In subsequent invocations, the model can choose to call any of the bound tools as needed.
+To make tools that you have defined available for use by a model, you must bind them using `bind_tools`[BaseChatModel.bind_tools]. In subsequent invocations, the model can choose to call any of the bound tools as needed.
 
 Some model providers offer built-in tools that can be enabled via model or invocation parameters (e.g. `ChatOpenAI`, `ChatAnthropic`). Check the respective provider reference for details.
 
@@ -701,7 +701,7 @@ Below, we show some common ways you can use tool calling.
 
         :::
 
-        Each @[`ToolMessage`] returned by the tool includes a `tool_call_id` that matches the original tool call, helping the model correlate results with requests.
+        Each `ToolMessage` returned by the tool includes a `tool_call_id` that matches the original tool call, helping the model correlate results with requests.
     
     
         By default, the model has the freedom to choose which bound tool to use based on the user's input. However, you might want to force choosing a tool, ensuring the model uses either a particular tool or **any** tool from a given list:
@@ -801,7 +801,7 @@ Below, we show some common ways you can use tool calling.
         
     
     
-        When streaming responses, tool calls are progressively built through @[`ToolCallChunk`]. This allows you to see tool calls as they're being generated rather than waiting for the complete response.
+        When streaming responses, tool calls are progressively built through `ToolCallChunk`. This allows you to see tool calls as they're being generated rather than waiting for the complete response.
 
         :::python
 
@@ -983,7 +983,7 @@ Models can be requested to provide their response in a format matching a given s
 
     See your provider's integration page for supported methods and configuration options.
 
-It can be useful to return the raw @[`AIMessage`] object alongside the parsed representation to access response metadata such as token counts. To do this, set @[`include_raw=True`][BaseChatModel.with_structured_output(include_raw)] when calling @[`with_structured_output`][BaseChatModel.with_structured_output]:
+It can be useful to return the raw `AIMessage` object alongside the parsed representation to access response metadata such as token counts. To do this, set `include_raw=True`[BaseChatModel.with_structured_output(include_raw)] when calling `with_structured_output`[BaseChatModel.with_structured_output]:
 
     :::python
     ```python
@@ -1196,7 +1196,7 @@ Certain models can process and return non-textual data such as images, audio, an
 
 See the multimodal section of the messages guide for details.
 
-Some models can return multimodal data as part of their response. If invoked to do so, the resulting @[`AIMessage`] will have content blocks with multimodal types.
+Some models can return multimodal data as part of their response. If invoked to do so, the resulting `AIMessage` will have content blocks with multimodal types.
 
 ```python Multimodal output
 response = model.invoke("Create a picture of a cat")
@@ -1231,7 +1231,7 @@ Depending on the model, you can sometimes specify the level of effort it should 
 
     `reasoning_effort` as a standard parameter requires `langchain-core>=1.5.2`, plus the corresponding partner package version: `langchain-anthropic>=1.5.3`, `langchain-openai>=1.4.1`, `langchain-fireworks>=1.5.2`, `langchain-xai>=1.3.0`, `langchain-google-genai>=4.3.1`, or `langchain-aws>=1.6.5`.
 
-@[`ChatOpenAI`], @[`ChatAnthropic`], @[`ChatFireworks`], @[`ChatXAI`], @[`ChatGoogleGenerativeAI`], and `ChatBedrockConverse` support a standard `reasoning_effort` parameter. Like `temperature`, it can be set at model construction or per invocation, and each provider translates it into its own API format:
+`ChatOpenAI`, `ChatAnthropic`, `ChatFireworks`, `ChatXAI`, `ChatGoogleGenerativeAI`, and `ChatBedrockConverse` support a standard `reasoning_effort` parameter. Like `temperature`, it can be set at model construction or per invocation, and each provider translates it into its own API format:
 
 ```python
 from langchain_anthropic import ChatAnthropic
@@ -1266,7 +1266,7 @@ Many providers offer prompt caching features to reduce latency and cost on repea
 
 - **Implicit provider caching:** providers automatically pass on cost savings if a request hits a cache, with no configuration required. Examples: OpenAI and Gemini.
 - **Provider-level explicit controls:** providers let you manually indicate cache points for greater control or to guarantee cost savings. These mirror the underlying provider/API behavior. Examples:
-    - @[`ChatOpenAI`] (via `prompt_cache_key`)
+    - `ChatOpenAI` (via `prompt_cache_key`)
     - Anthropic content-block `cache_control`
     - Gemini.
     - AWS Bedrock `cachePoint` blocks
@@ -1336,7 +1336,7 @@ Many chat model providers impose a limit on the number of invocations that can b
 
 To help manage rate limits, chat model integrations accept a `rate_limiter` parameter that can be provided during initialization to control the rate at which requests are made.
 
-    LangChain comes with (an optional) built-in @[`InMemoryRateLimiter`]. This limiter is thread safe and can be shared by multiple threads in the same process.
+    LangChain comes with (an optional) built-in `InMemoryRateLimiter`. This limiter is thread safe and can be shared by multiple threads in the same process.
 
     ```python Define a rate limiter
     from langchain.rate_limiters import InMemoryRateLimiter
@@ -1369,7 +1369,7 @@ You can configure a custom base URL for providers that implement the OpenAI Chat
     - LiteLLM via `ChatLiteLLM` / `ChatLiteLLMRouter` (`langchain-litellm`)
 
     :::python
-    Many model providers offer OpenAI-compatible APIs (e.g., Together AI, vLLM). You can use @[`init_chat_model`] with these providers by specifying the appropriate `base_url` parameter:
+    Many model providers offer OpenAI-compatible APIs (e.g., Together AI, vLLM). You can use `init_chat_model` with these providers by specifying the appropriate `base_url` parameter:
 
     ```python
     model = init_chat_model(
@@ -1429,7 +1429,7 @@ print(response.response_metadata["logprobs"])
 
 ### Token usage
 
-A number of model providers return token usage information as part of the invocation response. When available, this information will be included on the @[`AIMessage`] objects produced by the corresponding model. For more details, see the messages guide.
+A number of model providers return token usage information as part of the invocation response. When available, this information will be included on the `AIMessage` objects produced by the corresponding model. For more details, see the messages guide.
 
     Some provider APIs, notably OpenAI and Azure OpenAI chat completions, require users opt-in to receiving token usage data in streaming contexts. See the streaming usage metadata section of the integration guide for details.
 
@@ -1500,7 +1500,7 @@ You can track aggregate token counts across models in an application using eithe
 
 ### Invocation config
 
-When invoking a model, you can pass additional configuration through the `config` parameter using a @[`RunnableConfig`] dictionary. This provides run-time control over execution behavior, callbacks, and metadata tracking.
+When invoking a model, you can pass additional configuration through the `config` parameter using a `RunnableConfig` dictionary. This provides run-time control over execution behavior, callbacks, and metadata tracking.
 
 Common configuration options include:
 
@@ -1535,7 +1535,7 @@ These configuration values are particularly useful when:
     
 
     
-        Controls the maximum number of parallel calls when using @[`batch()`][BaseChatModel.batch] or @[`batch_as_completed()`][BaseChatModel.batch_as_completed].
+        Controls the maximum number of parallel calls when using `batch()`[BaseChatModel.batch] or `batch_as_completed()`[BaseChatModel.batch_as_completed].
     
 
     
@@ -1546,11 +1546,11 @@ These configuration values are particularly useful when:
         Maximum recursion depth for chains to prevent infinite loops in complex pipelines.
     
 
-    See full @[`RunnableConfig`] reference for all supported attributes.
+    See full `RunnableConfig` reference for all supported attributes.
 
 ### Configurable models
 
-You can also create a runtime-configurable model by specifying @[`configurable_fields`][BaseChatModel.configurable_fields]. If you don't specify a model value, then `'model'` and `'model_provider'` will be configurable by default.
+You can also create a runtime-configurable model by specifying `configurable_fields`[BaseChatModel.configurable_fields]. If you don't specify a model value, then `'model'` and `'model_provider'` will be configurable by default.
 
 ```python
 from langchain.chat_models import init_chat_model
@@ -1593,7 +1593,7 @@ configurable_model.invoke(
     )
     ```
 
-    See the @[`init_chat_model`] reference for more details on `configurable_fields` and `config_prefix`.
+    See the `init_chat_model` reference for more details on `configurable_fields` and `config_prefix`.
 
     We can call declarative operations like `bind_tools`, `with_structured_output`, `with_configurable`, etc. on a configurable model and chain a configurable model in the same way that we would a regularly instantiated chat model object.
 
@@ -1663,7 +1663,7 @@ configurable_model.invoke(
 
 Dynamic models are selected at runtime based on the current state and context. This enables sophisticated routing logic and cost optimization.
 
-To use a dynamic model, create middleware using the @[`@wrap_model_call`] decorator that modifies the model in the request:
+To use a dynamic model, create middleware using the `@wrap_model_call` decorator that modifies the model in the request:
 
 ```python
 from langchain_openai import ChatOpenAI
@@ -1694,6 +1694,6 @@ agent = create_agent(
 )
 ```
 
-Pre-bound models (models with @[`bind_tools`][BaseChatModel.bind_tools] already called) are not supported when using structured output. If you need dynamic model selection with structured output, ensure the models passed to the middleware are not pre-bound.
+Pre-bound models (models with `bind_tools`[BaseChatModel.bind_tools] already called) are not supported when using structured output. If you need dynamic model selection with structured output, ensure the models passed to the middleware are not pre-bound.
 
 For model configuration details, see Models. For dynamic model selection patterns, see Dynamic model in middleware.

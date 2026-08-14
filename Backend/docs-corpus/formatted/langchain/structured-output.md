@@ -6,7 +6,7 @@ Structured output allows agents to return data in a specific, predictable format
 
 This page covers structured output with agents using `create_agent`. To use structured output directly on a model (outside of agents), see Models - Structured output.
 
-LangChain's @[`create_agent`] handles structured output automatically. The user sets their desired structured output schema, and when the model generates the structured data, it's captured, validated, and returned in the `'structured_response'` key of the agent's state.
+LangChain's `create_agent` handles structured output automatically. The user sets their desired structured output schema, and when the model generates the structured data, it's captured, validated, and returned in the `'structured_response'` key of the agent's state.
 
 ```python
 def create_agent(
@@ -70,7 +70,7 @@ class ProviderStrategy(Generic[SchemaT]):
 
     Optional boolean parameter to enable strict schema adherence. Supported by some providers (e.g., OpenAI and xAI). Defaults to `None` (disabled).
 
-LangChain automatically uses `ProviderStrategy` when you pass a schema type directly to @[`create_agent.response_format`][create_agent(response_format)] and the model supports native structured output:
+LangChain automatically uses `ProviderStrategy` when you pass a schema type directly to `create_agent.response_format`[create_agent(response_format)] and the model supports native structured output:
 
     ```python Pydantic Model
     from pydantic import BaseModel, Field
@@ -425,7 +425,7 @@ Name: MeetingAction
 Action item captured and added to meeting notes!
 ```
 
-Without `tool_message_content`, our final @[`ToolMessage`] would be:
+Without `tool_message_content`, our final `ToolMessage` would be:
 ```
 ================================= Tool Message =================================
 Name: MeetingAction
@@ -439,7 +439,7 @@ Models can make mistakes when generating structured output via tool calling. Lan
 
 #### Multiple structured outputs error
 
-When a model incorrectly calls multiple structured output tools, the agent provides error feedback in a @[`ToolMessage`] and prompts the model to retry:
+When a model incorrectly calls multiple structured output tools, the agent provides error feedback in a `ToolMessage` and prompts the model to retry:
 
 ```python
 from pydantic import BaseModel, Field

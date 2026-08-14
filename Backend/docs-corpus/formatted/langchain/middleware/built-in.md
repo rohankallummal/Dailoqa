@@ -40,7 +40,7 @@ Automatically summarize conversation history when approaching token limits, pres
 
     Summarization is text-oriented context compression. It does not resize, downsample, or otherwise compress image/audio/video payloads. Recent messages retained by `keep` still include their original multimodal blocks, while older multimodal messages that are summarized are represented only by the generated text summary. For image-heavy applications, store media in a filesystem or object store and pass URLs or file references through message history.
 
-**API reference:** @[`SummarizationMiddleware`]
+**API reference:** `SummarizationMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -71,12 +71,12 @@ agent = create_agent(
     model = init_chat_model("gpt-5.5", profile=custom_profile)
     ```
 
-    Model for generating summaries. Can be a model identifier string (e.g., `'openai:gpt-5.4-mini'`) or a `BaseChatModel` instance. See @[`init_chat_model`][init_chat_model(model)] for more information.
+    Model for generating summaries. Can be a model identifier string (e.g., `'openai:gpt-5.4-mini'`) or a `BaseChatModel` instance. See `init_chat_model`[init_chat_model(model)] for more information.
 
     Condition(s) for triggering summarization. Can be:
 
-    - A single @[`ContextSize`] tuple (the specified threshold must be met)
-    - A single @[`TriggerClause`] dict (all specified thresholds must be met - AND logic)
+    - A single `ContextSize` tuple (the specified threshold must be met)
+    - A single `TriggerClause` dict (all specified thresholds must be met - AND logic)
     - A list mixing either form (any item must be met - OR logic)
 
     Supported thresholds are:
@@ -85,11 +85,11 @@ agent = create_agent(
     - `tokens` (int): Absolute token count
     - `messages` (int): Message count
 
-    A @[`ContextSize`] tuple expresses exactly one threshold. A @[`TriggerClause`] dict can include one or more thresholds, e.g. `{"tokens": 4000, "messages": 10}`, and all thresholds in the dict must be met (AND).
+    A `ContextSize` tuple expresses exactly one threshold. A `TriggerClause` dict can include one or more thresholds, e.g. `{"tokens": 4000, "messages": 10}`, and all thresholds in the dict must be met (AND).
 
-    Each @[`TriggerClause`] dict must specify at least one threshold. If `trigger` is not provided, summarization will not trigger automatically.
+    Each `TriggerClause` dict must specify at least one threshold. If `trigger` is not provided, summarization will not trigger automatically.
 
-    See the API reference for @[`ContextSize`] and @[`TriggerClause`] for more information.
+    See the API reference for `ContextSize` and `TriggerClause` for more information.
 
     How much context to preserve after summarization. Specify exactly one of:
 
@@ -97,7 +97,7 @@ agent = create_agent(
     - `tokens` (int): Absolute token count to keep
     - `messages` (int): Number of recent messages to keep
 
-    See the API reference for @[`ContextSize`] for more information.
+    See the API reference for `ContextSize` for more information.
 
     Custom token counting function. Defaults to character-based counting.
 
@@ -210,7 +210,7 @@ Pause agent execution for human approval, editing, or rejection of tool calls be
 - Compliance workflows where human oversight is mandatory.
 - Long-running conversations where human feedback guides the agent.
 
-**API reference:** @[`HumanInTheLoopMiddleware`]
+**API reference:** `HumanInTheLoopMiddleware`
 
     Human-in-the-loop middleware requires a checkpointer to maintain state across interruptions.
 
@@ -257,7 +257,7 @@ Limit the number of model calls to prevent infinite loops or excessive costs. Mo
 - Enforcing cost controls on production deployments.
 - Testing agent behavior within specific call budgets.
 
-**API reference:** @[`ModelCallLimitMiddleware`]
+**API reference:** `ModelCallLimitMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -295,7 +295,7 @@ Control agent execution by limiting the number of tool calls, either globally ac
 - Enforcing rate limits on specific tool usage.
 - Protecting against runaway agent loops.
 
-**API reference:** @[`ToolCallLimitMiddleware`]
+**API reference:** `ToolCallLimitMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -367,7 +367,7 @@ Automatically fallback to alternative models when the primary model fails. Model
 - Cost optimization by falling back to cheaper models.
 - Provider redundancy across OpenAI, Anthropic, etc.
 
-**API reference:** @[`ModelFallbackMiddleware`]
+**API reference:** `ModelFallbackMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -401,7 +401,7 @@ Detect and handle Personally Identifiable Information (PII) in conversations usi
 
 With `apply_to_output=True`, `PIIMiddleware` also redacts streamed wire output—text deltas, tool-call args, tool outputs, and state snapshots—via a registered stream transformer. Requires `langchain>=1.3.2`. See Register transformers on middleware.
 
-**API reference:** @[`PIIMiddleware`]
+**API reference:** `PIIMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -538,7 +538,7 @@ Equip agents with task planning and tracking capabilities for complex multi-step
 
     This middleware automatically provides agents with a `write_todos` tool and system prompts to guide effective task planning.
 
-**API reference:** @[`TodoListMiddleware`]
+**API reference:** `TodoListMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -567,7 +567,7 @@ Use an LLM to intelligently select relevant tools before calling the main model.
 
 This middleware uses structured output to ask an LLM which tools are most relevant for the current query. The structured output schema defines the available tool names and descriptions. Model providers often add this structured output information to the system prompt behind the scenes.
 
-**API reference:** @[`LLMToolSelectorMiddleware`]
+**API reference:** `LLMToolSelectorMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -586,7 +586,7 @@ agent = create_agent(
 )
 ```
 
-    Model for tool selection. Can be a model identifier string (e.g., `'openai:gpt-5.4-mini'`) or a `BaseChatModel` instance. See @[`init_chat_model`][init_chat_model(model)] for more information.
+    Model for tool selection. Can be a model identifier string (e.g., `'openai:gpt-5.4-mini'`) or a `BaseChatModel` instance. See `init_chat_model`[init_chat_model(model)] for more information.
 
     Defaults to the agent's main model.
 
@@ -606,7 +606,7 @@ Catch exceptions raised during tool execution and convert them into error `ToolM
 
 Tool error middleware does not automatically retry failed calls. For retries, compose with Tool retry middleware placed *inner* (earlier in the `middleware` list) and configured with `on_failure="error"` so that exceptions reach the tool error middleware. See the full example below.
 
-**API reference:** @[`ToolErrorMiddleware`]
+**API reference:** `ToolErrorMiddleware`
 
 `ToolErrorMiddleware` requires `langchain>=1.3.14`.
 
@@ -684,7 +684,7 @@ Automatically retry failed tool calls with configurable exponential backoff. Too
 - Improving reliability of network-dependent tools.
 - Building resilient agents that gracefully handle temporary errors.
 
-**API reference:** @[`ToolRetryMiddleware`]
+**API reference:** `ToolRetryMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -769,7 +769,7 @@ Automatically retry failed model calls with configurable exponential backoff. Mo
 - Improving reliability of network-dependent model requests.
 - Building resilient agents that gracefully handle temporary model errors.
 
-**API reference:** @[`ModelRetryMiddleware`]
+**API reference:** `ModelRetryMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -887,7 +887,7 @@ Emulate tool execution using an LLM for testing purposes, replacing actual tool 
 - Developing agents when external tools are unavailable or expensive.
 - Prototyping agent workflows before implementing actual tools.
 
-**API reference:** @[`LLMToolEmulator`]
+**API reference:** `LLMToolEmulator`
 
 ```python
 from langchain.agents import create_agent
@@ -904,7 +904,7 @@ agent = create_agent(
 
     List of tool names (str) or BaseTool instances to emulate. If `None` (default), ALL tools will be emulated. If empty list `[]`, no tools will be emulated. If array with tool names/instances, only those tools will be emulated.
 
-    Model to use for generating emulated tool responses. Can be a model identifier string (e.g., `'google_genai:gemini-3.6-flash'`) or a `BaseChatModel` instance. Defaults to the agent's model if not specified. See @[`init_chat_model`][init_chat_model(model)] for more information.
+    Model to use for generating emulated tool responses. Can be a model identifier string (e.g., `'google_genai:gemini-3.6-flash'`) or a `BaseChatModel` instance. Defaults to the agent's model if not specified. See `init_chat_model`[init_chat_model(model)] for more information.
 
 The middleware uses an LLM to generate plausible responses for tool calls instead of executing the actual tools.
 
@@ -955,7 +955,7 @@ Manage conversation context by clearing older tool call outputs when token limit
 - Reducing token costs by removing older tool outputs that are no longer relevant
 - Maintaining only the most recent N tool results in context
 
-**API reference:** @[`ContextEditingMiddleware`], @[`ClearToolUsesEdit`]
+**API reference:** `ContextEditingMiddleware`, `ClearToolUsesEdit`
 
 ```python
 from langchain.agents import create_agent
@@ -977,11 +977,11 @@ agent = create_agent(
 )
 ```
 
-    List of @[`ContextEdit`] strategies to apply
+    List of `ContextEdit` strategies to apply
 
     Token counting method. Options: `'approximate'` or `'model'`
 
-**@[`ClearToolUsesEdit`] options:**
+**`ClearToolUsesEdit` options:**
 
     Token count that triggers the edit. When the conversation exceeds this token count, older tool outputs will be cleared.
 
@@ -1036,7 +1036,7 @@ Defer selected tools behind model providers' server-side tool search, so the mod
 
     Requires a model with server-side tool search support: Anthropic (Claude Sonnet 4+/Opus 4+/Haiku 4.5+) or OpenAI (gpt-5.5+). Other providers raise a `ValueError`.
 
-**API reference:** @[`ProviderToolSearchMiddleware`]
+**API reference:** `ProviderToolSearchMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -1089,7 +1089,7 @@ Expose a persistent shell session to agents for command execution. Shell tool mi
 
     **Limitation**: Persistent shell sessions do not currently work with interrupts (human-in-the-loop). We anticipate adding support for this in the future.
 
-**API reference:** @[`ShellToolMiddleware`]
+**API reference:** `ShellToolMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -1202,7 +1202,7 @@ Provide Glob and Grep search tools over a filesystem. File search middleware is 
 - Searching code content with regex
 - Large codebases where file discovery is needed
 
-**API reference:** @[`FilesystemFileSearchMiddleware`]
+**API reference:** `FilesystemFileSearchMiddleware`
 
 ```python
 from langchain.agents import create_agent
@@ -1413,7 +1413,7 @@ In addition to any user-defined subagents, the main agent has access to a `gener
 
 Some tasks have a clear definition of "done" that an agent cannot reliably hit on the first try. `RubricMiddleware` lets you declare _what done looks like_ as a rubric and have the agent self-evaluate and iterate until the rubric is satisfied or a maximum iteration cap is hit.
 
-**API reference:** @[`RubricMiddleware`]
+**API reference:** `RubricMiddleware`
 
     ```python Google
     from deepagents import RubricMiddleware, create_deep_agent
