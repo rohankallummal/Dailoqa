@@ -58,9 +58,14 @@ _BLANK_LINES_RE = re.compile(r"\n{3,}")
 # line (often a closing ":::") at the end of the mask instead of at a line start, and the
 # line-anchored rules would then miss it.
 _FENCE_RE = re.compile(r"^([ \t]*)(`{3,}|~{3,})[^\n]*\n.*?^\1?\2[ \t]*$", re.DOTALL | re.MULTILINE)
-_INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)", re.DOTALL)
+# Deliberately NOT re.DOTALL: an inline code span must stay on one line. With DOTALL a single
+# unbalanced backtick -- `](https://...) inside a link, say -- matches across paragraphs and
+# swallows whatever lies between it and the next backtick, including already-masked fences. Those
+# then never get restored, so the chunk keeps a raw \x00MASK7\x00 and loses the code outright.
+_INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)([^\n]+?)(?<!`)\1(?!`)")
 _MASK = "\x00MASK{}\x00"
 _MASK_RE = re.compile(r"\x00MASK(\d+)\x00")
+_MAX_UNMASK_PASSES = 10
 
 
 def _docs_dir() -> Path:
@@ -99,8 +104,18 @@ def _mask_code(text: str) -> tuple[str, list[str]]:
 
 
 def _unmask_code(text: str, saved: list[str]) -> str:
-    """Restore masked code verbatim."""
-    return _MASK_RE.sub(lambda m: saved[int(m.group(1))], text)
+    """Restore masked code verbatim.
+
+    Loops rather than substituting once: ``re.sub`` does not rescan what it inserts, so a saved
+    span containing a placeholder would leave a raw ``\\x00MASK7\\x00`` in an embedded chunk.
+    Worth being defensive about even now that the inline-code rule cannot produce that nesting,
+    because the failure is silent and lands in the index rather than in a traceback.
+    """
+    for _ in range(_MAX_UNMASK_PASSES):
+        text, changed = _MASK_RE.subn(lambda m: saved[int(m.group(1))], text)
+        if not changed:
+            return text
+    raise RuntimeError("unmasking did not converge; masked code is nested more deeply than expected")
 
 
 def _select_language(text: str, keep: str) -> str:

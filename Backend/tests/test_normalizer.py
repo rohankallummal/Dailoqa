@@ -8,7 +8,7 @@ wrong answer, so it has to be provable before anything is ingested.
 import pytest
 
 from app.config import get_settings
-from app.rag.ingest import _flatten_mdx, _mask_code, _unmask_code
+from app.rag.ingest import _INLINE_CODE_RE, _flatten_mdx, _mask_code, _unmask_code
 from app.rag.store import citation_label, context_prefix, strip_context_prefix
 
 # Every character class the prose rules would otherwise mangle, inside one fence.
@@ -50,6 +50,25 @@ def test_the_same_constructs_are_normalized_outside_fences(language):
     assert "<Tip>" not in out.replace(_HOSTILE_FENCE, "")
     assert "Read this." in out
     assert _HOSTILE_FENCE in out
+
+
+def test_an_inline_code_span_cannot_cross_a_line():
+    # Regression, and the direct cause of the bug below: `_INLINE_CODE_RE` carried re.DOTALL, so
+    # an unbalanced backtick -- upstream langchain/models.mdx has a stray one after
+    # "[integration package](/oss/...)`" -- opened a span that ran across paragraphs to the next
+    # backtick, absorbing every already-masked fence in between.
+    assert _INLINE_CODE_RE.search("a `open\n\nstill going` b") is None
+    assert _INLINE_CODE_RE.search("a `closed` b") is not None
+
+
+def test_unmasking_restores_nested_placeholders():
+    # The consequence: a saved span holding another placeholder. re.sub does not rescan what it
+    # inserts, so a single pass left a literal \x00MASK0\x00 in the chunk and dropped the fence
+    # it stood for -- 9,618 bytes destroyed on langchain/models, silently, straight into the index.
+    saved = ["```bash\npip install thing\n```", "`\x00MASK0\x00`"]
+    out = _unmask_code("before \x00MASK1\x00 after", saved)
+    assert "\x00" not in out, "a mask placeholder survived unmasking"
+    assert "pip install thing" in out
 
 
 def test_masking_round_trips_exactly():
