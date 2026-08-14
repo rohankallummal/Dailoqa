@@ -1,0 +1,169 @@
+{
+  "upstream_repo": "https://github.com/langchain-ai/docs",
+  "upstream_sha": "27c27c203996d259e5d59cd53bdf371cb7573c73",
+  "docs_language": "python",
+  "pages": [
+    {
+      "topic": "deep-agents",
+      "slug": "multimodal",
+      "upstream_path": "src/oss/deepagents/multimodal.mdx",
+      "vault_path": "deep-agents/multimodal.md",
+      "frontend_route": "/docs/deepagents/multimodality",
+      "frontend_rel_path": "deepagents/multimodal.mdx",
+      "title": "Multimodal inputs and outputs"
+    },
+    {
+      "topic": "deep-agents",
+      "slug": "overview",
+      "upstream_path": "src/oss/deepagents/overview.mdx",
+      "vault_path": "deep-agents/overview.md",
+      "frontend_route": "/docs/deepagents",
+      "frontend_rel_path": "deepagents/overview.mdx",
+      "title": "Deep Agents overview"
+    },
+    {
+      "topic": "deep-agents",
+      "slug": "sandboxes",
+      "upstream_path": "src/oss/deepagents/sandboxes.mdx",
+      "vault_path": "deep-agents/sandboxes.md",
+      "frontend_route": "/docs/deepagents/sandboxes",
+      "frontend_rel_path": "deepagents/sandboxes.mdx",
+      "title": "Sandboxes"
+    },
+    {
+      "topic": "deep-agents",
+      "slug": "skills",
+      "upstream_path": "src/oss/deepagents/skills.mdx",
+      "vault_path": "deep-agents/skills.md",
+      "frontend_route": "/docs/deepagents/skills",
+      "frontend_rel_path": "deepagents/skills.mdx",
+      "title": "Skills"
+    },
+    {
+      "topic": "deep-agents",
+      "slug": "subagents",
+      "upstream_path": "src/oss/deepagents/subagents.mdx",
+      "vault_path": "deep-agents/subagents.md",
+      "frontend_route": "/docs/deepagents/subagents",
+      "frontend_rel_path": "deepagents/subagents.mdx",
+      "title": "Subagents"
+    },
+    {
+      "topic": "deep-agents",
+      "slug": "tools",
+      "upstream_path": "src/oss/deepagents/tools.mdx",
+      "vault_path": "deep-agents/tools.md",
+      "frontend_route": "/docs/deepagents/tools",
+      "frontend_rel_path": "deepagents/tools.mdx",
+      "title": "Tools"
+    },
+    {
+      "topic": "langchain",
+      "slug": "agents",
+      "upstream_path": "src/oss/langchain/agents.mdx",
+      "vault_path": "langchain/agents.md",
+      "frontend_route": "/docs/langchain/agents",
+      "frontend_rel_path": "langchain/agents.mdx",
+      "title": "Agents"
+    },
+    {
+      "topic": "langchain",
+      "slug": "guardrails",
+      "upstream_path": "src/oss/langchain/guardrails.mdx",
+      "vault_path": "langchain/guardrails.md",
+      "frontend_route": "/docs/langchain/guardrails",
+      "frontend_rel_path": "langchain/guardrails.mdx",
+      "title": "Guardrails"
+    },
+    {
+      "topic": "langchain",
+      "slug": "middleware/built-in",
+      "upstream_path": "src/oss/langchain/middleware/built-in.mdx",
+      "vault_path": "langchain/middleware/built-in.md",
+      "frontend_route": "/docs/langchain/prebuilt-middleware",
+      "frontend_rel_path": "langchain/middleware/built-in.mdx",
+      "title": "Prebuilt middleware"
+    },
+    {
+      "topic": "langchain",
+      "slug": "models",
+      "upstream_path": "src/oss/langchain/models.mdx",
+      "vault_path": "langchain/models.md",
+      "frontend_route": "/docs/langchain/models",
+      "frontend_rel_path": "langchain/models.mdx",
+      "title": "Models"
+    },
+    {
+      "topic": "langchain",
+      "slug": "overview",
+      "upstream_path": "src/oss/langchain/overview.mdx",
+      "vault_path": "langchain/overview.md",
+      "frontend_route": "/docs/langchain",
+      "frontend_rel_path": "langchain/overview.mdx",
+      "title": "LangChain overview"
+    },
+    {
+      "topic": "langchain",
+      "slug": "structured-output",
+      "upstream_path": "src/oss/langchain/structured-output.mdx",
+      "vault_path": "langchain/structured-output.md",
+      "frontend_route": "/docs/langchain/structured-output",
+      "frontend_rel_path": "langchain/structured-output.mdx",
+      "title": "Structured output"
+    },
+    {
+      "topic": "langgraph",
+      "slug": "checkpointers",
+      "upstream_path": "src/oss/langgraph/checkpointers.mdx",
+      "vault_path": "langgraph/checkpointers.md",
+      "frontend_route": "/docs/langgraph/checkpoints",
+      "frontend_rel_path": "langgraph/checkpointers.mdx",
+      "title": "Checkpointers"
+    },
+    {
+      "topic": "langgraph",
+      "slug": "interrupts",
+      "upstream_path": "src/oss/langgraph/interrupts.mdx",
+      "vault_path": "langgraph/interrupts.md",
+      "frontend_route": "/docs/langgraph/interrupts",
+      "frontend_rel_path": "langgraph/interrupts.mdx",
+      "title": "Interrupts"
+    },
+    {
+      "topic": "langgraph",
+      "slug": "overview",
+      "upstream_path": "src/oss/langgraph/overview.mdx",
+      "vault_path": "langgraph/overview.md",
+      "frontend_route": "/docs/langgraph",
+      "frontend_rel_path": "langgraph/overview.mdx",
+      "title": "LangGraph overview"
+    },
+    {
+      "topic": "langgraph",
+      "slug": "persistence",
+      "upstream_path": "src/oss/langgraph/persistence.mdx",
+      "vault_path": "langgraph/persistence.md",
+      "frontend_route": "/docs/langgraph/persistence",
+      "frontend_rel_path": "langgraph/persistence.mdx",
+      "title": "Persistence"
+    },
+    {
+      "topic": "langgraph",
+      "slug": "stores",
+      "upstream_path": "src/oss/langgraph/stores.mdx",
+      "vault_path": "langgraph/stores.md",
+      "frontend_route": "/docs/langgraph/stores",
+      "frontend_rel_path": "langgraph/stores.mdx",
+      "title": "Stores"
+    },
+    {
+      "topic": "langgraph",
+      "slug": "use-subgraphs",
+      "upstream_path": "src/oss/langgraph/use-subgraphs.mdx",
+      "vault_path": "langgraph/use-subgraphs.md",
+      "frontend_route": "/docs/langgraph/subgraphs",
+      "frontend_rel_path": "langgraph/use-subgraphs.mdx",
+      "title": "Subgraphs"
+    }
+  ]
+}
