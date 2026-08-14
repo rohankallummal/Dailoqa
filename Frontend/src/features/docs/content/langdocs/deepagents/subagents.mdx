@@ -328,10 +328,6 @@ As your deep agent runs, all runs executed by a subagent or the coordinator will
 
 ![LangSmith Example trace showing the metadata](/oss/images/deepagents/deepagents-langsmith.png)
 
-<Tip>
-Open the run in LangSmith to compare the coordinator trace with each subagent run. Follow the observability quickstart to get set up. We recommend you also set up LangSmith Engine which monitors your traces, detects issues, and proposes fixes.
-</Tip>
-
 ## Filter by subagent in LangSmith
 
 Because each subagent's `name` is written to the `lc_agent_name` metadata key on every run it produces, you can use LangSmith's metadata filtering to isolate all runs from a specific subagent — useful for debugging, monitoring, or comparing subagent behavior over time.

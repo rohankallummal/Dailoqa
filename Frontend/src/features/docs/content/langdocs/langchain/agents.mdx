@@ -91,7 +91,7 @@ Pass a model identifier string (`"provider:model"`) or an initialized model inst
 :::
 :::js
 
-<AgentsIntroJs />
+<AgentsModelJs />
 
 :::
 
@@ -180,11 +180,6 @@ For full details, examples, and middleware-level state schemas, see Short-term m
 
 ## Invocation
 
-<Tip>
-Trace each step of this loop, debug tool calls, and evaluate agent outputs with LangSmith. Follow the tracing quickstart to get set up. We recommend you also set up LangSmith Engine which monitors your traces, detects issues, and proposes fixes.
-</Tip>
-
-
 :::python
 You can invoke an agent with a message. Behind the scenes that passes an update to the agent's `State`. All agents include a sequence of messages in their state; to invoke the agent, pass a new message along with a `thread_id` so the agent can persist and resume conversation history:
 :::
@@ -253,30 +248,6 @@ Common patterns are prebuilt as first-class middleware. You can build anything e
     style={{height: "300px", width: "auto", justifyContent: "center"}}
     className="rounded-lg block mx-auto"
 />
-
-As agents take on complex work, they need support across a few key areas. The middleware ecosystem provides:
-
-
-<CardGroup cols={2}>
-  <Card title="Execution environment" icon="bolt" href="#execution-environment">
-    Tools, filesystem, sandboxes, and code execution
-  </Card>
-  <Card title="Context management" icon="database" href="#context-management">
-    Summarization, memory, skills, and prompt caching
-  </Card>
-  <Card title="Planning and delegation" icon="sitemap" href="#planning-and-delegation">
-    Todo lists and subagents for parallel, isolated work
-  </Card>
-  <Card title="Fault tolerance" icon="shield" href="#fault-tolerance">
-    Retries, fallbacks, and call limits
-  </Card>
-  <Card title="Guardrails" icon="lock" href="#guardrails">
-    PII detection and content controls
-  </Card>
-  <Card title="Steering" icon="user" href="#steering">
-    Human-in-the-loop approval before high-impact actions
-  </Card>
-</CardGroup>
 
 <Tip>
 `create_deep_agent` pre-assembles this stack for long-running coding and research tasks (filesystem, summarization, subagents, and prompt caching included by default). See Deep Agents for the full prebuilt harness.
@@ -493,17 +464,3 @@ See @[`HumanInTheLoopMiddleware`], Human-in-the-loop.
 :::js
 See @[`humanInTheLoopMiddleware`], Human-in-the-loop.
 :::
-
-### Middleware resources
-
-<CardGroup cols={3}>
-  <Card title="Middleware overview" icon="route" arrow>
-    How the middleware stack works and when hooks fire
-  </Card>
-  <Card title="Prebuilt middleware" icon="package" href="/oss/langchain/middleware/built-in" arrow>
-    Full reference with configuration examples
-  </Card>
-  <Card title="Custom middleware" icon="code" arrow>
-    Write your own hooks for business logic, PII scrubbing, and more
-  </Card>
-</CardGroup>

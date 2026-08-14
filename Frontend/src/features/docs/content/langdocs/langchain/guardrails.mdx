@@ -25,10 +25,10 @@ You can implement guardrails using middleware to intercept execution at strategi
 Guardrails can be implemented using two complementary approaches:
 
 <CardGroup cols={2}>
-    <Card title="Deterministic guardrails" icon="list-check">
+    <Card title="Deterministic guardrails">
         Use rule-based logic like regex patterns, keyword matching, or explicit checks. Fast, predictable, and cost-effective, but may miss nuanced violations.
     </Card>
-    <Card title="Model-based guardrails" icon="brain">
+    <Card title="Model-based guardrails">
         Use LLMs or classifiers to evaluate content with semantic understanding. Catch subtle issues that rules miss, but are slower and more expensive.
     </Card>
 </CardGroup>
@@ -688,10 +688,3 @@ const agent = createAgent({
 });
 ```
 :::
-
-## Additional resources
-
-- Middleware documentation - Complete guide to custom middleware
-- Middleware API reference - Complete guide to custom middleware
-- Human-in-the-loop - Add human review for sensitive operations
-- Testing agents - Strategies for testing safety mechanisms

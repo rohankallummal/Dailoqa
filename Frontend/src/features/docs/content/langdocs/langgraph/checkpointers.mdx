@@ -12,10 +12,6 @@ A checkpointer saves a snapshot of graph state at each super-step, organized int
 When using the Agent Server, you do not need to implement or configure checkpointers manually. The server handles all persistence infrastructure for you behind the scenes.
 </Info>
 
-<Tip>
-Trace checkpointed state and debug how your agent resumes across sessions with LangSmith. Follow the tracing quickstart to get set up.
-</Tip>
-
 ## Why use checkpointers
 
 Checkpointers are required for the following features:
@@ -619,10 +615,6 @@ By default, LangGraph checkpoints write the full value of every state channel at
 Under the hood, checkpointing is powered by checkpointer objects that conform to @[`BaseCheckpointSaver`] interface. LangGraph provides several checkpointer implementations, all implemented via standalone, installable libraries.
 
 :::python
-<Note>
-See checkpointer integrations for available providers.
-</Note>
-
 * `langgraph-checkpoint`: The base interface for checkpointer savers (@[`BaseCheckpointSaver`]) and serialization/deserialization interface (@[`SerializerProtocol`]). Includes in-memory checkpointer implementation (@[`InMemorySaver`]) for experimentation. LangGraph comes with `langgraph-checkpoint` included.
 * `langgraph-checkpoint-sqlite`: An implementation of LangGraph checkpointer that uses SQLite database (@[`SqliteSaver`] / @[`AsyncSqliteSaver`]). Ideal for experimentation and local workflows. Needs to be installed separately.
 * `langgraph-checkpoint-postgres`: An advanced checkpointer that uses Postgres database (@[`PostgresSaver`] / @[`AsyncPostgresSaver`]), used in LangSmith. Ideal for using in production. Needs to be installed separately.

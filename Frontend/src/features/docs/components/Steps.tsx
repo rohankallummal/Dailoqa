@@ -38,7 +38,7 @@ export function Steps({ children }: { children: ReactNode }) {
   if (steps.length === 0) return null;
 
   return (
-    <ol className="my-4 ml-1 border-l border-line pl-3">
+    <ol className="docSteps my-4 ml-1 border-l border-line">
       {steps.map((step, index) =>
         cloneElement(step, { key: index, index: index + 1 }),
       )}

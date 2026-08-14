@@ -4,11 +4,10 @@ import { LangBlock } from "./LangBlock";
 import { CodeBlock } from "./CodeBlock";
 import { CodeGroup } from "./CodeGroup";
 import { Card } from "./Card";
-import { AccordionGroup, CardGroup, Grid } from "./Grid";
+import { AccordionGroup, CardGroup } from "./Grid";
 import { Accordion } from "./Accordion";
 import { Expandable } from "./Expandable";
 import { Callout, Note, Tip, Warning } from "./Callout";
-import { Icon } from "./Icon";
 import { ParamField } from "./ParamField";
 import { Tab, Tabs } from "./Tabs";
 import { Tooltip } from "./Tooltip";
@@ -25,7 +24,6 @@ const shims: Components = {
   CodeGroup,
   Card,
   CardGroup,
-  Columns: Grid,
   Accordion,
   AccordionGroup,
   Expandable,
@@ -42,7 +40,6 @@ const shims: Components = {
   Steps,
   Step,
   Tree,
-  Icon,
   a: MdxLink,
 };
 

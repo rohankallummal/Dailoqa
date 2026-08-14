@@ -13,7 +13,7 @@ function normalize(cols: number | string | undefined): number {
   return 2;
 }
 
-export function Grid({
+function Grid({
   cols,
   children,
 }: {

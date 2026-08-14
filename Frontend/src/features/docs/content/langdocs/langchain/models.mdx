@@ -9,10 +9,10 @@ LLMs are powerful AI tools that can interpret and generate text like humans. The
 
 In addition to text generation, many models support:
 
-* <Icon icon="hammer" size={16} /> [Tool calling](#tool-calling) - calling external tools (like databases queries or API calls) and use results in their responses.
-* <Icon icon="layout-grid" size={16} /> [Structured output](#structured-output) - where the model's response is constrained to follow a defined format.
-* <Icon icon="photo" size={16} /> [Multimodality](#multimodal) - process and return data other than text, such as images, audio, and video.
-* <Icon icon="brain" size={16} /> [Reasoning](#reasoning) - models perform multi-step reasoning to arrive at a conclusion.
+* [Tool calling](#tool-calling) - calling external tools (like databases queries or API calls) and use results in their responses.
+* [Structured output](#structured-output) - where the model's response is constrained to follow a defined format.
+* [Multimodality](#multimodal) - process and return data other than text, such as images, audio, and video.
+* [Reasoning](#reasoning) - models perform multi-step reasoning to arrive at a conclusion.
 
 Models are the reasoning engine of [agents](/oss/langchain/agents). They drive the agent's decision-making process, determining which tools to call, how to interpret results, and when to provide a final answer.
 
@@ -21,12 +21,6 @@ The quality and capabilities of the model you choose directly impact your agent'
 LangChain's standard model interfaces give you access to many different provider integrations, which makes it easy to experiment with and switch between models to find the best fit for your use case.
 
 For provider-specific integration information and capabilities, see the provider's chat model page.
-
-<Tip>
-LangSmith traces each model call so you can compare providers, inspect tool routing, and debug failures. Follow the tracing quickstart to get set up.
-
-We recommend you also set up LangSmith Engine which monitors your traces, detects issues, and proposes fixes.
-</Tip>
 
 ## Basic usage
 
@@ -64,22 +58,6 @@ See @[`initChatModel`][initChatModel] for more detail, including information on 
 LangChain supports all major model providers through dedicated integration packages. Each provider package implements the same standard interface, so you can swap providers without rewriting application logic. New model names work immediately — no LangChain update required — because provider packages pass model names directly to the provider's API.
 
 Browse the full list of supported providers, or see Providers and models for a conceptual overview of how providers, packages, and model names work together in LangChain.
-
-### Key methods
-
-<Card title="Invoke" href="#invoke" icon="send" arrow="true" horizontal>
-    The model takes messages as input and outputs messages after generating a complete response.
-</Card>
-<Card title="Stream" href="#stream" icon="broadcast" arrow="true" horizontal>
-    Invoke the model, but stream the output as it is generated in real-time.
-</Card>
-<Card title="Batch" href="#batch" icon="grip-vertical" arrow="true" horizontal>
-    Send multiple requests to a model in a batch for more efficient processing.
-</Card>
-
-<Info>
-    In addition to chat models, LangChain provides support for other adjacent technologies, such as embedding models and vector stores. See the integrations page for details.
-</Info>
 
 ## Parameters
 
@@ -756,7 +734,7 @@ Below, we show some common ways you can use tool calling.
 
         Each @[`ToolMessage`] returned by the tool includes a `tool_call_id` that matches the original tool call, helping the model correlate results with requests.
     </Accordion>
-    <Accordion title="Forcing tool calls" icon="asterisk">
+    <Accordion title="Forcing tool calls">
         By default, the model has the freedom to choose which bound tool to use based on the user's input. However, you might want to force choosing a tool, ensuring the model uses either a particular tool or **any** tool from a given list:
 
         :::python
@@ -783,7 +761,7 @@ Below, we show some common ways you can use tool calling.
         </CodeGroup>
         :::
     </Accordion>
-    <Accordion title="Parallel tool calls" icon="stack-2">
+    <Accordion title="Parallel tool calls">
         Many models support calling multiple tools in parallel when appropriate. This allows the model to gather information from different sources simultaneously.
 
         :::python
@@ -853,7 +831,7 @@ Below, we show some common ways you can use tool calling.
         ```
         </Tip>
     </Accordion>
-    <Accordion title="Streaming tool calls" icon="rss">
+    <Accordion title="Streaming tool calls">
         When streaming responses, tool calls are progressively built through @[`ToolCallChunk`]. This allows you to see tool calls as they're being generated rather than waiting for the complete response.
 
         :::python
@@ -1638,7 +1616,7 @@ Many chat model providers impose a limit on the number of invocations that can b
 
 To help manage rate limits, chat model integrations accept a `rate_limiter` parameter that can be provided during initialization to control the rate at which requests are made.
 
-<Accordion title="Initialize and use a rate limiter" icon="gauge">
+<Accordion title="Initialize and use a rate limiter">
     LangChain in comes with (an optional) built-in @[`InMemoryRateLimiter`]. This limiter is thread safe and can be shared by multiple threads in the same process.
 
     ```python Define a rate limiter
@@ -1675,7 +1653,7 @@ You can configure a custom base URL for providers that implement the OpenAI Chat
     - LiteLLM via `ChatLiteLLM` / `ChatLiteLLMRouter` (`langchain-litellm`)
 </Warning>
 
-<Accordion title="Custom base URL" icon="link">
+<Accordion title="Custom base URL">
     :::python
     Many model providers offer OpenAI-compatible APIs (e.g., Together AI, vLLM). You can use @[`init_chat_model`] with these providers by specifying the appropriate `base_url` parameter:
 
@@ -1710,7 +1688,7 @@ You can configure a custom base URL for providers that implement the OpenAI Chat
 </Accordion>
 
 :::python
-<Accordion title="HTTP proxy configuration" icon="shield">
+<Accordion title="HTTP proxy configuration">
     For deployments requiring HTTP proxies, some model integrations support proxy configuration:
 
     ```python

@@ -23,12 +23,6 @@ When using the Agent Server, you do not need to implement or configure stores ma
 @[InMemoryStore] is suitable for development and testing. For production, use a persistent store like `PostgresStore`, `MongoDBStore`, `RedisStore`, or `UpstashStore`. All implementations extend @[BaseStore], which is the type annotation to use in node function signatures.
 </Note>
 
-:::python
-<Note>
-See store integrations for the full list of available providers.
-</Note>
-:::
-
 ## Basic usage
 
 The following code snippet shows the @[InMemoryStore] in isolation without using LangGraph:
@@ -671,5 +665,4 @@ async def test_search_prefix(store, reference):
 
 ### Next steps
 
-- Add a custom store to Agent Server — deploying your implementation
 - [Checkpointers](/oss/langgraph/checkpointers) — thread-scoped state persistence

@@ -481,18 +481,6 @@ const agent = createAgent({
     For complete examples, configuration options, and integration patterns, see the Human-in-the-loop documentation.
 </Tip>
 
-:::python
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Human-in-the-loop middleware behavior.
-</Callout>
-:::
-
-:::js
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Human-in-the-loop middleware behavior.
-</Callout>
-:::
-
 ### Model call limit
 
 Limit the number of model calls to prevent infinite loops or excessive costs. Model call limit is useful for the following:
@@ -542,18 +530,6 @@ const agent = createAgent({
   ],
 });
 ```
-:::
-
-:::python
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Model Call Limit middleware behavior.
-</Callout>
-:::
-
-:::js
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Model Call Limit middleware behavior.
-</Callout>
 :::
 
 <Accordion title="Configuration options">
@@ -639,18 +615,6 @@ const agent = createAgent({
   ],
 });
 ```
-:::
-
-:::python
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Tool Call Limit middleware behavior.
-</Callout>
-:::
-
-:::js
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Tool Call Limit middleware behavior.
-</Callout>
 :::
 
 <Accordion title="Configuration options">
@@ -798,12 +762,6 @@ const agent = createAgent({
   ],
 });
 ```
-:::
-
-:::python
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating Model Fallback middleware behavior.
-</Callout>
 :::
 
 <Accordion title="Configuration options">
@@ -1172,18 +1130,6 @@ const agent = createAgent({
   middleware: [todoListMiddleware()],
 });
 ```
-:::
-
-:::python
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating To-do List middleware behavior.
-</Callout>
-:::
-
-:::js
-<Callout icon="player-play" iconType="solid">
-    Watch this video guide demonstrating To-do List middleware behavior.
-</Callout>
 :::
 
 <Accordion title="Configuration options">
@@ -2975,34 +2921,4 @@ Some tasks have a clear definition of "done" that an agent cannot reliably hit o
 **API reference:** @[`RubricMiddleware`]
 
 <RubricConfigurePy />
-
-For full configuration options, streaming events, and a complete code generation example, see Grading rubrics.
 :::
-
-## Provider-specific middleware
-
-These middleware are optimized for specific LLM providers. See each provider's documentation for full details and examples.
-
-<Columns cols={2}>
-
-:::python
-    <Card title="Anthropic" icon="/images/providers/anthropic-icon.svg" arrow>
-        Prompt caching, bash tool, text editor, memory, and file search middleware for Claude models.
-    </Card>
-    <Card title="AWS" icon="brand-aws" arrow>
-        Prompt caching middleware for Amazon Bedrock models.
-    </Card>
-    <Card title="OpenAI" icon="brand-openai" arrow>
-        Content moderation middleware for OpenAI models.
-    </Card>
-:::
-
-:::js
-    <Card title="Anthropic" icon="/images/providers/anthropic-icon.svg" arrow>
-        Prompt caching, bash tool, text editor, memory, and file search middleware for Claude models.
-    </Card>
-    <Card title="AWS" icon="brand-aws" arrow>
-        Prompt caching middleware for Amazon Bedrock models.
-    </Card>
-:::
-</Columns>

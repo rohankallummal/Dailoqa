@@ -8,7 +8,6 @@ import LanggraphInterruptsHitlStreamPy from '/snippets/code-samples/langgraph-in
 import LanggraphInterruptsHitlStreamJs from '/snippets/code-samples/langgraph-interrupts-hitl-stream-js.mdx';
 import LanggraphInterruptsApprovalPy from '/snippets/code-samples/langgraph-interrupts-approval-py.mdx';
 import LanggraphInterruptsReviewPy from '/snippets/code-samples/langgraph-interrupts-review-py.mdx';
-import LanggraphInterruptsValidatePy from '/snippets/code-samples/langgraph-interrupts-validate-py.mdx';
 import LanggraphInterruptsValidateConditionalEdgePatternPy from '/snippets/code-samples/langgraph-interrupts-validate-conditional-edge-pattern-py.mdx';
 import LanggraphInterruptsValidateConditionalEdgePatternJs from '/snippets/code-samples/langgraph-interrupts-validate-conditional-edge-pattern-js.mdx';
 import LanggraphInterruptsValidateConditionalEdgeJs from '/snippets/code-samples/langgraph-interrupts-validate-conditional-edge-js.mdx';
@@ -148,11 +147,11 @@ await graph.invoke(new Command({ resume: true }), config);
 
 The key thing that interrupts unlock is the ability to pause execution and wait for external input. This is useful for a variety of use cases, including:
 
-- <Icon icon="circle-check" /> [Approval workflows](#approve-or-reject): Pause before executing critical actions (API calls, database changes, financial transactions)
-- <Icon icon="link" /> [Handling multiple interrupts](#handling-multiple-interrupts): Pair interrupt IDs with resume values when resuming multiple interrupts in a single invocation
-- <Icon icon="pencil" /> [Review and edit](#review-and-edit-state): Let humans review and modify LLM outputs or tool calls before continuing
-- <Icon icon="tool" /> [Interrupting tool calls](#interrupts-in-tools): Pause before executing tool calls to review and edit the tool call before execution
-- <Icon icon="shield-check" /> [Validating human input](#validating-human-input): Pause before proceeding to the next step to validate human input
+- [Approval workflows](#approve-or-reject): Pause before executing critical actions (API calls, database changes, financial transactions)
+- [Handling multiple interrupts](#handling-multiple-interrupts): Pair interrupt IDs with resume values when resuming multiple interrupts in a single invocation
+- [Review and edit](#review-and-edit-state): Let humans review and modify LLM outputs or tool calls before continuing
+- [Interrupting tool calls](#interrupts-in-tools): Pause before executing tool calls to review and edit the tool call before execution
+- [Validating human input](#validating-human-input): Pause before proceeding to the next step to validate human input
 
 ### Stream with human-in-the-loop (HITL) interrupts
 
@@ -834,53 +833,8 @@ Each resume invokes `getAgeNode` exactly once, runs the `interrupt()` call once,
 
     :::js
 
-    ```typescript
-    import {
-      Command,
-      MemorySaver,
-      START,
-      END,
-      StateGraph,
-      StateSchema,
-      interrupt,
-    } from "@langchain/langgraph";
-    import * as z from "zod";
+    <LanggraphInterruptsValidateConditionalEdgeJs />
 
-    const State = new StateSchema({
-      age: z.number().nullable(),
-      pendingQuestion: z.string().nullable(),
-    });
-
-    const builder = new StateGraph(State)
-      .addNode("collectAge", (state) => {
-        const question = state.pendingQuestion ?? "What is your age?";
-        const answer = interrupt(question); // called exactly once per invocation
-
-        if (typeof answer === "number" && answer > 0) {
-          return { age: answer, pendingQuestion: null };
-        }
-        return { pendingQuestion: `'${answer}' is not a valid age. Please enter a positive number.` };
-      })
-      .addEdge(START, "collectAge")
-      .addConditionalEdges("collectAge", (state) =>
-        state.age !== null ? END : "collectAge"
-      );
-
-    const checkpointer = new MemorySaver();
-    const graph = builder.compile({ checkpointer });
-
-    const config = { configurable: { thread_id: "form-1" } };
-    const first = await graph.invoke({ age: null, pendingQuestion: null }, config);
-    console.log(first.__interrupt__); // -> [{ value: "What is your age?", ... }]
-
-    // Provide invalid data; the node re-prompts via the conditional edge
-    const retry = await graph.invoke(new Command({ resume: "thirty" }), config);
-    console.log(retry.__interrupt__); // -> [{ value: "'thirty' is not a valid age...", ... }]
-
-    // Provide valid data; route returns END and the graph finishes
-    const final = await graph.invoke(new Command({ resume: 30 }), config);
-    console.log(final.age); // -> 30
-    ```
     :::
 
 </Accordion>
@@ -1570,13 +1524,3 @@ To debug and test a graph, you can use static interrupts as breakpoints to step 
         :::
     </Tab>
 </Tabs>
-
-<Tip>
-To debug your interrupts, use LangSmith.
-</Tip>
-
-### Using LangSmith Studio
-
-You can use LangSmith Studio to set static interrupts in your graph in the UI before running the graph. You can also use the UI to inspect the graph state at any point in the execution.
-
-![image](/oss/images/static-interrupt.png)

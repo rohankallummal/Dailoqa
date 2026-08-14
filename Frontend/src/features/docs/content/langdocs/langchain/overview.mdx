@@ -14,11 +14,9 @@ Start with [Deep Agents](/oss/deepagents/overview/) for a "batteries-included" a
 Use [LangChain](/oss/langchain/agents) (`create_agent`) for a highly customizable harness, easily tailored to your use case and data.
 
 Use [LangGraph](/oss/langgraph/overview), our low-level orchestration framework, for advanced needs combining deterministic and agentic workflows.
-
-Use LangSmith to trace, debug, and evaluate agents built with any of these frameworks. Follow the tracing quickstart to get set up. We recommend you also set up LangSmith Engine which monitors your traces, detects issues, and proposes fixes.
 </Tip>
 
-## <Icon icon="wand" /> Create an agent
+## Create an agent
 
 This example demonstrates how to create a simple LangChain agent with a custom tool:
 
@@ -472,28 +470,3 @@ This example demonstrates how to create a simple LangChain agent with a custom t
 </CodeGroup>
 :::
 
-See the Installation instructions and Quickstart guide to get started building your own agents and applications with LangChain.
-
-<Tip>
-Use LangSmith to trace requests, debug agent behavior, and evaluate outputs. Set `LANGSMITH_TRACING=true` and your API key to get started.
-</Tip>
-
-## <Icon icon="star" size={20} /> Core benefits
-
-<Columns cols={2}>
-    <Card title="Standard model interface" icon="refresh" href="/oss/langchain/models" arrow cta="Learn more">
-        Use one interface for chat models, embeddings, and more across providers. Switch models with minimal code changes and keep your application portable as requirements evolve.
-    </Card>
-
-    <Card title="Highly configurable harness" icon="wand" href="/oss/langchain/agents" arrow cta="Learn more">
-        Start with `create_agent` as a minimal harness and add capabilities incrementally through middleware. Compose only what your use case needs, from guardrails and retries to routing and custom tool policies.
-    </Card>
-
-    <Card title="Built on top of LangGraph" icon="/images/brand/langgraph-icon.png" href="/oss/langgraph/overview" arrow cta="Learn more">
-        LangChain's agents are built on top of LangGraph. This allows us to take advantage of LangGraph's durable execution, human-in-the-loop support, persistence, and more.
-    </Card>
-
-    <Card title="Debug with LangSmith" icon="/images/brand/observability-icon-dark.png" arrow cta="Learn more">
-        Inspect traces, tool calls, state transitions, and latency in one place. Find failure modes, evaluate quality, and improve agent behavior with execution data.
-    </Card>
-</Columns>
