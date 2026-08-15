@@ -10,6 +10,11 @@ from app.auth import AuthContext, require_auth
 from app.db.base import async_session
 from app.sse.backplane import run_listener
 
+# Running natively on Windows needs a selector event loop or the LISTEN/NOTIFY backplane dies at
+# startup; see app/loop.py. It cannot be fixed from here -- uvicorn picks its loop from a
+# hardcoded factory, not the event loop policy, so a set_event_loop_policy call in this module is
+# ignored. Pass `--loop app.loop:selector_event_loop` (or `--reload`) instead.
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
