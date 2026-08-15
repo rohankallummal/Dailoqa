@@ -41,7 +41,7 @@ def manifest_at(tmp_path, monkeypatch):
 
 def test_a_citation_carries_the_documentation_route():
     label = citation_label(corpus_page("subagents"), "Subagents", "Using CompiledSubAgent")
-    assert label.endswith("(/docs/deepagents/subagents)")
+    assert "(/docs/deepagents/subagents" in label
     assert "Subagents - Using CompiledSubAgent" in label
 
 
@@ -100,6 +100,41 @@ def test_the_fallback_still_disambiguates_colliding_titles(manifest_at):
         for topic in ("deep-agents", "langchain", "langgraph")
     }
     assert len(labels) == 3
+
+
+# --- section anchors ---------------------------------------------------------------------
+
+def test_the_intro_sentinel_matches_store():
+    # routes.py duplicates INTRO_HEADING because store imports it, not the other way round.
+    # This is what stops the two copies drifting silently.
+    from app.rag.store import INTRO_HEADING
+
+    assert routes._INTRO_HEADING == INTRO_HEADING
+
+
+@pytest.mark.parametrize(
+    "heading, anchor",
+    [
+        ("Using CompiledSubAgent", "using-compiledsubagent"),
+        # Only the leaf is a heading on the page; the trail is the path to it.
+        ("Context management > Summarization and context offloading", "summarization-and-context-offloading"),
+        ("Add supporting resources > `references/`", "references"),
+        ("Row key / index design", "row-key--index-design"),
+        (None, None),
+        ("(intro)", None),  # a page's lead-in is not a heading, so there is nothing to link to
+    ],
+)
+def test_anchor_matches_the_docs_site_slugger(heading, anchor):
+    assert routes.anchor_for(heading) == anchor
+
+
+def test_a_citation_points_at_the_section_not_just_the_page():
+    label = citation_label(corpus_page("subagents"), "Subagents", "Using CompiledSubAgent")
+    assert label.endswith("(/docs/deepagents/subagents#using-compiledsubagent)")
+
+
+def test_a_page_with_no_heading_cites_the_bare_route():
+    assert citation_label(corpus_page("overview", "langgraph"), "Overview", None).endswith("(/docs/langgraph)")
 
 
 def test_every_indexed_page_is_mapped():

@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db.models import DocChunk
-from app.rag.routes import route_for
+from app.rag.routes import cited_url
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +126,8 @@ def citation_label(source_path: str, title: str | None, heading: str | None) -> 
     topic = _topic(source_path)
     head = f"{topic}/{title}" if topic and title else (title or topic or "documentation")
     label = f"{head} - {heading}" if heading else head
-    route = route_for(source_path)
-    return f"{label} ({route})" if route else label
+    url = cited_url(source_path, heading)
+    return f"{label} ({url})" if url else label
 
 
 # Ingestion prepends the context line to every chunk. Reassembling a section verbatim

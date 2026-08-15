@@ -100,9 +100,13 @@ async def test_an_off_corpus_question_is_declined_without_citing(question):
     assert not _CITATION.search(answer), f"cited documentation for an uncovered question: {answer[:160]}"
 
 
+# Tolerates an adverb between the negation and the verb. The first version demanded "does not
+# mention" adjacently and failed a perfectly correct "does not *specifically* mention", which is
+# a test defect rather than a behaviour one -- the kind that gets a real fix reverted.
 _DENIAL = re.compile(
-    r"does not (mention|cover|describe)|no mention|not (mentioned|covered|documented)"
-    r"|doesn't (mention|cover)|couldn't find|no .{0,12}reference",
+    r"does(?:n't| not)\s+(?:\w+\s+){0,2}(?:mention|cover|describe|discuss|include|provide|specify)"
+    r"|no mention|not (?:mentioned|covered|documented|described)"
+    r"|couldn't find|could not find|no .{0,12}reference",
     re.I,
 )
 
@@ -144,6 +148,24 @@ async def test_a_real_question_is_not_swept_up_by_the_relevance_check(question):
     answer = await _answer(question)
     assert not _DENIAL.search(answer), f"declined a question the corpus covers:\n{answer[:300]}"
     assert _CITATION.search(answer), f"answered without citing:\n{answer[:300]}"
+
+
+async def test_a_citation_points_at_the_section_it_quoted():
+    # A page runs to thousands of words, so the page URL alone makes the reader hunt for the
+    # paragraph. The anchor is what turns "here is my source" into "here is my source, here".
+    answer = await _answer("can you provide me code for using subagents")
+    anchored = re.findall(r"/docs/[a-z0-9/-]+#[a-z0-9-]+", answer)
+    assert anchored, f"cited a page but not the section within it:\n{answer[-400:]}"
+
+
+async def test_deep_agents_apis_are_not_relabelled_as_dailoqa():
+    # LangChain, LangGraph and Deep Agents are libraries DailoQA builds on, not its own APIs.
+    # Calling create_deep_agent "DailoQA" sends a reader looking in the wrong codebase, and it
+    # crept in from the scope boundary naming DailoQA first.
+    answer = await _answer("can you provide me code for using subagents")
+    assert not re.search(r"(?:in|with|for|using)\s+DailoQA", answer, re.I), (
+        f"attributed a Deep Agents API to DailoQA:\n{answer[:300]}"
+    )
 
 
 async def test_a_code_answer_carries_the_sample_and_its_source():
