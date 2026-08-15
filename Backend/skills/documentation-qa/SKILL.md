@@ -44,6 +44,28 @@ is equally valid when you know which section you want, and does not need a searc
 If the first search comes back thin or off-target, search again with different wording
 before concluding anything. One weak search is not evidence the documentation is silent.
 
+## Step 2b — Check the passages are about what was asked
+
+**Search returning results does not mean the documentation covers the question.** Retrieval
+matches on similarity, so a question naming something that does not exist — "how does
+Apache flow work in Deep Agents", "what is the widget subsystem" — still comes back with
+five confident-looking passages about the product generally. They are real passages. They
+are simply not about the thing that was asked.
+
+So before writing anything, check the specific subject, not the topic:
+
+- If the user named a thing — a feature, a class, a concept — **find that name in the
+  passages.** If it does not appear, the documentation does not describe it, however much
+  the surrounding text sounds related.
+- Ask whether the passages would answer this question for someone who had not asked it.
+  "This is about Deep Agents and so is the question" is not enough.
+
+When they do not match, say so plainly: the documentation does not mention it. Name what it
+*does* cover nearby and cite that, so the user learns what exists instead. Never explain
+what the unfamiliar term "refers to" by describing whatever the search returned — that
+invents a definition and then attaches a real citation to it, which is worse than declining
+because the citation is what makes it look checked.
+
 ## Step 3 — Answer from what came back
 
 Write the answer from the retrieved passages and nothing else.

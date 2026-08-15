@@ -100,6 +100,52 @@ async def test_an_off_corpus_question_is_declined_without_citing(question):
     assert not _CITATION.search(answer), f"cited documentation for an uncovered question: {answer[:160]}"
 
 
+_DENIAL = re.compile(
+    r"does not (mention|cover|describe)|no mention|not (mentioned|covered|documented)"
+    r"|doesn't (mention|cover)|couldn't find|no .{0,12}reference",
+    re.I,
+)
+
+
+@pytest.mark.parametrize(
+    "question, invented_term",
+    [
+        ("i want you to explain me apache flow in deep agents", "apache flow"),
+        ("what is the blorptastic subsystem in deep agents", "blorptastic"),
+        ("how does the quantum tunneling module work in deep agents", "quantum tunneling"),
+        ("explain the frobnicator in langgraph", "frobnicator"),
+    ],
+)
+async def test_a_plausible_but_absent_concept_is_declined_not_explained(question, invented_term):
+    """The hardest false positive: a question that borrows the corpus's own vocabulary.
+
+    Retrieval cannot catch these and no gate value can. Measured on the live index, the best
+    distance for these sits at 0.227-0.304 while legitimate questions run 0.126-0.314 -- "What
+    is a Skill?" scores 0.314, worse than every nonsense query here, so any threshold that
+    rejected these would reject the most basic real question in the corpus.
+
+    What made it dangerous was the answer's shape: the model explained what the invented term
+    "refers to" using whatever came back, then attached a real citation to it. The citation is
+    precisely what makes an invented definition look verified.
+    """
+    answer = await _answer(question)
+    assert _DENIAL.search(answer), (
+        f"explained a term the documentation never mentions ({invented_term!r}):\n{answer[:400]}"
+    )
+
+
+@pytest.mark.parametrize(
+    "question",
+    ["how does context management work in deep agents", "What is a Skill?", "How do subagents work?"],
+)
+async def test_a_real_question_is_not_swept_up_by_the_relevance_check(question):
+    # The counterweight. Declining everything would satisfy the test above, and this is what
+    # stops that being a passing run.
+    answer = await _answer(question)
+    assert not _DENIAL.search(answer), f"declined a question the corpus covers:\n{answer[:300]}"
+    assert _CITATION.search(answer), f"answered without citing:\n{answer[:300]}"
+
+
 async def test_a_code_answer_carries_the_sample_and_its_source():
     # The end-to-end proof that snippet splicing reaches a user: this code exists only in
     # snippets/code-samples/subagents-compiled-subagent-py.mdx, never inline in the page.

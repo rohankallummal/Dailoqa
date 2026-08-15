@@ -46,10 +46,18 @@ _FABRICATED = (
 )
 
 _UNCITED = (
-    "You answered from documentation passages but cited none of them. Rewrite the answer with "
-    "the [Doc N] tag on every claim it came from, including any code sample, and close with a "
-    "Sources: legend listing each tag and its label exactly as the tool gave it. Use only the "
-    "numbers the tools assigned; do not invent or renumber them."
+    "Your answer used documentation passages but cited none of them. There are two correct "
+    "outcomes here and you must pick the one that is true.\n\n"
+    "If the passages do answer the question: rewrite the answer with the [Doc N] tag on every "
+    "claim they support, including any code sample, and close with a Sources: legend listing "
+    "each tag and its label exactly as the tool gave it. Use only the numbers the tools "
+    "assigned; do not invent or renumber them.\n\n"
+    "If the passages do NOT answer the question — they are about the same product but not the "
+    "thing that was asked about — then say exactly that and stop. Name what the documentation "
+    "does cover, cite that, and state plainly that it does not cover what was asked. Do not "
+    "manufacture a connection between the question and a passage that merely shares its topic. "
+    "An invented explanation with a real citation attached is the worst answer you can give, "
+    "because the citation is what makes it look verified."
 )
 
 

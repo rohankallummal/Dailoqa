@@ -166,6 +166,22 @@ async def test_a_cited_answer_backed_by_passages_passes_untouched(turn_context, 
     assert "[Doc 1]" in final.content
 
 
+def test_the_uncited_correction_offers_declining_as_well_as_citing():
+    """The correction must not have exactly one exit, because it fires on correct answers too.
+
+    A search that returns on-topic but irrelevant passages -- "explain Apache flow in Deep
+    Agents" -- makes a *correct* decline look like an uncited answer, so this bounces it. When
+    the only instruction was "add the citations", the way out was to invent a connection to a
+    passage and cite it, which is how enforcement started producing the confabulation it exists
+    to prevent. Both outcomes have to be on offer, with the honest one named explicitly.
+    """
+    from app.agent.middleware.grounding import _UNCITED
+
+    assert "do answer the question" in _UNCITED, "the cite-it path must be stated"
+    assert "do NOT answer the question" in _UNCITED, "the decline path must be stated"
+    assert "manufacture" in _UNCITED, "inventing a connection must be named as the failure"
+
+
 async def test_a_model_that_will_not_comply_still_terminates(turn_context, scripted_model):
     # One correction, then the answer is allowed through: a persistent offender must not
     # be able to loop the turn forever.
