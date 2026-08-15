@@ -10,6 +10,8 @@ here rather than by the model so that citations stay stable across several tool 
 one turn; see ``_cite``.
 """
 
+import re
+
 from langchain.tools import ToolRuntime, tool
 
 from app.config import get_settings
@@ -50,6 +52,10 @@ NO_MATCH = (
 
 _LOAD_SKILL = "load_skill"
 
+# The tag `_cite` puts on every passage a tool returns. Its presence in a tool result is what
+# distinguishes "here is documentation" from "nothing matched".
+_DOC_TAG = re.compile(r"\[Doc\s*\d+", re.IGNORECASE)
+
 
 def _tool_calls(messages):
     """Every tool call across a thread's messages."""
@@ -73,6 +79,29 @@ def citable_passages_retrieved(messages) -> bool:
     documentation activity, but it hands over no passages, so it cannot justify a `[Doc N]`.
     """
     return any(call.get("name") in CITING_DOC_TOOLS for call in _tool_calls(messages))
+
+
+def _message_text(message) -> str:
+    """Flatten a message's content, which providers return as a string or as blocks."""
+    content = getattr(message, "content", "")
+    if isinstance(content, str):
+        return content
+    return "".join(part.get("text", "") for part in content if isinstance(part, dict))
+
+
+def passages_were_offered(messages) -> bool:
+    """Whether a citing tool actually handed back a passage, rather than finding nothing.
+
+    Stronger than :func:`citable_passages_retrieved`, which only reports that the tool *ran*.
+    The distinction is what separates "answered from documentation without crediting it" from
+    "searched, found nothing, and correctly declined" — the tools tag every passage they return
+    with ``[Doc N: ...]``, while ``NO_MATCH`` and the unknown-section message carry no tag at
+    all. Without this, a correct decline would be bounced back as if it were an uncited answer.
+    """
+    return any(
+        getattr(message, "name", None) in CITING_DOC_TOOLS and _DOC_TAG.search(_message_text(message))
+        for message in messages
+    )
 
 
 def documentation_skill_loaded(messages) -> bool:

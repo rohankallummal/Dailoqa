@@ -11,6 +11,7 @@ from langchain_core.messages import AIMessage
 from app.agent.context import TurnContext
 from app.agent.middleware.grounding import require_documentation
 from app.agent.tools import TOOLS
+from app.agent.tools.docs import NO_MATCH
 from tests.conftest import corpus_page
 
 _SKILLS_SECTION = {
@@ -19,10 +20,38 @@ _SKILLS_SECTION = {
 }
 
 
-async def _run(model, responses: list[AIMessage], context: TurnContext):
+def _stub_tools(results: dict[str, str]):
+    """Stand-ins for the documentation tools that return fixed text.
+
+    The uncited-answer checks turn on *what a tool returned* — a tagged passage versus
+    ``NO_MATCH`` — so the result has to be the fixture. Driving them through real retrieval
+    would make them depend on which passage currently wins a search, which is a different
+    test's job and would make these fail for unrelated reasons.
+    """
+    from langchain_core.tools import StructuredTool
+
+    def build(name: str, text: str):
+        return StructuredTool.from_function(
+            func=lambda **_kwargs: text, name=name, description=f"stub {name}"
+        )
+
+    known = {tool.name for tool in TOOLS}
+    unknown = set(results) - known
+    if unknown:  # a typo here would silently fall through to the real tools
+        raise KeyError(f"no such tool to stub: {sorted(unknown)}")
+    stubs = {name: build(name, text) for name, text in results.items()}
+    return [stubs.get(t.name, t) for t in TOOLS]
+
+
+async def _run(
+    model,
+    responses: list[AIMessage],
+    context: TurnContext,
+    tool_results: dict[str, str] | None = None,
+):
     agent = create_agent(
         model=model(responses),
-        tools=TOOLS,
+        tools=_stub_tools(tool_results) if tool_results else TOOLS,
         context_schema=TurnContext,
         middleware=[require_documentation],
     )
@@ -83,6 +112,58 @@ async def test_browsing_the_inventory_alone_does_not_justify_a_citation(turn_con
     )
     assert turn_context.grounding_corrections == 1
     assert "Corrected" in final.content
+
+
+async def test_an_answer_built_on_passages_must_cite_them(turn_context, scripted_model):
+    # The enforcement half. Prompt wording got the live citation rate to 16/16, but wording is
+    # compliance: without this, an unrelated SKILL.md edit could take it back to 8/16 silently.
+    final = await _run(
+        scripted_model,
+        [
+            AIMessage(content="", tool_calls=[{"name": "search_documentation", "args": {"query": "skills"}, "id": "a"}]),
+            AIMessage(content="Skills package workflows into a directory."),
+            AIMessage(content="Skills package workflows into a directory [Doc 1]."),
+        ],
+        turn_context,
+        tool_results={
+            "search_documentation": "[Doc 1: deep-agents/Skills - How skills work]\nSkills package workflows."
+        },
+    )
+    assert turn_context.grounding_corrections == 1
+    assert "[Doc 1]" in final.content
+
+
+async def test_a_decline_after_an_empty_search_is_not_bounced(turn_context, scripted_model):
+    # The exemption that makes the rule safe. Searching and finding nothing then declining is
+    # *correct*; a naive "tool ran but no [Doc N]" check would bounce it and push the model into
+    # inventing an answer -- turning the best behaviour into the worst.
+    final = await _run(
+        scripted_model,
+        [
+            AIMessage(content="", tool_calls=[{"name": "search_documentation", "args": {"query": "sso"}, "id": "a"}]),
+            AIMessage(content="The documentation does not cover single sign-on."),
+        ],
+        turn_context,
+        tool_results={"search_documentation": NO_MATCH},
+    )
+    assert turn_context.grounding_corrections == 0
+    assert "does not cover" in final.content
+
+
+async def test_a_cited_answer_backed_by_passages_passes_untouched(turn_context, scripted_model):
+    final = await _run(
+        scripted_model,
+        [
+            AIMessage(content="", tool_calls=[{"name": "search_documentation", "args": {"query": "skills"}, "id": "a"}]),
+            AIMessage(content="Skills package workflows [Doc 1]."),
+        ],
+        turn_context,
+        tool_results={
+            "search_documentation": "[Doc 1: deep-agents/Skills - How skills work]\nSkills package workflows."
+        },
+    )
+    assert turn_context.grounding_corrections == 0
+    assert "[Doc 1]" in final.content
 
 
 async def test_a_model_that_will_not_comply_still_terminates(turn_context, scripted_model):

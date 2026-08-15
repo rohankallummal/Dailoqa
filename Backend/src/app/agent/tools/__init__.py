@@ -15,6 +15,7 @@ from app.agent.tools.docs import (
     documentation_skill_loaded,
     documentation_tool_used,
     fetch_document_section,
+    passages_were_offered,
     list_documentation_sources,
     search_documentation,
 )
@@ -61,6 +62,7 @@ __all__ = [
     "link_to_existing",
     "list_documentation_sources",
     "load_skill",
+    "passages_were_offered",
     "request_evidence",
     "search_documentation",
     "search_existing_issues",

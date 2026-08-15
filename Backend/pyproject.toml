@@ -33,6 +33,10 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Live tests call the real model and cost tokens, so CI runs `pytest -m "not live"`.
+# They are collected by default locally, which is the point: a manual script is how a
+# 16/16 citation rate quietly becomes 8/16 with nobody noticing.
+markers = ["live: needs a real model and a populated index; deselect with -m 'not live'"]
 
 [build-system]
 requires = ["hatchling"]
