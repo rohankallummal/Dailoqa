@@ -72,7 +72,6 @@ builder.add_edge(START, "node_1")
 graph = builder.compile()
 ```
 
-  :::python
   ```python
   from typing_extensions import TypedDict
   from langgraph.graph.state import StateGraph, START
@@ -129,75 +128,9 @@ graph = builder.compile()
   ['node_2:577b710b-64ae-31fb-9455-6a4d4cc2b0b9'] {'subgraph_node_2': {'bar': 'hi! foobaz'}}
   [] {'node_2': {'foo': 'hi! foobaz'}}
   ```
-  :::
-
-  :::js
-  ```typescript
-  import { StateGraph, StateSchema, START } from "@langchain/langgraph";
-  import * as z from "zod";
-
-  // Define subgraph
-  const SubgraphState = new StateSchema({
-    // note that none of these keys are shared with the parent graph state
-    bar: z.string(),
-    baz: z.string(),
-  });
-
-  const subgraphBuilder = new StateGraph(SubgraphState)
-    .addNode("subgraphNode1", (state) => {
-      return { baz: "baz" };
-    })
-    .addNode("subgraphNode2", (state) => {
-      return { bar: state.bar + state.baz };
-    })
-    .addEdge(START, "subgraphNode1")
-    .addEdge("subgraphNode1", "subgraphNode2");
-
-  const subgraph = subgraphBuilder.compile();
-
-  // Define parent graph
-  const ParentState = new StateSchema({
-    foo: z.string(),
-  });
-
-  const builder = new StateGraph(ParentState)
-    .addNode("node1", (state) => {
-      return { foo: "hi! " + state.foo };
-    })
-    .addNode("node2", async (state) => {
-      const response = await subgraph.invoke({ bar: state.foo });   // [!code highlight]
-      return { foo: response.bar };   // [!code highlight]
-    })
-    .addEdge(START, "node1")
-    .addEdge("node1", "node2");
-
-  const graph = builder.compile();
-
-  const stream = await graph.streamEvents(
-    { foo: "foo" },
-    { subgraphs: true, version: "v3" }
-  );
-  for await (const message of stream.messages) {
-    for await (const token of message.text) {
-      process.stdout.write(token);
-    }
-  }
-  ```
-
-  1. Transform the state to the subgraph state
-  2. Transform response back to the parent state
-
-  ```
-  [[], { node1: { foo: 'hi! foo' } }]
-  [['node2:9c36dd0f-151a-cb42-cbad-fa2f851f9ab7'], { subgraphNode1: { baz: 'baz' } }]
-  [['node2:9c36dd0f-151a-cb42-cbad-fa2f851f9ab7'], { subgraphNode2: { bar: 'hi! foobaz' } }]
-  [[], { node2: { foo: 'hi! foobaz' } }]
-  ```
-  :::
 
   This is an example with two levels of subgraphs: parent -> child -> grandchild.
 
-  :::python
   ```python
   # Grandchild graph
   from typing_extensions import TypedDict
@@ -278,96 +211,6 @@ graph = builder.compile()
   [] {'child': {'my_key': 'hi Bob, how are you today?'}}
   [] {'parent_2': {'my_key': 'hi Bob, how are you today? bye!'}}
   ```
-  :::
-
-  :::js
-  ```typescript
-  import { StateGraph, StateSchema, START, END } from "@langchain/langgraph";
-  import * as z from "zod";
-
-  // Grandchild graph
-  const GrandChildState = new StateSchema({
-    myGrandchildKey: z.string(),
-  });
-
-  const grandchild = new StateGraph(GrandChildState)
-    .addNode("grandchild1", (state) => {
-      // NOTE: child or parent keys will not be accessible here
-      return { myGrandchildKey: state.myGrandchildKey + ", how are you" };
-    })
-    .addEdge(START, "grandchild1")
-    .addEdge("grandchild1", END);
-
-  const grandchildGraph = grandchild.compile();
-
-  // Child graph
-  const ChildState = new StateSchema({
-    myChildKey: z.string(),
-  });
-
-  const child = new StateGraph(ChildState)
-    .addNode("child1", async (state) => {
-      // NOTE: parent or grandchild keys won't be accessible here
-      const grandchildGraphInput = { myGrandchildKey: state.myChildKey };   // [!code highlight]
-      const grandchildGraphOutput = await grandchildGraph.invoke(grandchildGraphInput);
-      return { myChildKey: grandchildGraphOutput.myGrandchildKey + " today?" };   // [!code highlight]
-    })   // [!code highlight]
-    .addEdge(START, "child1")
-    .addEdge("child1", END);
-
-  const childGraph = child.compile();
-
-  // Parent graph
-  const ParentState = new StateSchema({
-    myKey: z.string(),
-  });
-
-  const parent = new StateGraph(ParentState)
-    .addNode("parent1", (state) => {
-      // NOTE: child or grandchild keys won't be accessible here
-      return { myKey: "hi " + state.myKey };
-    })
-    .addNode("child", async (state) => {
-      const childGraphInput = { myChildKey: state.myKey };   // [!code highlight]
-      const childGraphOutput = await childGraph.invoke(childGraphInput);
-      return { myKey: childGraphOutput.myChildKey };   // [!code highlight]
-    })   // [!code highlight]
-    .addNode("parent2", (state) => {
-      return { myKey: state.myKey + " bye!" };
-    })
-    .addEdge(START, "parent1")
-    .addEdge("parent1", "child")
-    .addEdge("child", "parent2")
-    .addEdge("parent2", END);
-
-  const parentGraph = parent.compile();
-
-  const stream = await parentGraph.streamEvents(
-    { myKey: "Bob" },
-    { subgraphs: true, version: "v3" }
-  );
-  for await (const message of stream.messages) {
-    for await (const token of message.text) {
-      process.stdout.write(token);
-    }
-  }
-  ```
-
-  1. We're transforming the state from the child state channels (`myChildKey`) to the grandchild state channels (`myGrandchildKey`)
-  2. We're transforming the state from the grandchild state channels (`myGrandchildKey`) back to the child state channels (`myChildKey`)
-  3. We're passing a function here instead of just compiled graph (`grandchildGraph`)
-  4. We're transforming the state from the parent state channels (`myKey`) to the child state channels (`myChildKey`)
-  5. We're transforming the state from the child state channels (`myChildKey`) back to the parent state channels (`myKey`)
-  6. We're passing a function here instead of just a compiled graph (`childGraph`)
-
-  ```
-  [[], { parent1: { myKey: 'hi Bob' } }]
-  [['child:2e26e9ce-602f-862c-aa66-1ea5a4655e3b', 'child1:781bb3b1-3971-84ce-810b-acf819a03f9c'], { grandchild1: { myGrandchildKey: 'hi Bob, how are you' } }]
-  [['child:2e26e9ce-602f-862c-aa66-1ea5a4655e3b'], { child1: { myChildKey: 'hi Bob, how are you today?' } }]
-  [[], { child: { myKey: 'hi Bob, how are you today?' } }]
-  [[], { parent2: { myKey: 'hi Bob, how are you today? bye!' } }]
-  ```
-  :::
 
 ### Add a subgraph as a node
 
@@ -403,7 +246,6 @@ builder.add_edge(START, "node_1")
 graph = builder.compile()
 ```
 
-  :::python
   ```python
   from typing_extensions import TypedDict
   from langgraph.graph.state import StateGraph, START
@@ -452,64 +294,6 @@ graph = builder.compile()
   {'node_1': {'foo': 'hi! foo'}}
   {'node_2': {'foo': 'hi! foobar'}}
   ```
-  :::
-
-  :::js
-  ```typescript
-  import { StateGraph, StateSchema, START } from "@langchain/langgraph";
-  import * as z from "zod";
-
-  // Define subgraph
-  const SubgraphState = new StateSchema({
-    foo: z.string(),    // [!code highlight]
-    bar: z.string(),    // [!code highlight]
-  });
-
-  const subgraphBuilder = new StateGraph(SubgraphState)
-    .addNode("subgraphNode1", (state) => {
-      return { bar: "bar" };
-    })
-    .addNode("subgraphNode2", (state) => {
-      // note that this node is using a state key ('bar') that is only available in the subgraph
-      // and is sending update on the shared state key ('foo')
-      return { foo: state.foo + state.bar };
-    })
-    .addEdge(START, "subgraphNode1")
-    .addEdge("subgraphNode1", "subgraphNode2");
-
-  const subgraph = subgraphBuilder.compile();
-
-  // Define parent graph
-  const ParentState = new StateSchema({
-    foo: z.string(),
-  });
-
-  const builder = new StateGraph(ParentState)
-    .addNode("node1", (state) => {
-      return { foo: "hi! " + state.foo };
-    })
-    .addNode("node2", subgraph)
-    .addEdge(START, "node1")
-    .addEdge("node1", "node2");
-
-  const graph = builder.compile();
-
-  const stream = await graph.streamEvents({ foo: "foo" }, { version: "v3" });
-  for await (const message of stream.messages) {
-    for await (const token of message.text) {
-      process.stdout.write(token);
-    }
-  }
-  ```
-
-  1. This key is shared with the parent graph state
-  2. This key is private to the `SubgraphState` and is not visible to the parent graph
-
-  ```
-  { node1: { foo: 'hi! foo' } }
-  { node2: { foo: 'hi! foobar' } }
-  ```
-  :::
 
 ## Subgraph persistence
 
@@ -962,7 +746,6 @@ for event in stream:
         print(event["params"]["namespace"], event["params"]["data"])
 ```
 
-  :::python
   ```python
   from typing_extensions import TypedDict
   from langgraph.graph.state import StateGraph, START
@@ -1013,66 +796,3 @@ for event in stream:
   ['node_2:e58e5673-a661-ebb0-70d4-e298a7fc28b7'] {'subgraph_node_2': {'foo': 'hi! foobar'}}
   [] {'node_2': {'foo': 'hi! foobar'}}
   ```
-  :::
-
-  :::js
-  ```typescript
-  import { StateGraph, StateSchema, START } from "@langchain/langgraph";
-  import * as z from "zod";
-
-  // Define subgraph
-  const SubgraphState = new StateSchema({
-    foo: z.string(),
-    bar: z.string(),
-  });
-
-  const subgraphBuilder = new StateGraph(SubgraphState)
-    .addNode("subgraphNode1", (state) => {
-      return { bar: "bar" };
-    })
-    .addNode("subgraphNode2", (state) => {
-      // note that this node is using a state key ('bar') that is only available in the subgraph
-      // and is sending update on the shared state key ('foo')
-      return { foo: state.foo + state.bar };
-    })
-    .addEdge(START, "subgraphNode1")
-    .addEdge("subgraphNode1", "subgraphNode2");
-
-  const subgraph = subgraphBuilder.compile();
-
-  // Define parent graph
-  const ParentState = new StateSchema({
-    foo: z.string(),
-  });
-
-  const builder = new StateGraph(ParentState)
-    .addNode("node1", (state) => {
-      return { foo: "hi! " + state.foo };
-    })
-    .addNode("node2", subgraph)
-    .addEdge(START, "node1")
-    .addEdge("node1", "node2");
-
-  const graph = builder.compile();
-
-  const stream = await graph.streamEvents(
-    { foo: "foo" },
-    {
-      subgraphs: true,   // [!code highlight]
-      version: "v3",
-    }
-  );
-  for await (const snapshot of stream.values) {
-    console.log(snapshot);
-  }
-  ```
-
-  1. Set `subgraphs: true` to stream outputs from subgraphs.
-
-  ```
-  [[], { node1: { foo: 'hi! foo' } }]
-  [['node2:e58e5673-a661-ebb0-70d4-e298a7fc28b7'], { subgraphNode1: { bar: 'bar' } }]
-  [['node2:e58e5673-a661-ebb0-70d4-e298a7fc28b7'], { subgraphNode2: { foo: 'hi! foobar' } }]
-  [[], { node2: { foo: 'hi! foobar' } }]
-  ```
-  :::

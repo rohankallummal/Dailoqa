@@ -447,7 +447,6 @@ The resulting message can be treated the same as a message that was generated wi
     Streaming only works if all steps in the program know how to process a stream of chunks. For instance, an application that isn't streaming-capable would be one that needs to store the entire output in memory before it can be processed.
 
     
-        :::python
         LangChain chat models can also stream semantic events using `astream_events()`.
 
         This simplifies filtering based on event types and other metadata, and will aggregate the full message in the background. See below for an example.
@@ -482,42 +481,7 @@ The resulting message can be treated the same as a message that was generated wi
         
             See the `astream_events()`[BaseChatModel.astream_events] reference for event types and other details.
         
-        :::
 
-        :::js
-        LangChain chat models can also stream semantic events using
-        [`streamEvents()`][BaseChatModel.streamEvents].
-
-        This simplifies filtering based on event types and other metadata, and will aggregate the full message in the background. See below for an example.
-
-        ```typescript
-        const stream = await model.streamEvents("Hello");
-        for await (const event of stream) {
-            if (event.event === "on_chat_model_start") {
-                console.log(`Input: ${event.data.input}`);
-            }
-            if (event.event === "on_chat_model_stream") {
-                console.log(`Token: ${event.data.chunk.text}`);
-            }
-            if (event.event === "on_chat_model_end") {
-                console.log(`Full message: ${event.data.output.text}`);
-            }
-        }
-        ```
-        ```txt
-        Input: Hello
-        Token: Hi
-        Token:  there
-        Token: !
-        Token:  How
-        Token:  can
-        Token:  I
-        ...
-        Full message: Hi there! How can I help today?
-        ```
-
-        See the `streamEvents()`[BaseChatModel.streamEvents] reference for event types and other details.
-        :::
     
     
         LangChain simplifies streaming from chat models by automatically enabling streaming mode in certain cases, even when you're not explicitly calling the streaming methods. This is particularly useful when you use the non-streaming invoke method but still want to stream the entire application, including intermediate results from the chat model.
@@ -528,12 +492,7 @@ The resulting message can be treated the same as a message that was generated wi
 
         When you `invoke()` a chat model, LangChain will automatically switch to an internal streaming mode if it detects that you are trying to stream the overall application. The result of the invocation will be the same as far as the code that was using invoke is concerned; however, while the chat model is being streamed, LangChain will take care of invoking `on_llm_new_token` events in LangChain's callback system.
 
-        :::python
         Callback events allow LangGraph `stream()` and `astream_events()` to surface the chat model's output in real-time.
-        :::
-        :::js
-        Callback events allow LangGraph `stream()` and `streamEvents()` to surface the chat model's output in real-time.
-        :::
     
 
 ### Batch
@@ -651,8 +610,6 @@ Below, we show some common ways you can use tool calling.
 
         Here's a simple example of how to do this:
 
-        :::python
-
         ```python Tool execution loop
         # Bind (potentially multiple) tools to the model
         model_with_tools = model.bind_tools([get_weather])
@@ -674,39 +631,10 @@ Below, we show some common ways you can use tool calling.
         # "The current weather in Boston is 72°F and sunny."
         ```
 
-        :::
-        :::js
-
-        ```typescript Tool execution loop
-        // Bind (potentially multiple) tools to the model
-        const modelWithTools = model.bindTools([get_weather])
-
-        // Step 1: Model generates tool calls
-        const messages = [{"role": "user", "content": "What's the weather in Boston?"}]
-        const ai_msg = await modelWithTools.invoke(messages)
-        messages.push(ai_msg)
-
-        // Step 2: Execute tools and collect results
-        for (const tool_call of ai_msg.tool_calls) {
-            // Execute the tool with the generated arguments
-            const tool_result = await get_weather.invoke(tool_call)
-            messages.push(tool_result)
-        }
-
-        // Step 3: Pass results back to model for final response
-        const final_response = await modelWithTools.invoke(messages)
-        console.log(final_response.text)
-        // "The current weather in Boston is 72°F and sunny."
-        ```
-
-        :::
-
         Each `ToolMessage` returned by the tool includes a `tool_call_id` that matches the original tool call, helping the model correlate results with requests.
     
     
         By default, the model has the freedom to choose which bound tool to use based on the user's input. However, you might want to force choosing a tool, ensuring the model uses either a particular tool or **any** tool from a given list:
-
-        :::python
 
         
             ```python Force use of any tool
@@ -717,23 +645,9 @@ Below, we show some common ways you can use tool calling.
             ```
         
 
-        :::
-        :::js
-
-        
-            ```typescript Force use of any tool
-            const modelWithTools = model.bindTools([tool_1], { toolChoice: "any" })
-            ```
-            ```typescript Force use of specific tools
-            const modelWithTools = model.bindTools([tool_1], { toolChoice: "tool_1" })
-            ```
-        
-        :::
     
     
         Many models support calling multiple tools in parallel when appropriate. This allows the model to gather information from different sources simultaneously.
-
-        :::python
 
         ```python Parallel tool calls
         model_with_tools = model.bind_tools([get_weather])
@@ -760,37 +674,6 @@ Below, we show some common ways you can use tool calling.
             results.append(result)
         ```
 
-        :::
-        :::js
-
-        ```typescript Parallel tool calls
-        const modelWithTools = model.bind_tools([get_weather])
-
-        const response = await modelWithTools.invoke(
-            "What's the weather in Boston and Tokyo?"
-        )
-
-
-        // The model may generate multiple tool calls
-        console.log(response.tool_calls)
-        // [
-        //   { name: 'get_weather', args: { location: 'Boston' }, id: 'call_1' },
-        //   { name: 'get_time', args: { location: 'Tokyo' }, id: 'call_2' }
-        // ]
-
-
-        // Execute all tools (can be done in parallel with async)
-        const results = []
-        for (const tool_call of response.tool_calls || []) {
-            if (tool_call.name === 'get_weather') {
-                const result = await get_weather.invoke(tool_call)
-                results.push(result)
-            }
-        }
-        ```
-
-        :::
-
         The model intelligently determines when parallel execution is appropriate based on the independence of the requested operations.
 
         
@@ -802,8 +685,6 @@ Below, we show some common ways you can use tool calling.
     
     
         When streaming responses, tool calls are progressively built through `ToolCallChunk`. This allows you to see tool calls as they're being generated rather than waiting for the complete response.
-
-        :::python
 
         ```python Streaming tool calls
         for chunk in model_with_tools.stream(
@@ -844,48 +725,6 @@ Below, we show some common ways you can use tool calling.
             print(gathered.tool_calls)
         ```
 
-        :::
-        :::js
-
-        ```typescript Streaming tool calls
-        const stream = await modelWithTools.stream(
-            "What's the weather in Boston and Tokyo?"
-        )
-        for await (const chunk of stream) {
-            // Tool call chunks arrive progressively
-            if (chunk.tool_call_chunks) {
-                for (const tool_chunk of chunk.tool_call_chunks) {
-                console.log(`Tool: ${tool_chunk.get('name', '')}`)
-                console.log(`Args: ${tool_chunk.get('args', '')}`)
-                }
-            }
-        }
-
-        // Output:
-        // Tool: get_weather
-        // Args:
-        // Tool:
-        // Args: {"loc
-        // Tool:
-        // Args: ation": "BOS"}
-        // Tool: get_time
-        // Args:
-        // Tool:
-        // Args: {"timezone": "Tokyo"}
-        ```
-
-        You can accumulate chunks to build complete tool calls:
-
-        ```typescript Accumulate tool calls
-        let full: AIMessageChunk | null = null
-        const stream = await modelWithTools.stream("What's the weather in Boston?")
-        for await (const chunk of stream) {
-            full = full ? full.concat(chunk) : chunk
-            console.log(full.contentBlocks)
-        }
-        ```
-
-        :::
     
 
 ---
@@ -985,7 +824,6 @@ Models can be requested to provide their response in a format matching a given s
 
 It can be useful to return the raw `AIMessage` object alongside the parsed representation to access response metadata such as token counts. To do this, set `include_raw=True`[BaseChatModel.with_structured_output(include_raw)] when calling `with_structured_output`[BaseChatModel.with_structured_output]:
 
-    :::python
     ```python
     from pydantic import BaseModel, Field
 
@@ -1005,36 +843,8 @@ It can be useful to return the raw `AIMessage` object alongside the parsed repre
     #     "parsing_error": None,
     # }
     ```
-    :::
-
-    :::js
-    ```typescript
-    import * as z from "zod";
-
-    const Movie = z.object({
-      title: z.string().describe("The title of the movie"),
-      year: z.number().describe("The year the movie was released"),
-      director: z.string().describe("The director of the movie"),
-      rating: z.number().describe("The movie's rating out of 10"),
-      title: z.string().describe("The title of the movie"),
-      year: z.number().describe("The year the movie was released"),
-      director: z.string().describe("The director of the movie"),  // [!code highlight]
-      rating: z.number().describe("The movie's rating out of 10"),
-    });
-
-    const modelWithStructure = model.withStructuredOutput(Movie, { includeRaw: true });
-
-    const response = await modelWithStructure.invoke("Provide details about the movie Inception");
-    console.log(response);
-    // {
-    //   raw: AIMessage { ... },
-    //   parsed: { title: "Inception", ... }
-    // }
-    ```
-    :::
 
     Schemas can be nested:
-    :::python
     
         ```python Pydantic BaseModel
         from pydantic import BaseModel, Field
@@ -1070,28 +880,6 @@ It can be useful to return the raw `AIMessage` object alongside the parsed repre
         model_with_structure = model.with_structured_output(MovieDetails)
         ```
     
-    :::
-
-    :::js
-    ```typescript
-    import * as z from "zod";
-
-    const Actor = z.object({
-      name: z.string(),
-      role: z.string(),
-    });
-
-    const MovieDetails = z.object({
-      title: z.string(),
-      year: z.number(),
-      cast: z.array(Actor),
-      genres: z.array(z.string()),
-      budget: z.number().nullable().describe("Budget in millions USD"),
-    });
-
-    const modelWithStructure = model.withStructuredOutput(MovieDetails);
-    ```
-    :::
 
 ---
 
@@ -1368,7 +1156,6 @@ You can configure a custom base URL for providers that implement the OpenAI Chat
     - OpenRouter via `ChatOpenRouter` (`langchain-openrouter`)
     - LiteLLM via `ChatLiteLLM` / `ChatLiteLLMRouter` (`langchain-litellm`)
 
-    :::python
     Many model providers offer OpenAI-compatible APIs (e.g., Together AI, vLLM). You can use `init_chat_model` with these providers by specifying the appropriate `base_url` parameter:
 
     ```python
@@ -1379,22 +1166,6 @@ You can configure a custom base URL for providers that implement the OpenAI Chat
         api_key="YOUR_API_KEY",
     )
     ```
-    :::
-
-    :::js
-    Many model providers offer OpenAI-compatible APIs (e.g., Together AI, vLLM). You can use `initChatModel` with these providers by specifying the appropriate `base_url` parameter:
-
-    ```python
-    model = initChatModel(
-        "MODEL_NAME",
-        {
-            modelProvider: "openai",
-            baseUrl: "BASE_URL",
-            apiKey: "YOUR_API_KEY",
-        }
-    )
-    ```
-    :::
 
     
         When using direct chat model class instantiation, the parameter name may vary by provider. Check the respective reference for details.

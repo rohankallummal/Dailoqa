@@ -67,8 +67,6 @@ Built-in offloading and summarization are optimized for text and message history
 
     When summarization runs, media blocks in older turns drop out of the active context:
 
-    :::python
-
     
 ```python
 # Before — model receives image blocks in older turns
@@ -96,14 +94,6 @@ Built-in offloading and summarization are optimized for text and message history
     "Tool returned an updated chart. Agent identified Q3 revenue growth."
 )}
 ```
-
-    :::
-
-    :::js
-
-    
-
-    :::
 
     The original conversation is still written to the filesystem as text. See Summarization for triggers, keep thresholds, and the full flow.
 

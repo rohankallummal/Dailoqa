@@ -40,7 +40,11 @@ class Settings(BaseSettings):
     # absent-topic negatives decline); re-run `python -m app.rag.evaluate` after any
     # change to the corpus to re-tune them.
     rag_enabled: bool = True
-    docs_path: str = "docs"
+    # Only the formatted tree. Its sibling docs-corpus/raw/ holds the upstream .mdx and the
+    # snippet library, and must stay outside this path -- ingestion globs recursively, so a
+    # raw/ underneath it would index every page a second time plus ~154 contextless snippet
+    # fragments as if they were pages.
+    docs_path: str = "docs-corpus/formatted"
     # Which ":::<lang>" arm of the upstream docs to keep. LangChain writes most concepts
     # twice (python and js); indexing both wastes a quarter of the corpus and lets a
     # Python question be answered in TypeScript.
@@ -49,7 +53,13 @@ class Settings(BaseSettings):
     rag_top_k: int = 5
     rag_candidates: int = 20
     rrf_k: int = 60
-    semantic_max_distance: float = 0.40
+    # Tightened from 0.40 when the corpus went from 44 chunks to 613. An absolute cosine gate
+    # weakens as a corpus grows -- more content means a better chance something sits within the
+    # threshold of an off-topic query -- and that is exactly what happened: at 0.40 an off-topic
+    # question ("how do I configure SSO for Dailoqa") pulled back four LangChain chunks, taking
+    # the decline rate to 0.857. At 0.35 decline returns to 1.000 with hit@k unchanged at 1.000,
+    # so this costs no recall. Re-run `python -m app.rag.evaluate` after any corpus change.
+    semantic_max_distance: float = 0.35
     lexical_min_rank: float = 0.05
 
 

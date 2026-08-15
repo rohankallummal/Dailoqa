@@ -16,8 +16,10 @@ from app.agent.tools.docs import (
     search_documentation,
 )
 from app.config import get_settings
+from tests.conftest import corpus_page
 
-_SKILLS_SECTION = ("deepagents-overview.mdx", "Context management > Skills")
+_SKILLS_PAGE = corpus_page("skills")
+_SKILLS_SECTION = (_SKILLS_PAGE, "How skills work")
 
 
 def _runtime(turn_context):
@@ -76,14 +78,14 @@ async def test_fetch_reuses_the_number_a_search_already_assigned(turn_context):
 
 async def test_fetch_reports_an_unknown_section(turn_context):
     output = await fetch_document_section.coroutine(
-        source_path="deepagents-overview.mdx", heading="Nope", runtime=_runtime(turn_context)
+        source_path=_SKILLS_PAGE, heading="Nope", runtime=_runtime(turn_context)
     )
     assert "list_documentation_sources" in output
 
 
 async def test_list_returns_an_inventory_without_citations(turn_context):
     output = await list_documentation_sources.coroutine(runtime=_runtime(turn_context))
-    assert "deepagents-overview.mdx" in output
+    assert _SKILLS_PAGE in output
     assert not _tags(output), "an inventory is not citable text"
     assert not turn_context.citations
 

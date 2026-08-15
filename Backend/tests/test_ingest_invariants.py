@@ -5,19 +5,17 @@ from sqlalchemy import func, select
 from app.db.base import async_session
 from app.db.models import DocChunk
 from app.rag.embeddings import get_tokenizer
+from tests.conftest import corpus_sources
 
 _MODEL_TOKEN_LIMIT = 512
-_EXPECTED_SOURCES = {
-    "deepagents-overview.mdx",
-    "langchain-overview.mdx",
-    "langgraph-overview.mdx",
-}
 
 
-async def test_every_seed_document_is_present():
+async def test_every_document_in_the_manifest_is_present():
+    # Both directions. A missing page means answers silently lose a topic; an extra one means
+    # something is indexed that no citation can map back to a documentation route.
     async with async_session() as session:
         sources = set((await session.execute(select(DocChunk.source_path).distinct())).scalars().all())
-    assert _EXPECTED_SOURCES <= sources
+    assert sources == corpus_sources()
 
 
 async def test_no_chunk_is_empty():

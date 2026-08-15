@@ -4,6 +4,7 @@ from app.config import get_settings
 from app.db.base import async_session
 from app.rag.embeddings import aembed_query
 from app.rag.store import INTRO_HEADING, fetch_section, list_sources, search
+from tests.conftest import corpus_page, corpus_sources
 
 
 async def _search(query: str):
@@ -15,7 +16,7 @@ async def test_question_retrieves_the_right_section():
     results = await _search("What is a Skill?")
     assert results
     assert any(
-        chunk.source_path == "deepagents-overview.mdx" and "Skills" in (chunk.heading or "")
+        chunk.source_path == corpus_page("skills") and "skills" in (chunk.heading or "").lower()
         for chunk in results
     )
 
@@ -23,9 +24,14 @@ async def test_question_retrieves_the_right_section():
 async def test_exact_term_is_ranked_first_by_the_lexical_arm():
     # A bare product noun is where semantic similarity is weakest and full-text is
     # strongest; fusion should still put the right section on top.
+    #
+    # Re-pinned by hand against the 18-page corpus, deliberately not derived: which passage
+    # wins retrieval is the claim this test exists to make. MCP is now discussed on several
+    # pages (deep-agents/overview has a "Tools and MCP" section too), so the assertion is
+    # that the page *dedicated* to tools still outranks the page that merely mentions them.
     results = await _search("MCP")
     assert results
-    assert results[0].source_path == "deepagents-overview.mdx"
+    assert results[0].source_path == corpus_page("tools")
     assert "MCP" in (results[0].heading or "")
 
 
@@ -42,27 +48,23 @@ async def test_absent_topic_matches_nothing():
 async def test_list_sources_exposes_every_document_and_its_headings():
     async with async_session() as session:
         outlines = await list_sources(session)
-    assert {outline.source_path for outline in outlines} == {
-        "deepagents-overview.mdx",
-        "langchain-overview.mdx",
-        "langgraph-overview.mdx",
-    }
+    assert {outline.source_path for outline in outlines} == corpus_sources()
     # A page's lead-in has no heading of its own and must still be nameable.
     assert all(INTRO_HEADING in outline.headings for outline in outlines)
 
 
 async def test_fetch_section_reassembles_without_repeating_the_heading():
     async with async_session() as session:
-        section = await fetch_section(session, "langchain-overview.mdx", "Create an agent")
+        section = await fetch_section(session, corpus_page("agents"), "Invocation")
     assert section is not None
     assert len(section.chunk_ids) > 1, "expected a section that spans several chunks"
     # Ingestion prefixes every chunk with its heading trail; reassembly must not repeat it.
-    assert section.content.count("LangChain overview > Create an agent") == 0
+    assert section.content.count("langchain/Agents > Invocation") == 0
 
 
 async def test_fetch_section_reads_a_document_intro():
     async with async_session() as session:
-        section = await fetch_section(session, "langgraph-overview.mdx", INTRO_HEADING)
+        section = await fetch_section(session, corpus_page("overview", topic="langgraph"), INTRO_HEADING)
     assert section is not None
     assert section.heading is None
     assert section.content
@@ -70,4 +72,5 @@ async def test_fetch_section_reads_a_document_intro():
 
 async def test_fetch_section_returns_none_for_an_unknown_heading():
     async with async_session() as session:
-        assert await fetch_section(session, "langgraph-overview.mdx", "No Such Heading") is None
+        page = corpus_page("overview", topic="langgraph")
+        assert await fetch_section(session, page, "No Such Heading") is None

@@ -103,6 +103,16 @@ def test_flipping_the_setting_inverts_the_result(language, monkeypatch):
     assert "PYTHON BODY" not in out
 
 
+def test_indented_directive_blocks_are_selected_too(language):
+    # Regression: the rules were anchored at "^:::", so a directive nested inside a <Steps> or
+    # <Tabs> component -- and therefore indented -- was never matched. Both arms survived, in
+    # full, markers and all: 25 :::js blocks and 24KB of TypeScript reached the index.
+    out = _flatten_mdx("<Steps>\n    :::python\n    PYTHON BODY\n    :::\n\n    :::js\n    JS BODY\n    :::\n</Steps>")
+    assert "PYTHON BODY" in out
+    assert "JS BODY" not in out
+    assert ":::" not in out
+
+
 def test_language_selection_does_not_reach_outside_directive_blocks(language):
     # Scoped deliberately: 2 tsx fences in the real corpus sit outside any ::: block, so a
     # blanket "no TypeScript anywhere" rule would delete content this feature never owned.

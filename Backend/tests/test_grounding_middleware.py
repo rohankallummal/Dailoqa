@@ -11,10 +11,11 @@ from langchain_core.messages import AIMessage
 from app.agent.context import TurnContext
 from app.agent.middleware.grounding import require_documentation
 from app.agent.tools import TOOLS
+from tests.conftest import corpus_page
 
 _SKILLS_SECTION = {
-    "source_path": "deepagents-overview.mdx",
-    "heading": "Context management > Skills",
+    "source_path": corpus_page("skills"),
+    "heading": "How skills work",
 }
 
 

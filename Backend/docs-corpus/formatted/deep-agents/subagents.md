@@ -2595,7 +2595,6 @@ def flexible_search(query: str, runtime: ToolRuntime[Context]) -> str:
 
 1. **Make descriptions more specific:**
 
-   :::python
    
 ```python
 # ✅ Good
@@ -2605,13 +2604,6 @@ good_subagent = {
 }
 ```
 
-   :::
-
-   :::js
-   
-   :::
-
-   :::python
    
 ```python
 # ❌ Bad
@@ -2621,15 +2613,8 @@ bad_subagent = {
 }
 ```
 
-   :::
-
-   :::js
-   
-   :::
-
 2. **Instruct main agent to delegate:**
 
-   :::python
    
 
     ```python Google
@@ -2765,12 +2750,6 @@ bad_subagent = {
     )
     ```
 
-   :::
-
-   :::js
-   
-   :::
-
 ### Context still getting bloated
 
 **Problem**: Context fills up despite using subagents.
@@ -2779,7 +2758,6 @@ bad_subagent = {
 
 1. **Instruct subagent to return concise results:**
 
-   :::python
    
 ```python
 system_prompt = """...
@@ -2789,15 +2767,8 @@ Do NOT include raw data, intermediate search results, or detailed tool outputs.
 Your response should be under 500 words."""
 ```
 
-   :::
-
-   :::js
-   
-   :::
-
 2. **Use filesystem for large data:**
 
-   :::python
    
 ```python
 system_prompt = """When you gather large amounts of data:
@@ -2807,12 +2778,6 @@ system_prompt = """When you gather large amounts of data:
 
 This keeps context clean."""
 ```
-
-   :::
-
-   :::js
-   
-   :::
 
 ### Wrong subagent being selected
 

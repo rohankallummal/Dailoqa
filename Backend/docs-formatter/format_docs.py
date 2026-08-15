@@ -47,8 +47,13 @@ _JSX_TAG_RE = re.compile(r"</?[A-Z][\w.]*(?:\s[^>]*)?/?>|</?(?:br|hr|img|a|p|div
 
 # LangChain's own language switches. The trailing newline is deliberately NOT consumed by the
 # fence rule below, so a ":::" closing a block stays at the start of its line for this to match.
-_DIRECTIVE_BLOCK_RE = re.compile(r"^:::(\w+)[ \t]*\n(.*?)^:::[ \t]*$\n?", re.DOTALL | re.MULTILINE)
-_STRAY_DIRECTIVE_RE = re.compile(r"^:::.*$", re.MULTILINE)
+# Leading whitespace is allowed on purpose. These directives are frequently nested inside a
+# <Steps> or <Tabs> component and therefore indented, and anchoring hard at "^:::" skipped every
+# one of those -- leaving 25 :::js blocks, 24KB of TypeScript, in a Python-only corpus.
+_DIRECTIVE_BLOCK_RE = re.compile(
+    r"^[ \t]*:::(\w+)[ \t]*\n(.*?)^[ \t]*:::[ \t]*$\n?", re.DOTALL | re.MULTILINE
+)
+_STRAY_DIRECTIVE_RE = re.compile(r"^[ \t]*:::.*$", re.MULTILINE)
 
 # `[Text](/oss/langchain/agents)` would otherwise push the URL's path segments into the note
 # as though they were prose. Images are dropped outright.

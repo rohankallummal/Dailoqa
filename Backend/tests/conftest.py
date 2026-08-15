@@ -7,7 +7,9 @@ suite needs a live model or an API key.
 """
 
 import asyncio
+import json
 import sys
+from pathlib import Path
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
@@ -16,6 +18,39 @@ from app.agent.context import TurnContext
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+_MANIFEST = Path(__file__).resolve().parents[1] / "docs-corpus" / "manifest.json"
+
+
+def corpus_sources() -> set[str]:
+    """Every page the corpus is supposed to contain, read from the manifest.
+
+    Derived rather than hard-coded so that adding or renaming a page updates the tests with
+    it. The previous literal set silently described a corpus that no longer existed the
+    moment ``DOCS_PATH`` moved, which is a test that passes while asserting nothing.
+    """
+    manifest = json.loads(_MANIFEST.read_text(encoding="utf-8"))
+    return {page["vault_path"] for page in manifest["pages"]}
+
+
+def corpus_page(slug: str, topic: str | None = None) -> str:
+    """The vault path of one page -- e.g. ``"skills"`` -> ``deep-agents/skills.md``.
+
+    ``topic`` disambiguates slugs that exist in more than one place: each of the three topics
+    ships an ``overview``. Raising on an ambiguous or unknown slug is deliberate, so a renamed
+    page fails loudly here rather than quietly matching nothing downstream.
+    """
+    manifest = json.loads(_MANIFEST.read_text(encoding="utf-8"))
+    matches = [
+        page["vault_path"]
+        for page in manifest["pages"]
+        if page["slug"] == slug and (topic is None or page["topic"] == topic)
+    ]
+    if len(matches) != 1:
+        raise LookupError(
+            f"slug={slug!r} topic={topic!r} matched {len(matches)} manifest pages, expected 1"
+        )
+    return matches[0]
 
 
 class ScriptedModel(FakeMessagesListChatModel):

@@ -220,8 +220,6 @@ graph.stream_events(Command(resume=True), config=config, version="v3").output
 graph.stream_events(Command(resume=False), config=config, version="v3").output
 ```
 
-    :::python
-
     
 ```python
 from typing import Literal, Optional, TypedDict
@@ -283,60 +281,6 @@ resumed = graph.stream_events(Command(resume=True), config=config, version="v3")
 print(resumed.output["status"])
 ```
 
-    :::
-
-    :::js
-
-    ```typescript
-    import {
-      Command,
-      MemorySaver,
-      START,
-      END,
-      StateGraph,
-      StateSchema,
-      interrupt,
-    } from "@langchain/langgraph";
-    import * as z from "zod";
-
-    const State = new StateSchema({
-      actionDetails: z.string(),
-      status: z.enum(["pending", "approved", "rejected"]).nullable(),
-    });
-
-    const graphBuilder = new StateGraph(State)
-      .addNode("approval", async (state) => {
-        // Expose details so the caller can render them in a UI
-        const decision = interrupt({
-          question: "Approve this action?",
-          details: state.actionDetails,
-        });
-        return new Command({ goto: decision ? "proceed" : "cancel" });
-      }, { ends: ['proceed', 'cancel'] })
-      .addNode("proceed", () => ({ status: "approved" }))
-      .addNode("cancel", () => ({ status: "rejected" }))
-      .addEdge(START, "approval")
-      .addEdge("proceed", END)
-      .addEdge("cancel", END);
-
-    // Use a more durable checkpointer in production
-    const checkpointer = new MemorySaver();
-    const graph = graphBuilder.compile({ checkpointer });
-
-    const config = { configurable: { thread_id: "approval-123" } };
-    const initial = await graph.invoke(
-      { actionDetails: "Transfer $500", status: "pending" },
-      config,
-    );
-    console.log(initial.__interrupt__);
-    // [{ value: { question: ..., details: ... } }]
-
-    // Resume with the decision; true routes to proceed, false to cancel
-    const resumed = await graph.invoke(new Command({ resume: true }), config);
-    console.log(resumed.status); // -> "approved"
-    ```
-    :::
-
 ### Review and edit state
 
 Sometimes you want to let a human review and edit part of the graph state before continuing. This is useful for correcting LLMs, adding missing information, or making adjustments.
@@ -364,8 +308,6 @@ graph.stream_events(
     version="v3",
 ).output
 ```
-
-    :::python
 
     
 ```python
@@ -415,55 +357,6 @@ final_state = graph.stream_events(
 print(final_state.output["generated_text"])  # -> "Improved draft after review"
 ```
 
-    :::
-
-    :::js
-
-    ```typescript
-    import {
-      Command,
-      MemorySaver,
-      START,
-      END,
-      StateGraph,
-      StateSchema,
-      interrupt,
-    } from "@langchain/langgraph";
-    import * as z from "zod";
-
-    const State = new StateSchema({
-      generatedText: z.string(),
-    });
-
-    const builder = new StateGraph(State)
-      .addNode("review", async (state) => {
-        // Ask a reviewer to edit the generated content
-        const updated = interrupt({
-          instruction: "Review and edit this content",
-          content: state.generatedText,
-        });
-        return { generatedText: updated };
-      })
-      .addEdge(START, "review")
-      .addEdge("review", END);
-
-    const checkpointer = new MemorySaver();
-    const graph = builder.compile({ checkpointer });
-
-    const config = { configurable: { thread_id: "review-42" } };
-    const initial = await graph.invoke({ generatedText: "Initial draft" }, config);
-    console.log(initial.__interrupt__);
-    // [{ value: { instruction: ..., content: ... } }]
-
-    // Resume with the edited text from the reviewer
-    const finalState = await graph.invoke(
-      new Command({ resume: "Improved draft after review" }),
-      config,
-    );
-    console.log(finalState.generatedText); // -> "Improved draft after review"
-    ```
-    :::
-
 ### Interrupts in tools
 
 You can also place interrupts directly inside tool functions. This makes the tool itself pause for approval whenever it's called, and allows for human review and editing of the tool call before it is executed.
@@ -497,8 +390,6 @@ def send_email(to: str, subject: str, body: str):
 ```
 
 This approach is useful when you want the approval logic to live with the tool itself, making it reusable across different parts of your graph. The LLM can call the tool naturally, and the interrupt will pause execution whenever the tool is invoked, allowing you to approve, edit, or cancel the action.
-
-    :::python
 
     ```python
     import sqlite3
@@ -602,98 +493,6 @@ This approach is useful when you want the approval logic to live with the tool i
     )
     print(resumed.output["messages"][-1])  # -> Tool result returned by send_email
     ```
-    :::
-
-    :::js
-
-    ```typescript
-    import { tool } from "@langchain/core/tools";
-    import { ChatAnthropic } from "@langchain/anthropic";
-    import {
-      Command,
-      MemorySaver,
-      START,
-      END,
-      StateGraph,
-      StateSchema,
-      MessagesValue,
-      GraphNode,
-      interrupt,
-    } from "@langchain/langgraph";
-    import * as z from "zod";
-
-    const sendEmailTool = tool(
-      async ({ to, subject, body }) => {
-        // Pause before sending; payload surfaces in result.__interrupt__
-        const response = interrupt({
-          action: "send_email",
-          to,
-          subject,
-          body,
-          message: "Approve sending this email?",
-        });
-
-        if (response?.action === "approve") {
-          const finalTo = response.to ?? to;
-          const finalSubject = response.subject ?? subject;
-          const finalBody = response.body ?? body;
-          console.log("[sendEmailTool]", finalTo, finalSubject, finalBody);
-          return `Email sent to ${finalTo}`;
-        }
-        return "Email cancelled by user";
-      },
-      {
-        name: "send_email",
-        description: "Send an email to a recipient",
-        schema: z.object({
-          to: z.string(),
-          subject: z.string(),
-          body: z.string(),
-        }),
-      },
-    );
-
-    const model = new ChatAnthropic({ model: "claude-sonnet-4-6" }).bindTools([sendEmailTool]);
-
-    const State = new StateSchema({
-      messages: MessagesValue,
-    });
-
-    const agent: typeof State.Node = async (state) => {
-      // LLM may decide to call the tool; interrupt pauses before sending
-      const response = await model.invoke(state.messages);
-      return { messages: [response] };
-    };
-
-    const graphBuilder = new StateGraph(State)
-      .addNode("agent", agent)
-      .addEdge(START, "agent")
-      .addEdge("agent", END);
-
-    const checkpointer = new MemorySaver();
-    const graph = graphBuilder.compile({ checkpointer });
-
-    const config = { configurable: { thread_id: "email-workflow" } };
-    const initial = await graph.invoke(
-      {
-        messages: [
-          { role: "user", content: "Send an email to alice@example.com about the meeting" },
-        ],
-      },
-      config,
-    );
-    console.log(initial.__interrupt__); // -> [{ value: { action: 'send_email', ... } }]
-
-    // Resume with approval and optionally edited arguments
-    const resumed = await graph.invoke(
-      new Command({
-        resume: { action: "approve", subject: "Updated subject" },
-      }),
-      config,
-    );
-    console.log(resumed.messages.at(-1)); // -> Tool result returned by send_email
-    ```
-    :::
 
 ### Validating human input
 
@@ -739,8 +538,6 @@ builder.add_conditional_edges("collect_age", route)
 ```
 
 Each resume invokes `get_age_node` exactly once, runs the `interrupt()` call once, and exits. When the answer is invalid, the conditional edge loops back and the next interrupt re-prompts with the updated question. No code runs more than once per resume.
-
-    :::python
 
     
 ```python
@@ -792,59 +589,6 @@ print(retry.interrupts)  # -> (Interrupt(value="'thirty' is not a valid age...",
 final = graph.stream_events(Command(resume=30), config=config, version="v3")
 print(final.output["age"])  # -> 30
 ```
-
-    :::
-
-    :::js
-
-    ```typescript
-    import {
-      Command,
-      MemorySaver,
-      START,
-      END,
-      StateGraph,
-      StateSchema,
-      interrupt,
-    } from "@langchain/langgraph";
-    import * as z from "zod";
-
-    const State = new StateSchema({
-      age: z.number().nullable(),
-      pendingQuestion: z.string().nullable(),
-    });
-
-    const builder = new StateGraph(State)
-      .addNode("collectAge", (state) => {
-        const question = state.pendingQuestion ?? "What is your age?";
-        const answer = interrupt(question); // called exactly once per invocation
-
-        if (typeof answer === "number" && answer > 0) {
-          return { age: answer, pendingQuestion: null };
-        }
-        return { pendingQuestion: `'${answer}' is not a valid age. Please enter a positive number.` };
-      })
-      .addEdge(START, "collectAge")
-      .addConditionalEdges("collectAge", (state) =>
-        state.age !== null ? END : "collectAge"
-      );
-
-    const checkpointer = new MemorySaver();
-    const graph = builder.compile({ checkpointer });
-
-    const config = { configurable: { thread_id: "form-1" } };
-    const first = await graph.invoke({ age: null, pendingQuestion: null }, config);
-    console.log(first.__interrupt__); // -> [{ value: "What is your age?", ... }]
-
-    // Provide invalid data; the node re-prompts via the conditional edge
-    const retry = await graph.invoke(new Command({ resume: "thirty" }), config);
-    console.log(retry.__interrupt__); // -> [{ value: "'thirty' is not a valid age...", ... }]
-
-    // Provide valid data; route returns END and the graph finishes
-    const final = await graph.invoke(new Command({ resume: 30 }), config);
-    console.log(final.age); // -> 30
-    ```
-    :::
 
 ## Rules of interrupts
 
@@ -1115,7 +859,6 @@ To debug and test a graph, you can use static interrupts as breakpoints to step 
     Static interrupts are **not** recommended for human-in-the-loop workflows. Use the `interrupt` function instead.
 
     
-        :::python
         ```python
         graph = builder.compile(
             interrupt_before=["node_a"],  # [!code highlight]
@@ -1143,38 +886,8 @@ To debug and test a graph, you can use static interrupts as breakpoints to step 
         4. A checkpointer is required to enable breakpoints.
         5. The graph is run until the first breakpoint is hit.
         6. The graph is resumed by passing in `None` for the input. This will run the graph until the next breakpoint is hit.
-        :::
-        :::js
-        ```typescript
-        const graph = builder.compile({
-            interruptBefore: ["node_a"],  // [!code highlight]
-            interruptAfter: ["node_b", "node_c"],  // [!code highlight]
-            checkpointer,
-        });
-
-        // Pass a thread ID to the graph
-        const config = {
-            configurable: {
-                thread_id: "some_thread"
-            }
-        };
-
-        // Run the graph until the breakpoint
-        await graph.invoke(inputs, config);# [!code highlight]
-
-        await graph.invoke(null, config);  # [!code highlight]
-        ```
-
-        1. The breakpoints are set during `compile` time.
-        2. `interruptBefore` specifies the nodes where execution should pause before the node is executed.
-        3. `interruptAfter` specifies the nodes where execution should pause after the node is executed.
-        4. A checkpointer is required to enable breakpoints.
-        5. The graph is run until the first breakpoint is hit.
-        6. The graph is resumed by passing in `null` for the input. This will run the graph until the next breakpoint is hit.
-        :::
     
     
-        :::python
         ```python
         config = {
             "configurable": {
@@ -1199,28 +912,6 @@ To debug and test a graph, you can use static interrupts as breakpoints to step 
         3. `interrupt_after` specifies the nodes where execution should pause after the node is executed.
         4. The graph is run until the first breakpoint is hit.
         5. The graph is resumed by passing in `None` for the input. This will run the graph until the next breakpoint is hit.
-        :::
-        :::js
-        ```typescript
-        // Run the graph until the breakpoint
-        graph.invoke(inputs, {
-            interruptBefore: ["node_a"],  // [!code highlight]
-            interruptAfter: ["node_b", "node_c"],  // [!code highlight]
-            configurable: {
-                thread_id: "some_thread"
-            }
-        });
-
-        // Resume the graph
-        await graph.invoke(null, config);  // [!code highlight]
-        ```
-
-        1. `graph.invoke` is called with the `interruptBefore` and `interruptAfter` parameters. This is a run-time configuration and can be changed for every invocation.
-        2. `interruptBefore` specifies the nodes where execution should pause before the node is executed.
-        3. `interruptAfter` specifies the nodes where execution should pause after the node is executed.
-        4. The graph is run until the first breakpoint is hit.
-        5. The graph is resumed by passing in `null` for the input. This will run the graph until the next breakpoint is hit.
-        :::
     
 
 To debug your interrupts, use LangSmith.
