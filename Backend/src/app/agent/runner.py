@@ -70,6 +70,31 @@ class _TurnStream:
         self.text += text
         await self.publish({"text": text, "stage": "token", "input_state": "thinking"})
 
+    async def restart(self) -> None:
+        """Discard the answer streamed so far, because the model is writing another one.
+
+        Grounding sends an answer back to be rewritten, and the tokens of the first attempt
+        have already been streamed and accumulated. Without this the two attempts are
+        concatenated: the user reads the same paragraph twice, once uncited and once cited,
+        and the persisted message keeps both. Clearing here and telling the client to do the
+        same means a correction shows one answer, the corrected one.
+        """
+        self.text = ""
+        await self.publish({"text": "", "stage": "restart", "input_state": "thinking"})
+
+
+def _is_retry(chunk) -> bool:
+    """Whether an updates chunk shows a middleware sending the answer back to the model.
+
+    Read from ``jump_to`` in the node's state update rather than from the node's name, so any
+    middleware that reroutes the graph is covered, not only the one that does today.
+    """
+    if not isinstance(chunk, dict):
+        return False
+    return any(
+        isinstance(update, dict) and update.get("jump_to") == "model" for update in chunk.values()
+    )
+
 
 def _write_summary(value) -> str:
     """Describe a pending ticket write in one line, from the args the model drafted."""
@@ -169,6 +194,11 @@ async def run_turn(
                     message_chunk, _ = chunk
                     if isinstance(message_chunk, AIMessageChunk):
                         await stream.token(_chunk_text(message_chunk))
+                elif mode == "updates" and _is_retry(chunk):
+                    # A middleware sent the answer back to the model. Whatever was streamed
+                    # belongs to the attempt being replaced, so drop it before the rewrite
+                    # arrives; otherwise both answers reach the user run together.
+                    await stream.restart()
             final = await agent.aget_state(config)
             stage, input_state, fallback = _terminal(final.interrupts)
         if input_state == "open":

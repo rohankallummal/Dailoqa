@@ -32,6 +32,17 @@ export function applyDelta(messages: Message[], event: Extract<ChatEvent, { type
   if (event.stage === "tool_status") return messages;
   const streaming = event.stage === "token";
   const index = messages.findIndex((message) => message.id === event.turnId);
+
+  // The agent was asked to rewrite its answer, so what has been streamed belongs to the draft
+  // being replaced. Emptying the bubble rather than removing it keeps the turn in place and
+  // avoids the message jumping to the bottom of the list when the rewrite starts arriving.
+  if (event.stage === "restart") {
+    if (index === -1) return messages;
+    const reset = [...messages];
+    reset[index] = { ...reset[index], content: "", streaming: true };
+    return reset;
+  }
+
   if (index === -1) {
     if (!event.text) return messages;
     return [
