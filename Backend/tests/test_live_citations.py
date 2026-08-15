@@ -26,7 +26,10 @@ from tests.conftest import corpus_page, corpus_sources
 pytestmark = pytest.mark.live
 
 _CITATION = re.compile(r"\[Doc\s*\d+", re.IGNORECASE)
-_ROUTE = re.compile(r"/docs/[a-z0-9-]+(?:/[a-z0-9-]+)*")
+# The trailing slash is captured, not discarded. An earlier version stopped before it, which
+# meant a model writing "/docs/langgraph/" was silently normalised to the manifest value and the
+# drift below could never be observed.
+_ROUTE = re.compile(r"/docs/[a-z0-9-]+(?:/[a-z0-9-]+)*/?")
 
 
 async def _answer(question: str) -> str:
@@ -70,9 +73,17 @@ async def test_a_documentation_answer_cites_a_real_route(question):
     routes = _ROUTE.findall(answer)
     assert routes, f"no /docs route in the answer to {question!r}"
 
+    # Exact match, modulo a trailing slash. The slash is tolerated because Next 308-redirects it
+    # so the link still lands, but nothing else is: SKILL.md tells the model to copy the label
+    # verbatim, and a route it has edited in any other way is one that can 404. Catching the
+    # difference here is the point — in the UI it looks like a broken citation, not a drift.
     known = {route_for(path) for path in corpus_sources()}
     for route in routes:
-        assert route in known, f"cited a route that is not in the manifest: {route}"
+        assert route.rstrip("/") in known, (
+            f"cited a route that is not in the manifest: {route!r}\n"
+            f"the model is not copying the label verbatim; nearest known routes: "
+            f"{sorted(k for k in known if k and k.split('/')[2] == route.split('/')[2])}"
+        )
 
 
 @pytest.mark.parametrize(
