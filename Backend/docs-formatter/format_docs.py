@@ -95,8 +95,8 @@ _MAX_UNMASK_PASSES = 10
 def parse_frontmatter(text: str) -> tuple[str, str]:
     """Split a leading YAML frontmatter block; return (frontmatter-with-fences, body).
 
-    The frontmatter is returned intact rather than parsed: Obsidian reads it, so it is worth
-    carrying through to the formatted note unchanged.
+    The frontmatter is returned intact rather than parsed: ingestion reads `title` out of it,
+    so it is worth carrying through to the formatted page unchanged.
     """
     match = _FRONTMATTER_RE.match(text)
     if not match:
