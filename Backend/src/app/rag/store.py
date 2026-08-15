@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db.models import DocChunk
+from app.rag.routes import route_for
 
 logger = logging.getLogger(__name__)
 
@@ -109,10 +110,24 @@ def context_prefix(source_path: str, title: str | None, heading: str | None) -> 
 
 
 def citation_label(source_path: str, title: str | None, heading: str | None) -> str:
-    """The human-readable half of a `[Doc N: ...]` tag, disambiguated by topic folder."""
+    """The human-readable half of a `[Doc N: ...]` tag.
+
+    Ends with the documentation route the passage came from, so a cited source is something the
+    reader can open rather than a filename they cannot act on. The route is looked up in the
+    manifest, never derived: a quarter of the pages render at a path their filename does not
+    predict (see ``app.rag.routes``).
+
+    **Falls back to the filename form when the page is unmapped.** That happens when the corpus
+    has moved on and the manifest has not, and the choice is deliberate — a citation that reads
+    slightly stale is better than an answer the user cannot get at all. The topic folder stays in
+    the label either way, because it is what keeps the three `overview` pages distinguishable
+    when no route is available to do it.
+    """
     topic = _topic(source_path)
     head = f"{topic}/{title}" if topic and title else (title or topic or "documentation")
-    return f"{head} - {heading}" if heading else head
+    label = f"{head} - {heading}" if heading else head
+    route = route_for(source_path)
+    return f"{label} ({route})" if route else label
 
 
 # Ingestion prepends the context line to every chunk. Reassembling a section verbatim

@@ -37,7 +37,11 @@ from pathlib import Path
 # --- normalizer rules (mirror of src/app/rag/ingest.py) --------------------------------
 
 _FRONTMATTER_RE = re.compile(r"^﻿?---\s*\n(.*?)\n---\s*\n", re.DOTALL)
-_IMPORT_EXPORT_RE = re.compile(r"^(import|export)\s.+$", re.MULTILINE)
+# Leading whitespace allowed, for the same reason as the ::: rules: MDX imports can sit inside an
+# indented component block. Also narrowed to require a quoted module path -- every one of the 160
+# in the corpus is `import X from '...'` -- so an indented line of prose merely beginning with the
+# word "import" is not deleted wholesale.
+_IMPORT_EXPORT_RE = re.compile(r"^[ \t]*(?:import|export)\s[^\n]*['\"][^\n]*$", re.MULTILINE)
 _MDX_COMMENT_RE = re.compile(r"\{/\*.*?\*/\}", re.DOTALL)
 
 # Only JSX *components* — Mintlify's are capitalised (<CodeGroup>, <Tip>, <Accordion>) — plus
@@ -69,7 +73,11 @@ _BLANK_LINES_RE = re.compile(r"\n{3,}")
 
 # Snippet plumbing. `import Foo from '/snippets/x-py.mdx';` pairs with a `<Foo />` in the body;
 # the suffix on the filename is what decides which language arm a snippet belongs to.
-_SNIPPET_IMPORT_RE = re.compile(r"^import\s+(\w+)\s+from\s+'(/snippets/[^']+)'", re.MULTILINE)
+# Leading whitespace allowed. This is the highest-stakes of the anchored rules: an unparsed
+# import leaves its <Name /> unresolved, the JSX rule then strips the tag, and the code sample
+# disappears with nothing to show it was ever referenced -- the same silent-loss failure the
+# whole splicing step exists to prevent.
+_SNIPPET_IMPORT_RE = re.compile(r"^[ \t]*import\s+(\w+)\s+from\s+'(/snippets/[^']+)'", re.MULTILINE)
 _COMPONENT_TAG_RE = re.compile(r"<([A-Z][A-Za-z0-9]*)\s*/>")
 _MAX_SNIPPET_DEPTH = 5
 _SNIPPET_DIR = "_snippets"
@@ -203,9 +211,19 @@ def splice_snippets(text: str, snippet_root: Path | None, language: str, _depth:
 
 
 def format_document(text: str, language: str, snippet_root: Path | None = None) -> str:
-    """Format one document, preserving its frontmatter and formatting only the body."""
+    """Format one document, preserving its frontmatter and formatting only the body.
+
+    Raises if a snippet placeholder survives splicing. Silence is the dangerous outcome here:
+    an unresolved ``<Name />`` is stripped by the JSX rule a moment later, so the code sample it
+    stood for would vanish leaving no trace that it had ever been referenced.
+    """
     frontmatter, body = parse_frontmatter(text)
-    body = splice_snippets(body, snippet_root, language)
+    if snippet_root is not None:
+        imported = {name for name, _ in _SNIPPET_IMPORT_RE.findall(body)}
+        body = splice_snippets(body, snippet_root, language)
+        unresolved = {m.group(1) for m in _COMPONENT_TAG_RE.finditer(body)} & imported
+        if unresolved:
+            raise ValueError(f"snippet placeholders left unspliced: {sorted(unresolved)}")
     return f"{frontmatter}{flatten_mdx(body, language)}\n"
 
 

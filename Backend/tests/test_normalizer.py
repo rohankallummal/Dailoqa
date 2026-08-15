@@ -103,6 +103,21 @@ def test_flipping_the_setting_inverts_the_result(language, monkeypatch):
     assert "PYTHON BODY" not in out
 
 
+def test_indented_imports_are_still_stripped(language):
+    # Audit of every line-anchored rule after the ::: bug: this one had the same assumption.
+    # An import nested inside a component block is indented, and "^import" never saw it.
+    out = _flatten_mdx("<Steps>\n    import Foo from '/snippets/foo.mdx';\n\n    Prose here.\n</Steps>")
+    assert "import Foo" not in out
+    assert "Prose here." in out
+
+
+def test_prose_beginning_with_the_word_import_is_not_deleted(language):
+    # The counterpart risk of making that rule indent-tolerant. Narrowed to require a quoted
+    # module path, which every one of the 160 real imports in the corpus has.
+    out = _flatten_mdx("Steps:\n\n    import the module before calling it\n")
+    assert "import the module before calling it" in out
+
+
 def test_indented_directive_blocks_are_selected_too(language):
     # Regression: the rules were anchored at "^:::", so a directive nested inside a <Steps> or
     # <Tabs> component -- and therefore indented -- was never matched. Both arms survived, in

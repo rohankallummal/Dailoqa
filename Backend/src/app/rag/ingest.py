@@ -31,7 +31,12 @@ _HEADERS_TO_SPLIT_ON = [("#", "h1"), ("##", "h2"), ("###", "h3")]
 
 _FRONTMATTER_RE = re.compile(r"^﻿?---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _TITLE_RE = re.compile(r"^title:\s*(.+?)\s*$", re.MULTILINE)
-_IMPORT_EXPORT_RE = re.compile(r"^(import|export)\s.+$", re.MULTILINE)
+# Leading whitespace allowed, for the same reason as the ::: rules below: MDX imports can sit
+# inside an indented component block. Also narrowed to require a quoted module path -- every one
+# of the 160 in the corpus is `import X from '...'` -- so that an indented line of prose merely
+# beginning with the word "import" is not deleted wholesale, which the old rule would have done
+# at column 0 and an indent-tolerant version of it would have done anywhere.
+_IMPORT_EXPORT_RE = re.compile(r"^[ \t]*(?:import|export)\s[^\n]*['\"][^\n]*$", re.MULTILINE)
 _MDX_COMMENT_RE = re.compile(r"\{/\*.*?\*/\}", re.DOTALL)
 
 # Only JSX *components* — Mintlify's are capitalised (<CodeGroup>, <Tip>, <Accordion>) —
