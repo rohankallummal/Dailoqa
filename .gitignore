@@ -60,5 +60,9 @@ Thumbs.db
 .vercel
 
 # ---- AI assistant / local dev instruction files (not needed in repo) ----
-CLAUDE.md
-AGENTS.md
+# Root-anchored on purpose. Without the leading slash these match at any depth, and on a
+# case-insensitive filesystem "AGENTS.md" also matches "agents.md" -- which silently excluded
+# docs-corpus/formatted/langchain/agents.md from the corpus. It stayed invisible locally, since
+# the file is on disk and git status is clean; only a fresh clone showed 17 of 18 pages.
+/CLAUDE.md
+/AGENTS.md
