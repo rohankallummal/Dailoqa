@@ -1,11 +1,15 @@
-"""Middleware that keeps an answer's citations honest in both directions.
+"""Middleware that keeps an answer's citations honest.
 
-Two defects, and they are opposites:
+Three defects. The first two are opposites; the third is about a citation that is present and
+real but attached to the wrong claim:
 
 * **Fabricated** — the answer carries ``[Doc N]`` markers but no documentation tool ever ran.
   The citation points at nothing.
 * **Uncited** — a documentation tool handed back passages and the answer used them without
   a single tag. The source is real but the reader cannot see it.
+* **Misattributed** — the answer credits a library its own sources do not come from: "Guardrails
+  in LangGraph are…" closing with a ``/docs/langchain/guardrails`` citation. Both halves are
+  individually fine and the pair is wrong, which is why neither check above sees it.
 
 The second half exists because prompt wording alone is compliance, not enforcement: the skill
 instructions reached a 16/16 citation rate in live testing, but nothing structural stopped that
@@ -15,8 +19,9 @@ the model is behaving on any given day.
 **Still not a retrieval gate.** An answer that consults nothing and cites nothing passes through
 here untouched — deciding *whether* to search is the skill's job, not this middleware's. What is
 guaranteed is narrower and worth stating exactly: a citation exists if and only if passages were
-retrieved. It is not a claim-level guarantee, so an answer citing ``[Doc 3]`` for a sentence that
-actually came from ``[Doc 1]`` still passes; catching that needs per-claim attribution.
+retrieved, and the library the answer names is one its citations actually come from. It is still
+not a per-claim guarantee — an answer citing ``[Doc 3]`` for a sentence that actually came from
+``[Doc 1]`` passes, since both are real sources for the same answer.
 
 Scoping falls out of the same rule. Ticket answers neither cite nor retrieve documentation, so
 they satisfy both directions trivially and the check needs no notion of which skill is running.
@@ -61,6 +66,18 @@ _UNCITED = (
 )
 
 
+_MISATTRIBUTED = (
+    "You attributed the answer to {claimed}, but the passages you cited are from the {cited} "
+    "documentation. Do not take the library name from the question — take it from the source. "
+    "Rewrite the answer naming the library the passages actually document.\n\n"
+    "If {claimed} genuinely is the right place to look, then the passages you cited are the wrong "
+    "ones: search again for the {claimed} page on this and answer from that instead. If the "
+    "documentation covers this only under {cited}, say so plainly — that these are {cited} "
+    "features — rather than describing them as though {claimed} provided them. Naming the wrong "
+    "library sends the reader to a page where the thing they just read about does not exist."
+)
+
+
 def _text(message) -> str:
     """Flatten a message's content, which providers return as a string or as blocks."""
     content = getattr(message, "content", "")
@@ -92,10 +109,110 @@ def _overlap_with(answer: str, passages: str) -> float:
     return len(words & source) / len(words)
 
 
+# The three libraries the corpus documents, keyed by the topic that appears in a citation
+# route (/docs/langgraph/...) and in the label's leading folder (langgraph/Persistence).
+_PRODUCTS = {"deepagents": "Deep Agents", "langchain": "LangChain", "langgraph": "LangGraph"}
+_TOPIC_ALIASES = {"deep-agents": "deepagents"}
+
+# A tool hands passages over as "[Doc 3: langchain/Guardrails - ... (/docs/langchain/guardrails)]";
+# the model writes "[Doc 3]" back. The first form carries the topic, the second is what the
+# answer's attribution has to be checked against, so both are needed to connect the two.
+_TAGGED_PASSAGE = re.compile(r"\[doc\s*(\d+)\s*:([^\]\n]*)", re.IGNORECASE)
+_TAG_NUMBER = re.compile(r"\[doc\s*(\d+)", re.IGNORECASE)
+_ROUTE_TOPIC = re.compile(r"/docs/(deepagents|langchain|langgraph)\b")
+_LABEL_TOPIC = re.compile(r"\b(deep-agents|deepagents|langchain|langgraph)\s*/")
+
+# Attributive positions only: "Guardrails **in LangGraph** are…", "**LangGraph's** checkpointer".
+# Provenance is deliberately not matched -- "the subagents middleware **from** Deep Agents" is how
+# the documentation itself describes a Deep Agents component used inside LangChain, and flagging
+# that would bounce the one phrasing that is precisely correct.
+_ATTRIBUTED = re.compile(
+    r"\bin\s+(LangChain|LangGraph|Deep\s?Agents)\b"
+    r"|\b(LangChain|LangGraph|Deep\s?Agents)(?:'s|’s)\b",
+    re.IGNORECASE,
+)
+
+_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+_NEGATED = re.compile(r"\bn(?:o|ot|ever)\b|n['’]t\b|\binstead\b|\brather than\b", re.IGNORECASE)
+
+
+def _topic_of_label(label: str) -> str | None:
+    """The library a citation label points at, from its route or its leading folder."""
+    route = _ROUTE_TOPIC.search(label)
+    if route:
+        return route.group(1)
+    folder = _LABEL_TOPIC.search(label)
+    if folder:
+        topic = folder.group(1).lower()
+        return _TOPIC_ALIASES.get(topic, topic)
+    return None
+
+
+def _cited_topics(answer: str, passages: str) -> set[str]:
+    """The libraries the answer's own ``[Doc N]`` tags resolve to."""
+    by_number = {}
+    for number, label in _TAGGED_PASSAGE.findall(passages):
+        topic = _topic_of_label(label)
+        if topic:
+            by_number[number] = topic
+    return {by_number[n] for n in _TAG_NUMBER.findall(answer) if n in by_number}
+
+
+def _claimed_topics(answer: str) -> set[str]:
+    """The libraries the answer's prose credits, in attributive position.
+
+    **A negated mention is not a claim, and skipping it is load-bearing.** The correct answer to
+    "what are guardrails in LangGraph?" opens *"The documentation does not cover guardrails in
+    LangGraph. Instead, guardrails are features provided by LangChain"* — which contains the exact
+    phrase this looks for, in the exact position, while saying the opposite of the failure it
+    exists to catch. Reading attribution without reading the negation around it bounced that
+    answer, so the check was rejecting the behaviour it was added to produce.
+
+    Sentence-level rather than clause-level on purpose: the denial and the topic sit in one
+    sentence in every phrasing observed, and a looser window starts swallowing the next sentence's
+    genuine claim.
+    """
+    claimed = set()
+    for sentence in _SENTENCE.split(answer):
+        if _NEGATED.search(sentence):
+            continue
+        for match in _ATTRIBUTED.finditer(sentence):
+            name = (match.group(1) or match.group(2)).lower().replace(" ", "")
+            if name in _PRODUCTS:
+                claimed.add(name)
+    return claimed
+
+
+def _misattribution(answer: str, passages: str) -> tuple[str, str] | None:
+    """A library the answer credits that none of its citations come from.
+
+    The failure this catches, seen live on all four probes of its kind: the model takes the
+    library name straight from the question and applies it to whatever was retrieved. "What are
+    guardrails in LangGraph?" came back as "Guardrails in LangGraph are…" citing five passages
+    that were, every one of them, from ``langchain/guardrails.md``.
+
+    Retrieval was not at fault in any of them — it returned the right pages, and in one case
+    ranked the genuinely correct cross-library page first. Only the prose was wrong, which is
+    why this reads the answer against its own citations rather than against the search results.
+    """
+    cited = _cited_topics(answer, passages)
+    if not cited:
+        return None  # nothing resolvable to check against; the other two checks cover this
+    stray = _claimed_topics(answer) - cited
+    if not stray:
+        return None
+    claimed_names = ", ".join(sorted(_PRODUCTS[t] for t in stray))
+    cited_names = ", ".join(sorted(_PRODUCTS[t] for t in cited))
+    return (
+        f"answer credits {claimed_names} but cites {cited_names}",
+        _MISATTRIBUTED.format(claimed=claimed_names, cited=cited_names),
+    )
+
+
 def _problem(messages, last) -> tuple[str, str] | None:
     """The citation defect in a final answer, as (log phrase, correction), or None if clean.
 
-    Two failures, opposite directions, and the checks are not symmetric:
+    Three failures, and the checks are not symmetric:
 
     * **cited but nothing retrieved** — the citation is invented. Detected by whether a citing
       tool *ran*, since a tool that ran and found nothing still cannot justify a `[Doc N]`.
@@ -103,10 +220,13 @@ def _problem(messages, last) -> tuple[str, str] | None:
       whether the answer's wording actually came from the passages, not merely by whether
       passages arrived: an agent that searched, found nothing relevant and declined owes them
       nothing, and bouncing it was how the irrelevant citations got manufactured.
+    * **cited but credited to the wrong library** — checked only once the citations are known to
+      be real, since an answer whose tags point at nothing has a worse problem than attribution.
     """
-    if _CITATION.search(_text(last)):
+    answer = _text(last)
+    if _CITATION.search(answer):
         if citable_passages_retrieved(messages):
-            return None  # citations are backed by passages the agent actually received
+            return _misattribution(answer, offered_passages(messages))
         return "citations with no documentation lookup", _FABRICATED
 
     if passages_were_offered(messages):

@@ -94,6 +94,47 @@ it. Sliding from "it does not cover X" into a paragraph or two about what it *do
 the same failure wearing different clothes: the reader asked about X, and a summary of three
 adjacent features is not a smaller answer, it is a longer wrong one.
 
+## Step 2c — Check the question's premise before you accept it
+
+A question can smuggle in a claim instead of asking one: "now that Skills are deprecated, what
+should I use instead", "since Deep Agents doesn't support streaming, how do I poll", "why did
+LangGraph remove subgraphs". Each presents something as settled and asks only about the
+consequence — so answering the question as asked means agreeing to the premise, whether or not you
+meant to.
+
+**Verify the premise in the passages first, and answer it before anything else.** If the
+documentation contradicts it, say so directly: Skills are not deprecated; Deep Agents does support
+streaming. If the documentation simply does not mention the deprecation, removal or limitation the
+question asserts, then that absence is the answer — say the documentation records no such thing.
+
+**Do not speculate about why it might be true.** "It's possible that this isn't publicly
+documented, or it might be a recent change" is not a decline; it hands the premise back with a
+plausible excuse attached, and the user leaves more convinced than they arrived.
+
+The worst version of this is answering helpfully and citing it — "with Skills deprecated, use
+Memory and Tools instead [Doc 1]" — where the citation is real, the recommendation is fluent, and
+the deprecation never happened. Nothing about the answer looks wrong.
+
+## Step 2d — Name the library the passages come from, not the one in the question
+
+These three products are layered — LangGraph underneath LangChain, Deep Agents built on both — so a
+question routinely names one and is answered by another's page. Guardrails are LangChain;
+persistence and subgraphs are LangGraph; subagents and Skills are Deep Agents.
+
+**Take the library name from the passage, never from the question.** "What are guardrails in
+LangGraph?" is answered by `langchain/guardrails.md`, so the answer says guardrails are a LangChain
+feature — not "guardrails in LangGraph are…" over a `/docs/langchain/...` citation. That pairing is
+self-contradicting, and it sends the reader to a page where the thing they just read about is not
+described as belonging there.
+
+Say where it actually lives, then answer: *"Guardrails are a LangChain feature [Doc 1]"* — adding
+how it is used from the library the user asked about, when the documentation says.
+
+**Being layered is not the same as being interchangeable.** If a question asks for one library's
+feature under another's name — a subgraph "in Deep Agents", say — check whether the thing exists
+there at all before substituting the nearest relative. Answering about subagents because the word
+resembles "subgraph" invents a feature by association.
+
 ## Step 3 — Answer from what came back
 
 Write the answer from the retrieved passages and nothing else.

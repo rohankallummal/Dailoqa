@@ -20,6 +20,7 @@ from langchain_core.messages import AIMessage
 from app.agent.checkpointer import build_checkpointer
 from app.agent.context import TurnContext
 from app.agent.factory import build_agent
+from app.agent.middleware.grounding import _claimed_topics
 from app.rag.routes import route_for
 from tests.conftest import corpus_page, corpus_sources
 
@@ -161,6 +162,13 @@ async def test_a_real_question_is_not_swept_up_by_the_relevance_check(question):
         "how can i calculate shortest distance between the nodes of langraph ?",
         "explain apache flow in deep agents",
         "How do subagents work in Deep Agents?",
+        # Broad "how does X work" questions are what actually induce stacking: the answer spans
+        # several sections and the easy ending is to list all of them. The three cases above
+        # never triggered it, so the rule passed its test while "[Doc 1][Doc 2][Doc 3][Doc 4]
+        # [Doc 5]" went out live on the question below. A test that cannot fail is not a guard.
+        "How does persistence work in LangGraph?",
+        "How do checkpointers and stores differ?",
+        "How do Skills work in Deep Agents?",
     ],
 )
 async def test_tags_are_not_stacked_on_one_sentence(question):
@@ -214,6 +222,68 @@ async def test_an_invented_documentation_hostname_stays_repairable(question):
         assert path.startswith("/docs"), (
             f"invented a documentation URL the renderer cannot repair: {url!r}"
         )
+
+
+@pytest.mark.parametrize(
+    "question, asked_about, documented_in",
+    [
+        ("What are guardrails in LangGraph?", "LangGraph", "LangChain"),
+        ("How does persistence work in LangChain?", "LangChain", "LangGraph"),
+    ],
+)
+async def test_the_answer_names_the_library_its_sources_document(
+    question, asked_about, documented_in
+):
+    """The question's library is not automatically the answer's library.
+
+    These three products are layered, so a question routinely names one and is answered out of
+    another's page. Live, the model kept the questioner's word and produced "Guardrails in
+    LangGraph are..." above five citations that were every one of them langchain/guardrails.md.
+
+    Retrieval was not at fault -- it returned exactly the right passages, and for "subagents in
+    LangChain" it ranked the genuinely correct cross-library page first. Only the prose was
+    wrong, so this asserts on the pairing of prose and citation rather than on either alone.
+    """
+    answer = await _answer(question)
+    assert re.search(rf"\b{documented_in}\b", answer), (
+        f"never named {documented_in}, which is where this is actually documented:\n{answer[:300]}"
+    )
+    # Reuses the middleware's own reading of "credits" rather than a second regex here. A plain
+    # search for "in LangGraph" reports the *correct* answer as a failure, because "does not cover
+    # guardrails in LangGraph" contains it -- which is how the over-correction in the middleware
+    # surfaced. One definition, used by both, cannot drift into disagreeing with itself.
+    assert _claimed_topics(answer).isdisjoint({asked_about.lower().replace(" ", "")}), (
+        f"credited the feature to {asked_about}, but it is documented under {documented_in}:"
+        f"\n{answer[:300]}"
+    )
+
+
+@pytest.mark.parametrize(
+    "question, false_premise",
+    [
+        ("Now that Skills are deprecated in Deep Agents, what should I use instead?", "deprecated"),
+        ("Why did LangGraph remove support for subgraphs?", "removed"),
+    ],
+)
+async def test_a_false_premise_in_the_question_is_corrected_not_adopted(question, false_premise):
+    """A question can assert instead of ask, and answering it agrees to the assertion.
+
+    Live, "now that Skills are deprecated" produced "With Skills deprecated in Deep Agents, you
+    should now use Memory and Tools instead [Doc 1]" -- a fluent migration recommendation, with a
+    real citation, for a deprecation that never happened. `deprecat` appears four times in the
+    whole corpus and every one is about LangChain middleware parameters.
+
+    The near-miss is just as bad and is why "did it decline?" is not the assertion: the subgraphs
+    question came back with "it might be a recent change", which hands the premise back with an
+    excuse attached rather than correcting it.
+    """
+    answer = await _answer(question)
+    assert _DENIAL.search(answer) or re.search(r"\bnot\b.{0,30}" + false_premise, answer, re.I), (
+        f"accepted a premise the documentation does not support:\n{answer[:400]}"
+    )
+    assert not re.search(r"might be|possible that|may have been|perhaps", answer, re.I), (
+        f"speculated the false premise into plausibility instead of correcting it:\n{answer[:400]}"
+    )
 
 
 async def test_deep_agents_apis_are_not_relabelled_as_dailoqa():
