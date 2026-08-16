@@ -19,6 +19,13 @@ _SKILLS_SECTION = {
     "heading": "How skills work",
 }
 
+# A real answer closes with a legend resolving each tag to a page, and the middleware now bounces
+# one that does not (see test_citation_legend.py). These fixtures predate that rule and carried a
+# bare "[Doc 1]", which is no longer a shape the model is allowed to emit -- so the sample answers
+# are brought up to date rather than the rule being relaxed for them. What each test asserts is
+# unchanged: that the turn passes without a correction.
+_SOURCES = "\n\nSources:\n[Doc 1] deep-agents/Skills - How skills work (/docs/deepagents/skills#how-skills-work)"
+
 
 def _stub_tools(results: dict[str, str]):
     """Stand-ins for the documentation tools that return fixed text.
@@ -89,7 +96,7 @@ async def test_fetching_without_searching_still_counts_as_consulting(turn_contex
         [
             AIMessage(content="", tool_calls=[{"name": "list_documentation_sources", "args": {}, "id": "a"}]),
             AIMessage(content="", tool_calls=[{"name": "fetch_document_section", "args": _SKILLS_SECTION, "id": "b"}]),
-            AIMessage(content="Skills package workflows [Doc 1]."),
+            AIMessage(content=f"Skills package workflows [Doc 1].{_SOURCES}"),
         ],
         turn_context,
     )
@@ -155,7 +162,7 @@ async def test_a_cited_answer_backed_by_passages_passes_untouched(turn_context, 
         scripted_model,
         [
             AIMessage(content="", tool_calls=[{"name": "search_documentation", "args": {"query": "skills"}, "id": "a"}]),
-            AIMessage(content="Skills package workflows [Doc 1]."),
+            AIMessage(content=f"Skills package workflows [Doc 1].{_SOURCES}"),
         ],
         turn_context,
         tool_results={

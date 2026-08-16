@@ -44,6 +44,22 @@ is equally valid when you know which section you want, and does not need a searc
 If the first search comes back thin or off-target, search again with different wording
 before concluding anything. One weak search is not evidence the documentation is silent.
 
+**Never conclude "there is no code example" from a search alone.** Code sits under whatever
+heading its page happens to use, and that heading often describes something else: LangGraph's
+only end-to-end agent sample — `StateGraph`, `add_node`, `compile`, `invoke` — lives under
+*Install*, so a search for agent code never surfaces it while a search for "hello world" does.
+Before saying the documentation has no example, list the sections of the page the search *did*
+return and fetch the ones that could plausibly carry one — an overview, a quickstart, a getting-
+started or install section, a usage section. Only after reading those is "no example" a finding
+rather than a guess.
+
+*Known not to be sufficient on its own.* Tested against exactly the case it describes — "can you
+provide a code example for creating an agent in LangGraph" — the decline persisted, in a fresh
+conversation as well as a continued one. The sample is retrievable only by queries that already
+describe it ("hello world"), so this is a retrieval problem wearing a prompt problem's clothes and
+the durable fix belongs in ranking, not here. Kept because the instruction is correct and cheap;
+do not read it as a working guard.
+
 ## Step 2b — Check the passages are about what was asked
 
 **Search returning results does not mean the documentation covers the question.** Retrieval

@@ -66,6 +66,16 @@ _UNCITED = (
 )
 
 
+_UNRESOLVED = (
+    "You wrote {tags} in the answer but no Sources legend explains {them}. A bare [Doc N] is not "
+    "a citation — the number means nothing on its own, and the reader has no page to open.\n\n"
+    "Add the legend: close the answer with `Sources:` and one line per tag you used, each giving "
+    "the label exactly as the tool provided it, ending in its /docs path — for example\n"
+    "[Doc 1] langgraph/LangGraph overview (/docs/langgraph)\n\n"
+    "Use only the numbers the tools assigned, list every tag that appears in your prose, and do "
+    "not list tags you did not cite."
+)
+
 _MISATTRIBUTED = (
     "You attributed the answer to {claimed}, but the passages you cited are from the {cited} "
     "documentation. Do not take the library name from the question — take it from the source. "
@@ -134,6 +144,25 @@ _ATTRIBUTED = re.compile(
 
 _SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
 _NEGATED = re.compile(r"\bn(?:o|ot|ever)\b|n['’]t\b|\binstead\b|\brather than\b", re.IGNORECASE)
+
+
+# A legend line pairs the tag with a label ending in the page's route:
+#   [Doc 1] langgraph/LangGraph overview (/docs/langgraph)
+_LEGEND_ENTRY = re.compile(r"\[doc\s*(\d+)\][^\n]*\(/docs/[^)\n]*\)", re.IGNORECASE)
+_ANY_TAG = re.compile(r"\[doc\s*(\d+)", re.IGNORECASE)
+
+
+def _unresolved_citations(answer: str) -> set[str]:
+    """Tag numbers used in the prose that no legend line resolves to a page.
+
+    Seen in a real conversation: an answer carrying "[Doc 1]" and "[Doc 5]" and no legend at all.
+    Every existing check passed it — a citation was present, it was backed by retrieved passages,
+    and the attribution matched — because all three ask whether a tag *exists*, not whether it
+    *resolves*. To the reader a bare number is worse than no citation: nothing to open, and the
+    answer looks sourced anyway.
+    """
+    resolved = set(_LEGEND_ENTRY.findall(answer))
+    return set(_ANY_TAG.findall(answer)) - resolved
 
 
 def _topic_of_label(label: str) -> str | None:
@@ -225,9 +254,17 @@ def _problem(messages, last) -> tuple[str, str] | None:
     """
     answer = _text(last)
     if _CITATION.search(answer):
-        if citable_passages_retrieved(messages):
-            return _misattribution(answer, offered_passages(messages))
-        return "citations with no documentation lookup", _FABRICATED
+        if not citable_passages_retrieved(messages):
+            return "citations with no documentation lookup", _FABRICATED
+        unresolved = _unresolved_citations(answer)
+        if unresolved:
+            tags = ", ".join(f"[Doc {n}]" for n in sorted(unresolved, key=int))
+            them = "it" if len(unresolved) == 1 else "them"
+            return (
+                f"citation tags with no legend entry: {tags}",
+                _UNRESOLVED.format(tags=tags, them=them),
+            )
+        return _misattribution(answer, offered_passages(messages))
 
     if passages_were_offered(messages):
         # Only an answer actually built on the passages owes them a citation. A decline is not,
