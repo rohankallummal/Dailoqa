@@ -109,7 +109,7 @@ async def test_an_off_corpus_question_is_declined_without_citing(question):
 # "does not mention" adjacently and reported a correct decline as a confabulation.
 _DENIAL = re.compile(
     r"does(?:n['’]t| not)\s+(?:\w+\s+){0,2}"
-    r"(?:mention|cover|describe|discuss|include|provide|specify)"
+    r"(?:mention|cover|describe|discuss|include|provide|specify|define|detail|address)"
     r"|no mention|not (?:mentioned|covered|documented|described)"
     r"|could(?:n['’]t| not) find|no .{0,12}reference",
     re.I,
@@ -153,6 +153,30 @@ async def test_a_real_question_is_not_swept_up_by_the_relevance_check(question):
     answer = await _answer(question)
     assert not _DENIAL.search(answer), f"declined a question the corpus covers:\n{answer[:300]}"
     assert _CITATION.search(answer), f"answered without citing:\n{answer[:300]}"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "how can i calculate shortest distance between the nodes of langraph ?",
+        "explain apache flow in deep agents",
+        "How do subagents work in Deep Agents?",
+    ],
+)
+async def test_tags_are_not_stacked_on_one_sentence(question):
+    """One sentence, one source.
+
+    A decline came back with "[Doc 1][Doc 2][Doc 3][Doc 4]" on a single line, from a sentence
+    that surveyed everything the search had returned. Each tag was technically supported, which
+    is why a rule about tags-per-claim did not stop it -- the fix was to say what a decline
+    should *be*: what is missing, then one place to look, not an index of the search results.
+    Four tags on a line tell a reader nothing about which source to open.
+    """
+    answer = await _answer(question)
+    body = answer.split("Sources")[0]
+    runs = [len(re.findall(r"\[Doc \d+\]", run)) for run in re.findall(r"(?:\[Doc \d+\]\s*){2,}", body)]
+    worst = max(runs) if runs else 1
+    assert worst <= 2, f"{worst} citations stacked on one sentence:\n{body[:300]}"
 
 
 async def test_a_citation_points_at_the_section_it_quoted():
