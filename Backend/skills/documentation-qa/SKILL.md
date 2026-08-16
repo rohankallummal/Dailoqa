@@ -102,10 +102,30 @@ LangGraph remove subgraphs". Each presents something as settled and asks only ab
 consequence — so answering the question as asked means agreeing to the premise, whether or not you
 meant to.
 
-**Verify the premise in the passages first, and answer it before anything else.** If the
-documentation contradicts it, say so directly: Skills are not deprecated; Deep Agents does support
-streaming. If the documentation simply does not mention the deprecation, removal or limitation the
-question asserts, then that absence is the answer — say the documentation records no such thing.
+**The premise is usually not the main clause, and that is exactly why it slips through.** "Given
+that subagents cannot use tools, how do I work around it?" reads as a question about workarounds,
+so the claim rides along as background — and the documentation says the opposite, that a subagent
+takes a `tools` list. Treat anything after *given that*, *since*, *now that*, *because*, *as*, or
+*with X being* as a claim you must check, not as context you may assume. A grammatically
+subordinate assertion is still an assertion, and repeating it back opens the answer with a
+sentence the documentation contradicts.
+
+**Search the claim itself, as its own query, before you search the question.** This is a separate
+search and it is not optional. "Given that subagents cannot use tools" means searching *can
+subagents use tools* — not *subagent tool workaround*, which returns passages about working
+around subagents and reads like confirmation. You are trying to disprove the claim, so the query
+has to be the claim; searching the question instead finds whatever assumes the answer.
+
+Then read the result against the claim. A `tools` row in the subagent configuration table settles
+it: subagents take tools, the premise is false, and that is the first thing the answer says.
+
+**Answer the premise before anything else.** If the documentation contradicts it, say so directly:
+Skills are not deprecated; subagents do take a `tools` list; Deep Agents does support streaming.
+Never carry the claim into your own sentence — "to work around the limitation that subagents
+cannot use tools" repeats the false premise as established fact even when the rest of the answer
+is accurate. If the documentation simply does not mention the deprecation, removal or limitation
+the question asserts, then that absence is the answer — say the documentation records no such
+thing.
 
 **Do not speculate about why it might be true.** "It's possible that this isn't publicly
 documented, or it might be a recent change" is not a decline; it hands the premise back with a
@@ -115,7 +135,32 @@ The worst version of this is answering helpfully and citing it — "with Skills 
 Memory and Tools instead [Doc 1]" — where the citation is real, the recommendation is fluent, and
 the deprecation never happened. Nothing about the answer looks wrong.
 
-## Step 2d — Name the library the passages come from, not the one in the question
+## Step 2d — Check what a value is *about* before you report it
+
+A passage can contain the word you searched for and still not be about the thing you were asked.
+Retrieval matches text, not meaning, so the risk is not that the passage is irrelevant — it is
+that a real value gets read as an answer to a different question.
+
+The measured case: asked what licence LangGraph is released under, the correct answer is that the
+documentation does not say. The corpus contains `license: MIT` exactly once, inside a **sample
+`SKILL.md` frontmatter** for an example skill that happens to be named `langgraph-docs`. It is
+that example skill's licence field. Reporting it as LangGraph's licence produced a confident,
+cited, wrong answer — and the citation is what made it look checked.
+
+So before you lift a value out of a passage, say what it is attached to:
+
+- A value inside an **example** — a sample file, a code block, a configuration snippet — describes
+  that example, not the product. `model="openai:gpt-5.5"` in a snippet is not a required model.
+- A row in a **field table** describes what the field *accepts*, not what the product *is*. A
+  `license` row means skills may declare a licence; it says nothing about any library's licence.
+- A value under a **heading about something else** belongs to that heading's subject.
+
+If the thing you were asked about is only present as the *name of an example*, the documentation
+does not answer the question. Say so. Questions about licensing, pricing, ownership, versions and
+maintainers are the usual shape of this, because the corpus is reference documentation and
+records almost none of them — the near-miss is nearly always an example, not an answer.
+
+## Step 2e — Name the library the passages come from, not the one in the question
 
 These three products are layered — LangGraph underneath LangChain, Deep Agents built on both — so a
 question routinely names one and is answered by another's page. Guardrails are LangChain;

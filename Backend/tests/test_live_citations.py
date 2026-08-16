@@ -201,6 +201,12 @@ async def test_a_citation_points_at_the_section_it_quoted():
         "explain apache flow in deep agents",
         "how can i calculate shortest distance between the nodes of langraph ?",
         "How do subagents work in Deep Agents?",
+        # Added after an audit found "https://docs/langgraph/subgraphs" in the wild -- the exact
+        # shape this test's docstring names as the one that slips through. It escaped because
+        # three fixed questions never produced it, not because the invariant held.
+        "Why did LangGraph remove support for subgraphs?",
+        "Where can I read more about checkpointers?",
+        "Point me at the documentation for skills.",
     ],
 )
 async def test_an_invented_documentation_hostname_stays_repairable(question):

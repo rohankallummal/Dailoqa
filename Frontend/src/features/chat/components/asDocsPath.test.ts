@@ -26,9 +26,21 @@ describe("asDocsPath", () => {
     );
   });
 
+  it("recovers the route when the host swallowed the /docs segment", () => {
+    // Found in an audit: `docs` used as the whole hostname, so the path carries no /docs at all
+    // and the path-only repair returned null. It rendered as a dead off-site link.
+    expect(asDocsPath("https://docs/langgraph/subgraphs")).toBe("/docs/langgraph/subgraphs");
+    expect(asDocsPath("https://docs/deepagents/skills#usage")).toBe("/docs/deepagents/skills#usage");
+    // A made-up host whose path starts straight at a real topic.
+    expect(asDocsPath("https://docs.dailoqa/deepagents")).toBe("/docs/deepagents");
+  });
+
   it("leaves genuine external links alone", () => {
     expect(asDocsPath("https://example.com/blog/post")).toBeNull();
     expect(asDocsPath("https://github.com/langchain-ai/docs")).toBeNull();
+    // A real docs site whose first path segment is not one of our topics. The host-based repair
+    // must not swallow this, or a legitimate upstream link becomes an internal 404.
+    expect(asDocsPath("https://docs.langchain.com/oss/python/langgraph")).toBeNull();
   });
 
   it("ignores anything that is not an absolute URL", () => {

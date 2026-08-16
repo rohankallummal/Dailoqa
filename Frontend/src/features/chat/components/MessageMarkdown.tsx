@@ -22,6 +22,9 @@ import { remarkDocPaths } from "../lib/remarkDocPaths";
 const isInternal = (href: string) => href.startsWith("/");
 const isAnchor = (href: string) => href.startsWith("#");
 
+/** The topic segments a documentation route can start with, per docs-corpus/manifest.json. */
+const DOC_TOPICS = new Set(["deepagents", "langchain", "langgraph"]);
+
 /**
  * Recover a documentation route from a link the model gave a hostname to.
  *
@@ -30,16 +33,33 @@ const isAnchor = (href: string) => href.startsWith("#");
  * /subagents", "https://docs.deepagents/subagents#using-compiledsubagent". Those render as
  * ordinary links: they look clickable and land nowhere.
  *
- * Instructing it not to has not held, so the path is taken over the host whenever one of these
- * points at `/docs`. A genuine external link whose path happens to start with `/docs` would be
- * internalised by this, which is the deliberate trade: the assistant answers only from this
+ * Instructing it not to has not held, so the path is taken over the host whenever the link is
+ * recognisably a documentation one. A genuine external link whose path starts with `/docs` would
+ * be internalised by this, which is the deliberate trade: the assistant answers only from this
  * product's documentation, so such a link is far more likely to be a fabricated host than a real
  * destination — and an internal link that 404s is easier to notice than one that leaves the app.
+ *
+ * **Two shapes, because the host can swallow the `/docs` segment.** Alongside the usual
+ * "…/docs/langgraph/subgraphs", an audit turned up `https://docs/langgraph/subgraphs` — the word
+ * `docs` used as the entire hostname, leaving a path with no `/docs` on it at all. That one is
+ * not repairable by path alone and rendered as a dead off-site link, so the host is inspected
+ * too. Kept deliberately narrow: a bare `docs` cannot be a real public host (no dot), and a
+ * `docs.*` host only qualifies when the path's first segment is a real documentation topic — so
+ * a genuine link like `https://docs.langchain.com/oss/python/...` is left alone.
  */
 export function asDocsPath(href: string): string | null {
   try {
     const url = new URL(href);
-    return url.pathname.startsWith("/docs") ? `${url.pathname}${url.hash}` : null;
+    if (url.pathname.startsWith("/docs")) {
+      return `${url.pathname}${url.hash}`;
+    }
+    const hostIsBareDocs = url.hostname === "docs";
+    const hostLooksLikeDocs = hostIsBareDocs || url.hostname.startsWith("docs.");
+    const firstSegment = url.pathname.split("/")[1] ?? "";
+    if (hostLooksLikeDocs && (hostIsBareDocs || DOC_TOPICS.has(firstSegment))) {
+      return `/docs${url.pathname}${url.hash}`;
+    }
+    return null;
   } catch {
     return null;
   }
