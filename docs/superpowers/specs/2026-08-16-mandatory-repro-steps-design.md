@@ -214,15 +214,52 @@ Known defects, found while designing this, deliberately not fixed here:
 - `Ticket-Structure.md`, cited by `adf.py:173` and `adf.py:192` as the authority for
   section order, does not exist in the repository.
 
+## Revision, 2026-08-16: steps are captured, not drafted
+
+The design above was implemented and then corrected during live verification. Two of its
+assumptions were wrong, both proven 3/3 against `azure-gpt-4o-mini`:
+
+**The gate induces the fabrication it was meant to prevent.** This spec rejected making
+`steps_to_reproduce` a required argument because that invites the model to invent a value.
+The gate has the identical effect: refusing empty steps makes non-empty steps the price of
+filing, and the model paid it. Given only "it just goes blank" it filed
+`['Open the dashboard.', 'Switch to the yearly view...']`. The gate turned "no ticket" into
+"ticket with invented steps", which is worse.
+
+**Ordering does not survive in prose.** "Ask for steps before evidence" was written into
+the skill's question list and then into the `request_evidence` docstring, the place every
+earlier fix had worked. `request_evidence` still fired on turn 1, 3/3 both times.
+
+The correction, agreed with the project owner: the model stops being the source of the
+steps.
+
+- `request_steps` collects them through an interrupt. The user's reply is recorded
+  verbatim as the tool's result and read back with `captured_steps`.
+- `create_ticket` and `link_to_existing` have **no** `steps_to_reproduce` argument. They
+  read the capture. Fabrication is impossible rather than discouraged.
+- The two-strike termination counts prior `request_steps` results, so it no longer depends
+  on the model keeping score.
+- `request_evidence` refuses until steps exist, which enforces the ordering structurally.
+- The write tools refuse until the picker has been offered. Attaching stays optional;
+  asking does not. Without this the model went straight from steps to filing and the
+  picker never opened, 0/4 — a regression of the original reported bug.
+- A `steps` stage was added to `STAGE_INPUT_STATES` mapping to an open composer, so no
+  frontend change was needed.
+
 ## Risks
 
-The two-strike ask-and-terminate flow is enforced by prose in `SKILL.md`, because
-judging whether a reply constitutes usable steps is a judgement the model has to make.
-`azure-gpt-4o-mini` has twice this session failed to honour prose instructions that were
-not backed by code. The gate itself is structural and cannot be talked around, so the
-worst case is a badly paced conversation, not a bad ticket.
+This risk section predates the revision above and is kept for the record. It assumed the
+two-strike flow would rest on prose in `SKILL.md`, with the escalation being to count
+prior refusals from `runtime.state["messages"]`. Live verification forced that escalation
+immediately, and it is now the implemented design rather than a contingency.
 
-If trials show the model asking indefinitely or terminating on the first refusal, the
-escalation is to count prior refusals from `runtime.state["messages"]` inside the write
-tools, the same technique that fixed the `request_evidence` repeat loop, and drive the
-termination from that count instead of from the model's judgement.
+The remaining judgement the model still owns is whether a reply *is* a set of steps: a
+user who answers "it just breaks" has that recorded verbatim as their step. The capture
+guarantees the words are theirs, not that they are useful. Triage quality is a human
+problem from that point, which is the correct place for it.
+
+One thin guard is worth noting. If a client ever posts a plain message while an interrupt
+is pending, the pending tool call is orphaned and every later model call on that thread
+fails with a 400 from the gateway. `run_turn` prevents this by resuming whenever
+`snapshot.interrupts` is set, and `_running_turns` blocks concurrent turns, so it is not
+reachable today — but nothing else defends it.
