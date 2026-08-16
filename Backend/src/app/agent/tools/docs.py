@@ -112,24 +112,37 @@ def documentation_skill_loaded(messages) -> bool:
     )
 
 
-def _cite(runtime: ToolRuntime, chunk_ids: list[str]) -> int:
+def _section_key(source_path: str, heading: str | None) -> str:
+    """A citation key for a whole section, distinct from any chunk id."""
+    return f"section:{source_path}#{heading or ''}"
+
+
+def _cite(runtime: ToolRuntime, chunk_ids: list[str], section: str | None = None) -> int:
     """Return the ``[Doc N]`` number for a passage, assigning one on first sight.
 
     Numbers are per turn and monotonic, and every chunk of a passage maps to the same
     number. Because the turn context is shared across tool calls, a section fetched after
     it was searched — or searched again with different wording — keeps the number the
     model has already written into its prose.
+
+    **Chunks of the same section share a number.** One search commonly returns several
+    fragments of one section, and numbering them separately produced citations like
+    ``[Doc 1][Doc 2][Doc 3][Doc 4][Doc 5]`` on a single sentence, with a Sources legend
+    listing the same section under two different numbers. Since the label is built from the
+    source and heading, two numbers with one label is a distinction the reader cannot see and
+    cannot act on.
     """
     citations = runtime.context.citations
-    for chunk_id in chunk_ids:
-        existing = citations.get(chunk_id)
+    keys = ([section] if section else []) + list(chunk_ids)
+    for key in keys:
+        existing = citations.get(key)
         if existing is not None:
-            for other in chunk_ids:
+            for other in keys:
                 citations.setdefault(other, existing)
             return existing
     number = max(citations.values(), default=0) + 1
-    for chunk_id in chunk_ids:
-        citations[chunk_id] = number
+    for key in keys:
+        citations[key] = number
     return number
 
 
@@ -155,7 +168,7 @@ async def search_documentation(query: str, runtime: ToolRuntime) -> str:
 
     blocks = []
     for chunk in chunks:
-        number = _cite(runtime, [chunk.id])
+        number = _cite(runtime, [chunk.id], _section_key(chunk.source_path, chunk.heading))
         body = strip_context_prefix(chunk.content, chunk.source_path, chunk.title, chunk.heading)
         label = citation_label(chunk.source_path, chunk.title, chunk.heading)
         blocks.append(f"[Doc {number}: {label}]\n{body}")
@@ -206,6 +219,6 @@ async def fetch_document_section(source_path: str, heading: str, runtime: ToolRu
             "Call list_documentation_sources to see the sections that exist."
         )
 
-    number = _cite(runtime, section.chunk_ids)
+    number = _cite(runtime, section.chunk_ids, _section_key(section.source_path, section.heading))
     label = citation_label(section.source_path, section.title, section.heading or INTRO_HEADING)
     return f"[Doc {number}: {label}]\n{section.content}"

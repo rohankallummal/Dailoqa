@@ -76,6 +76,29 @@ async def test_fetch_reuses_the_number_a_search_already_assigned(turn_context):
     assert _tags(fetched)[0] == first_tag, "the same passage must keep its citation number"
 
 
+def test_fragments_of_one_section_share_a_citation_number(turn_context):
+    """Two chunks of the same section are one source to the reader, so one number.
+
+    Numbering per chunk produced "[Doc 1][Doc 2][Doc 3][Doc 4][Doc 5]" on a single sentence
+    and a Sources legend listing the same section twice under different numbers. The label is
+    built from source and heading, so two numbers carrying one label is a distinction nobody
+    can see or act on.
+    """
+    from app.agent.tools.docs import _cite, _section_key
+
+    runtime = _runtime(turn_context)
+    section = _section_key("langgraph/subgraphs.md", "Define subgraph communication")
+    other = _section_key("langgraph/overview.md", None)
+
+    first = _cite(runtime, ["chunk-a"], section)
+    second = _cite(runtime, ["chunk-b"], section)
+    assert first == second, "fragments of one section must not be numbered separately"
+
+    assert _cite(runtime, ["chunk-c"], other) != first, "distinct sections need distinct numbers"
+    assert _cite(runtime, ["chunk-a"], section) == first, "a passage must keep its number"
+    assert _cite(runtime, ["chunk-z"]) not in (0, None), "a chunk with no section still cites"
+
+
 async def test_fetch_reports_an_unknown_section(turn_context):
     output = await fetch_document_section.coroutine(
         source_path=_SKILLS_PAGE, heading="Nope", runtime=_runtime(turn_context)

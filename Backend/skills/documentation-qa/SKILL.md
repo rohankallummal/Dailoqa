@@ -66,6 +66,12 @@ what the unfamiliar term "refers to" by describing whatever the search returned 
 invents a definition and then attaches a real citation to it, which is worse than declining
 because the citation is what makes it look checked.
 
+**A decline cites sparingly — one or two sources at most, and only for what you are actually
+pointing the reader at.** "The documentation does not cover X" is a statement about absence
+and nothing supports it, so do not hang the whole search behind it. If you name one nearby
+topic worth reading, cite that one page. Listing every passage that came back dresses up
+"I found nothing relevant" as a well-sourced answer.
+
 ## Step 3 — Answer from what came back
 
 Write the answer from the retrieved passages and nothing else.
@@ -73,6 +79,12 @@ Write the answer from the retrieved passages and nothing else.
 - **Cite every claim inline** with the tag it came from: "Skills are loaded progressively
   from skill files [Doc 2]." The numbers are assigned by the tools — use them exactly as
   given, and do not renumber or invent them.
+- **One claim, one tag.** Cite the passage the sentence actually came from, not every passage
+  the search returned. `[Doc 1][Doc 2][Doc 3][Doc 4][Doc 5]` after a sentence tells the reader
+  nothing — they cannot tell which source to open, and stacking five makes a claim look more
+  verified than it is. Two tags are reasonable when a sentence genuinely draws on two
+  passages; five is a sign of not choosing. If you cannot say which passage supports a
+  sentence, that sentence is not grounded and should not be written.
 - **A code sample is a claim, and the rule has no exceptions.** Every fenced block you output
   must have a `[Doc N]` on the line immediately introducing it, and that document must appear
   in the `Sources:` legend. This holds even when the answer is *only* code and one line of
