@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     # so this costs no recall. Re-run `python -m app.rag.evaluate` after any corpus change.
     semantic_max_distance: float = 0.35
     lexical_min_rank: float = 0.05
+    # How many of `rag_top_k`'s slots are reserved so one page cannot take them all. Chunks are
+    # ranked individually, so a question spanning two subjects loses the smaller one entirely:
+    # "can a subagent use a sandbox?" returned eight consecutive sandboxes.md chunks with the
+    # first subagents.md hit at rank 11, and "how do checkpointers and stores differ?" never
+    # retrieved stores.md at all. 2 = one slot for an unseen page, one for an unseen topic; both
+    # are needed, since they fix different halves (see `_with_reserved_slots`). 0 disables.
+    # Reserved slots only reorder candidates that already cleared the gates above.
+    rag_diversity_slots: int = 2
 
 
 @lru_cache

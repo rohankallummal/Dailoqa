@@ -292,6 +292,66 @@ def _to_vector_literal(vector: list[float]) -> str:
     return "[" + ",".join(repr(float(x)) for x in vector) + "]"
 
 
+def _topic_of(source_path: str) -> str:
+    """The topic folder a chunk belongs to: 'deep-agents/subagents.md' -> 'deep-agents'."""
+    return source_path.split("/")[0]
+
+
+def _with_reserved_slots(candidates: list, k: int, reserved: int):
+    """Take ``k`` chunks by rank, holding back slots for a page and a topic not yet seen.
+
+    **The problem this solves is a set-level one, which is why ranking cannot solve it.** Chunks
+    are scored individually, so a page whose every chunk matches sweeps the whole result: "can a
+    subagent use a sandbox?" returned eight consecutive sandboxes.md chunks, with the first
+    subagents.md hit at rank 11. The agent then answers a two-subject question having seen one
+    subject, and fills the other half by inference. This is not only a hallucination path -- "how
+    do checkpointers and stores differ?" is an ordinary documented question whose Stores page was
+    never retrieved (rank 6, one past the cutoff).
+
+    **Both reservations are needed; they fix different halves.** Measured against the live index,
+    a page slot recovers the intra-topic starvation (checkpointers crowding out stores, both
+    LangGraph) and a topic slot recovers the cross-topic case (four LangGraph terms crowding out
+    the one Deep Agents term in "use a Skill inside a LangGraph checkpointer"). Neither alone
+    fixed all three failing queries; together they fix all three.
+
+    **A reranker is not an alternative, and this was measured rather than assumed.** A
+    cross-encoder scores each (query, passage) pair independently, so it has no notion of
+    coverage: on these three queries it fixed one, and on another it cut the top-5 from four
+    distinct pages down to two. Better relevance scoring concentrates a monopolised result set
+    rather than breaking it up.
+
+    Every candidate here already cleared the per-arm relevance gates, so this only reorders
+    passages that were relevant enough to return -- it can never admit something the gate
+    rejected. When no unseen page or topic exists, the slot falls back to plain rank order and
+    the result is exactly what it would have been.
+    """
+    if reserved <= 0 or len(candidates) <= k:
+        return candidates[:k]
+
+    chosen = candidates[: max(k - reserved, 1)]
+    taken = {id(c) for c in chosen}
+
+    # Page before topic: a new page is the weaker, more common claim and should be spent first,
+    # leaving the scarcer topic slot to reach further down the list for a genuinely absent topic.
+    for key in (lambda c: c.source_path, lambda c: _topic_of(c.source_path)):
+        if len(chosen) >= k:
+            break
+        seen = {key(c) for c in chosen}
+        for candidate in candidates:
+            if id(candidate) not in taken and key(candidate) not in seen:
+                chosen.append(candidate)
+                taken.add(id(candidate))
+                break
+
+    for candidate in candidates:  # top up when there was no unseen page or topic to reach for
+        if len(chosen) >= k:
+            break
+        if id(candidate) not in taken:
+            chosen.append(candidate)
+            taken.add(id(candidate))
+    return chosen
+
+
 async def search(
     session: AsyncSession,
     query_text: str,
@@ -303,8 +363,17 @@ async def search(
     Returns the top-``k`` chunks, or ``[]`` when both arms are empty after gating —
     that empty result is the signal the answer node's guardrail keys off (never a
     fused-score cutoff).
+
+    The final ``k`` are chosen by :func:`_with_reserved_slots` rather than by rank alone, so a
+    single page cannot take every slot and strand the second subject of a two-subject question.
     """
     settings = get_settings()
+    reserved = min(settings.rag_diversity_slots, max(k - 1, 0))
+    # Fused rows are fetched past `k` so the reserved slots have somewhere to reach: the pages
+    # they recover sat at ranks 6, 10 and 11 in the failures that motivated this. Bounded by
+    # rag_candidates, which is what each arm already scanned -- this asks for no extra work in
+    # the arms, only for more of what they found.
+    pool = settings.rag_candidates if reserved else k
     started = time.perf_counter()
     result = await session.execute(
         _HYBRID_SQL,
@@ -315,13 +384,13 @@ async def search(
             "min_rank": settings.lexical_min_rank,
             "candidates": settings.rag_candidates,
             "rrf_k": settings.rrf_k,
-            "k": k,
+            "k": max(pool, k),
         },
     )
     rows = result.mappings().all()
     elapsed_ms = (time.perf_counter() - started) * 1000
 
-    chunks = [
+    candidates = [
         RetrievedChunk(
             id=row["id"],
             source_path=row["source_path"],
@@ -332,12 +401,15 @@ async def search(
         )
         for row in rows
     ]
+    chunks = _with_reserved_slots(candidates, k, reserved)
 
-    semantic_hits = sum(1 for row in rows if row["in_semantic"])
-    lexical_hits = sum(1 for row in rows if row["in_lexical"])
+    kept = {chunk.id for chunk in chunks}
+    semantic_hits = sum(1 for row in rows if row["in_semantic"] and row["id"] in kept)
+    lexical_hits = sum(1 for row in rows if row["in_lexical"] and row["id"] in kept)
     logger.info(
-        "rag.search query=%r k=%d returned=%d semantic=%d lexical=%d latency_ms=%.1f",
-        query_text[:120], k, len(chunks), semantic_hits, lexical_hits, elapsed_ms,
+        "rag.search query=%r k=%d returned=%d pages=%d semantic=%d lexical=%d latency_ms=%.1f",
+        query_text[:120], k, len(chunks), len({c.source_path for c in chunks}),
+        semantic_hits, lexical_hits, elapsed_ms,
     )
     for chunk in chunks:
         logger.debug("rag.search hit id=%s source=%s score=%.5f", chunk.id, chunk.source_path, chunk.score)
