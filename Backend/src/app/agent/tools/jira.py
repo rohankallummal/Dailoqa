@@ -20,6 +20,22 @@ logger = logging.getLogger(__name__)
 
 _MAX_CANDIDATES = 20
 
+STEPS_REQUIRED = (
+    "Not filed. A bug needs steps to reproduce before it can reach the team, and none were "
+    "given. You cannot see screenshots or video, so the steps are the only account of the "
+    "problem you can reason about. Ask the user for them. If they still will not give them, "
+    "reply with exactly: Sorry, we can’t proceed with raising this issue."
+)
+
+
+def missing_steps(kind: str, steps: list[str] | None) -> bool:
+    """Report whether a bug is missing the reproduction steps it cannot be filed without.
+
+    Blank entries do not count, so a list of empty strings reads as no steps at all.
+    Feature requests have no reproduction steps and are never gated.
+    """
+    return kind == "bug" and not [step for step in (steps or []) if str(step).strip()]
+
 
 def _escape(term: str) -> str:
     """Escape a user-derived term for safe embedding in a JQL quoted string."""
@@ -160,9 +176,12 @@ async def create_ticket(
             expected; for a feature, the capability and the problem it solves. Never
             the browser, device, or operating system: those are captured from the
             user's session and written into their own section of the issue.
-        steps_to_reproduce: Ordered reproduction steps. Bugs only, and only when the
-            user described them or attached no evidence.
+        steps_to_reproduce: Ordered reproduction steps, exactly as the user described
+            them. Required for every bug, and never guessed: a step the user did not
+            give sends a triager looking for a control that may not exist.
     """
+    if missing_steps(kind, steps_to_reproduce):
+        return STEPS_REQUIRED
     ticket = {
         "title": title,
         "summary": summary,
@@ -181,6 +200,7 @@ async def link_to_existing(
     note: str,
     kind: Literal["bug", "feature"],
     runtime: ToolRuntime,
+    steps_to_reproduce: list[str] | None = None,
 ) -> str:
     """Attach this user's report to an existing Jira issue instead of filing a duplicate.
 
@@ -193,8 +213,18 @@ async def link_to_existing(
         note: What this reporter adds — a different trigger, extra detail, or
             "same as described".
         kind: "bug" or "feature", matching the existing issue.
+        steps_to_reproduce: The ordered steps this reporter described, exactly as they
+            gave them. Required for a bug: they are how you judge it to be the same
+            problem. They are not written into the existing issue.
     """
-    ticket = {"title": issue_key, "summary": note, "issue_description": note, "steps_to_reproduce": []}
+    if missing_steps(kind, steps_to_reproduce):
+        return STEPS_REQUIRED
+    ticket = {
+        "title": issue_key,
+        "summary": note,
+        "issue_description": note,
+        "steps_to_reproduce": steps_to_reproduce or [],
+    }
     payload = _payload(runtime, kind, ticket)
     job_id = await _enqueue(runtime, payload, issue_key, "link")
     return f"Queued as job {job_id}. Tell the user their report was recorded and is with the team."
