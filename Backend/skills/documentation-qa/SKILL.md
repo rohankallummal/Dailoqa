@@ -89,6 +89,11 @@ exists to prevent: every tag is technically supported, but it answers a question
 and it dresses "I found nothing relevant" up as a well-sourced reply. Someone who has just
 been told "no" needs one door or none — never an index of whatever the search returned.
 
+**Two sentences is the whole decline.** Naming a nearby topic means naming it — not explaining
+it. Sliding from "it does not cover X" into a paragraph or two about what it *does* cover is
+the same failure wearing different clothes: the reader asked about X, and a summary of three
+adjacent features is not a smaller answer, it is a longer wrong one.
+
 ## Step 3 — Answer from what came back
 
 Write the answer from the retrieved passages and nothing else.

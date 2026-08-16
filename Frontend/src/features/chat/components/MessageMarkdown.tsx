@@ -22,9 +22,33 @@ import { remarkDocPaths } from "../lib/remarkDocPaths";
 const isInternal = (href: string) => href.startsWith("/");
 const isAnchor = (href: string) => href.startsWith("#");
 
+/**
+ * Recover a documentation route from a link the model gave a hostname to.
+ *
+ * Citations are handed to the model as site-relative paths, but it periodically writes them as
+ * absolute URLs against a host that does not exist — "https://docs.dailoqa.com/docs/deepagents
+ * /subagents", "https://docs.deepagents/subagents#using-compiledsubagent". Those render as
+ * ordinary links: they look clickable and land nowhere.
+ *
+ * Instructing it not to has not held, so the path is taken over the host whenever one of these
+ * points at `/docs`. A genuine external link whose path happens to start with `/docs` would be
+ * internalised by this, which is the deliberate trade: the assistant answers only from this
+ * product's documentation, so such a link is far more likely to be a fabricated host than a real
+ * destination — and an internal link that 404s is easier to notice than one that leaves the app.
+ */
+export function asDocsPath(href: string): string | null {
+  try {
+    const url = new URL(href);
+    return url.pathname.startsWith("/docs") ? `${url.pathname}${url.hash}` : null;
+  } catch {
+    return null;
+  }
+}
+
 const components: Components = {
   a({ href, children, ...props }) {
-    const target = href ?? "";
+    // A fabricated host on a /docs link is repaired before anything else looks at it.
+    const target = asDocsPath(href ?? "") ?? href ?? "";
 
     // Documentation citations point at /docs/... . Next's Link keeps those client-side, so
     // following a citation does not reload the app and lose the conversation.

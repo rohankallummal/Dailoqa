@@ -66,3 +66,4 @@ Thumbs.db
 # the file is on disk and git status is clean; only a fresh clone showed 17 of 18 pages.
 /CLAUDE.md
 /AGENTS.md
+/.claude/

@@ -187,6 +187,35 @@ async def test_a_citation_points_at_the_section_it_quoted():
     assert anchored, f"cited a page but not the section within it:\n{answer[-400:]}"
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "explain apache flow in deep agents",
+        "how can i calculate shortest distance between the nodes of langraph ?",
+        "How do subagents work in Deep Agents?",
+    ],
+)
+async def test_an_invented_documentation_hostname_stays_repairable(question):
+    """Doc links are site-relative, but the model sometimes writes them against a made-up host.
+
+    Seen in the wild as "https://docs.dailoqa.com/docs/deepagents/subagents" and
+    "https://docs.deepagents/subagents#using-compiledsubagent". Several rounds of instructing
+    it not to did not hold, so the renderer now discards the host and keeps the path
+    (`asDocsPath`), which is deterministic where the instruction was not.
+
+    So this asserts what the repair depends on rather than pretending the model complies: any
+    doc-ish URL it invents must carry a `/docs` path. One that did not — a bare
+    "https://docs.dailoqa/deepagents" with the topic as the host — would slip through as a
+    genuine external link and land the reader nowhere.
+    """
+    answer = await _answer(question)
+    for url in re.findall(r"https?://[^\s)\]]*docs[^\s)\]]*", answer, re.I):
+        path = re.sub(r"^https?://[^/]+", "", url)
+        assert path.startswith("/docs"), (
+            f"invented a documentation URL the renderer cannot repair: {url!r}"
+        )
+
+
 async def test_deep_agents_apis_are_not_relabelled_as_dailoqa():
     # LangChain, LangGraph and Deep Agents are libraries DailoQA builds on, not its own APIs.
     # Calling create_deep_agent "DailoQA" sends a reader looking in the wrong codebase, and it
