@@ -14,6 +14,8 @@
 
 - **No Python on the host.** Every command runs through Docker. Tests:
   `docker compose run --rm api pytest tests -q -m "not live"` from `Backend/`.
+  While iterating, mount the sources instead of rebuilding between edits:
+  `docker compose run --rm -v "$PWD/tests:/code/tests" -v "$PWD/src/app:/code/src/app" -v "$PWD/skills:/code/skills" api pytest tests -q -m "not live"`
 - **Coding rules:** `Backend/CLAUDE.md`. `snake_case` modules and functions,
   `UPPER_SNAKE_CASE` constants, leading underscore for internal helpers. **No inline or
   block comments.** Docstrings required on public modules, classes, and functions.
@@ -68,7 +70,7 @@ markers = [
 
 - [ ] **Step 2: Install the dev extra in the image**
 
-In `Backend/Dockerfile`, change line 12 from:
+In `Backend/Dockerfile`, change the install line from:
 
 ```dockerfile
 RUN pip install --no-cache-dir -e .
@@ -78,6 +80,13 @@ to:
 
 ```dockerfile
 RUN pip install --no-cache-dir -e ".[dev]"
+```
+
+The image does not copy `tests/`, so add it alongside the other COPY lines or the
+documented command fails with `file or directory not found: tests`:
+
+```dockerfile
+COPY tests ./tests
 ```
 
 - [ ] **Step 3: Create `Backend/tests/conftest.py`**
