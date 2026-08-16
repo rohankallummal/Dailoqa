@@ -110,14 +110,17 @@ class JiraClient:
         update = {"labels": [{"add": label} for label in labels]}
         await self._request("PUT", f"/issue/{issue_key}", json={"update": update})
 
-    async def add_attachments(self, issue_key: str, paths: list[Path]) -> list[str]:
-        """Upload files to an issue and return the filenames Jira accepted.
+    async def add_named_attachments(self, issue_key: str, items: list[tuple[str, Path]]) -> list[str]:
+        """Upload files under explicit names and return the filenames Jira accepted.
+
+        The name is passed separately from the path because the link path renames a
+        reporter's evidence to match their Affected Users row.
 
         Jira rejects multipart uploads without the X-Atlassian-Token: no-check header.
         """
-        if not paths:
+        if not items:
             return []
-        files = [("file", (path.name, path.read_bytes())) for path in paths]
+        files = [("file", (name, path.read_bytes())) for name, path in items]
         response = await self._request(
             "POST",
             f"/issue/{issue_key}/attachments",
@@ -130,8 +133,8 @@ class JiraClient:
     async def add_attachment_bytes(self, issue_key: str, filename: str, data: bytes) -> None:
         """Upload one in-memory file to an issue.
 
-        The Similar Reports workbook is generated per link and never touches disk, so it
-        has no path for add_attachments to take.
+        The Affected Users workbook is generated per link and never touches disk, so it
+        has no path for add_named_attachments to take.
         """
         await self._request(
             "POST",

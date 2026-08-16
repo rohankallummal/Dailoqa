@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.db.models import Ticket, TicketReporter
 from app.jira.adf import build_ticket_document
-from app.worker.evidence_step import attach_evidence, evidence_of
+from app.worker.evidence_step import attach_evidence, evidence_of, original_names
 from app.worker.queue import set_job_action
 
 
@@ -43,7 +43,8 @@ async def create_ticket(session, job, client) -> str:
     so a resume after a fully successful upload costs one API call and changes nothing.
     """
     if job.jira_key:
-        await attach_evidence(job, client, job.jira_key)
+        resumed = original_names([item["name"] for item in evidence_of(job)])
+        await attach_evidence(job, client, job.jira_key, resumed)
         return job.jira_key
     kind = job.payload["kind"]
     ticket = job.payload.get("ticket", {})
@@ -74,5 +75,5 @@ async def create_ticket(session, job, client) -> str:
     job.jira_key = key
     job.action = "create"
     await session.commit()
-    await attach_evidence(job, client, key)
+    await attach_evidence(job, client, key, original_names([item["name"] for item in evidence]))
     return key

@@ -474,7 +474,7 @@ from app.worker.evidence_step import original_names, reporter_prefix, upload_nam
 
 
 def test_reporter_prefix_is_filesystem_safe():
-    assert reporter_prefix("Ada Lovelace", "1001") == "Ada Lovelace-1001"
+    assert reporter_prefix("Ada Lovelace", "1001") == "Ada_Lovelace-1001"
     assert reporter_prefix("a/b", "../x") == "b-x"
 
 
