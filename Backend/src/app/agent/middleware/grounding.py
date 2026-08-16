@@ -28,7 +28,7 @@ import re
 from langchain.agents.middleware import after_model
 from langchain_core.messages import SystemMessage
 
-from app.agent.tools import citable_passages_retrieved, passages_were_offered
+from app.agent.tools import citable_passages_retrieved, offered_passages, passages_were_offered
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +53,11 @@ _UNCITED = (
     "each tag and its label exactly as the tool gave it. Use only the numbers the tools "
     "assigned; do not invent or renumber them.\n\n"
     "If the passages do NOT answer the question — they are about the same product but not the "
-    "thing that was asked about — then say exactly that and stop. Name what the documentation "
-    "does cover, cite that, and state plainly that it does not cover what was asked. Do not "
-    "manufacture a connection between the question and a passage that merely shares its topic. "
-    "An invented explanation with a real citation attached is the worst answer you can give, "
-    "because the citation is what makes it look verified."
+    "thing that was asked about — then say exactly that and stop, with no citations at all. Do "
+    "not manufacture a connection between the question and a passage that merely shares its "
+    "topic, and do not add a sentence surveying what the documentation happens to contain just "
+    "to have something to cite. An invented explanation with a real citation attached is the "
+    "worst answer you can give, because the citation is what makes it look verified."
 )
 
 
@@ -69,6 +69,29 @@ def _text(message) -> str:
     return "".join(part.get("text", "") for part in content if isinstance(part, dict))
 
 
+# Words too common to say anything about where a sentence came from.
+_NOISE = frozenset(
+    "the a an and or of to in for is are was be been with that this these those it as on by "
+    "from can could you your we our they them their if when how what which not no do does did "
+    "have has had will would should may might must there here about into over under more most "
+    "some any each other than then so such but at up out only own same too very".split()
+)
+_WORD = re.compile(r"[a-z][a-z0-9_-]{2,}")
+
+# Measured on real turns: declines scored 0.17 and 0.36, answers built on passages 0.78 and
+# 0.80. The threshold sits in that gap with room either side.
+_DERIVED_FROM_PASSAGES = 0.55
+
+
+def _overlap_with(answer: str, passages: str) -> float:
+    """How much of an answer's vocabulary comes from the passages it was given."""
+    words = {w for w in _WORD.findall(answer.lower()) if w not in _NOISE}
+    if not words:
+        return 0.0
+    source = {w for w in _WORD.findall(passages.lower()) if w not in _NOISE}
+    return len(words & source) / len(words)
+
+
 def _problem(messages, last) -> tuple[str, str] | None:
     """The citation defect in a final answer, as (log phrase, correction), or None if clean.
 
@@ -77,8 +100,9 @@ def _problem(messages, last) -> tuple[str, str] | None:
     * **cited but nothing retrieved** — the citation is invented. Detected by whether a citing
       tool *ran*, since a tool that ran and found nothing still cannot justify a `[Doc N]`.
     * **retrieved but nothing cited** — documentation was used without credit. Detected by
-      whether a citing tool actually *returned a passage*, because an agent that searched, got
-      nothing, and correctly declined has no passages to cite and must not be bounced for it.
+      whether the answer's wording actually came from the passages, not merely by whether
+      passages arrived: an agent that searched, found nothing relevant and declined owes them
+      nothing, and bouncing it was how the irrelevant citations got manufactured.
     """
     if _CITATION.search(_text(last)):
         if citable_passages_retrieved(messages):
@@ -86,8 +110,15 @@ def _problem(messages, last) -> tuple[str, str] | None:
         return "citations with no documentation lookup", _FABRICATED
 
     if passages_were_offered(messages):
-        return "documentation passages used without citation", _UNCITED
-    return None  # nothing cited and nothing to cite: a decline, or a non-documentation turn
+        # Only an answer actually built on the passages owes them a citation. A decline is not,
+        # and demanding one was making things worse rather than better: with nothing relevant
+        # retrieved, the only way to satisfy the check was to write a sentence about whatever
+        # came back and cite that — "it discusses subgraph communication [Doc 1][Doc 2][Doc 5]"
+        # under an answer about shortest paths. The enforcement was manufacturing the irrelevant
+        # sources it was supposed to prevent.
+        if _overlap_with(_text(last), offered_passages(messages)) >= _DERIVED_FROM_PASSAGES:
+            return "documentation passages used without citation", _UNCITED
+    return None  # nothing cited and nothing drawn from the passages: a decline, or a ticket reply
 
 
 @after_model(can_jump_to=["model"])

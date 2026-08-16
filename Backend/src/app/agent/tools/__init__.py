@@ -17,6 +17,7 @@ from app.agent.tools.docs import (
     fetch_document_section,
     passages_were_offered,
     list_documentation_sources,
+    offered_passages,
     search_documentation,
 )
 from app.agent.tools.evidence import request_evidence
@@ -62,6 +63,7 @@ __all__ = [
     "link_to_existing",
     "list_documentation_sources",
     "load_skill",
+    "offered_passages",
     "passages_were_offered",
     "request_evidence",
     "search_documentation",

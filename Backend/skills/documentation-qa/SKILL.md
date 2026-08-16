@@ -74,20 +74,20 @@ what the unfamiliar term "refers to" by describing whatever the search returned 
 invents a definition and then attaches a real citation to it, which is worse than declining
 because the citation is what makes it look checked.
 
-**A decline is two sentences: what is missing, and at most one place to look instead.**
+**A decline is one sentence, and usually carries no citation at all.**
 
-"The documentation does not cover X" is a statement about absence, and nothing supports it, so
-it carries no tag at all. Then, if something genuinely nearby is worth reading, name **one**
-topic and cite **that one page**.
+"The documentation does not cover X" is a statement about absence. Nothing supports it, so
+nothing is cited — that is the correct, complete answer, and you will not be asked to add
+sources to it.
 
-Do not survey. Writing "it focuses on A, B, C and D [Doc 1][Doc 2][Doc 3][Doc 4]" is the
-failure this exists to prevent: the sentence is technically supported, but it answers a
-question nobody asked, and four tags on one line tell the reader nothing about where to go.
-Someone who has just been told "no" needs one door, not an index.
+Cite on a decline **only** when you are genuinely sending the reader somewhere: one nearby
+topic that is actually worth their time, named in a second sentence, with one tag. If nothing
+retrieved is genuinely close, say only that it is not covered and stop.
 
-Pick the closest passage even when the fit is loose, and cite that single one — the answer
-still has to carry a tag, so choosing the nearest is better than listing everything to be
-safe.
+Never survey. "It focuses on A, B, C and D [Doc 1][Doc 2][Doc 3][Doc 4]" is the failure this
+exists to prevent: every tag is technically supported, but it answers a question nobody asked,
+and it dresses "I found nothing relevant" up as a well-sourced reply. Someone who has just
+been told "no" needs one door or none — never an index of whatever the search returned.
 
 ## Step 3 — Answer from what came back
 

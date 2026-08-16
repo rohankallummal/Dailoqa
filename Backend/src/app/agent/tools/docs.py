@@ -89,6 +89,15 @@ def _message_text(message) -> str:
     return "".join(part.get("text", "") for part in content if isinstance(part, dict))
 
 
+def offered_passages(messages) -> str:
+    """Every passage a citing tool handed back this thread, concatenated."""
+    return "\n".join(
+        _message_text(message)
+        for message in messages
+        if getattr(message, "name", None) in CITING_DOC_TOOLS and _DOC_TAG.search(_message_text(message))
+    )
+
+
 def passages_were_offered(messages) -> bool:
     """Whether a citing tool actually handed back a passage, rather than finding nothing.
 

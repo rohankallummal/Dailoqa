@@ -166,6 +166,38 @@ async def test_a_cited_answer_backed_by_passages_passes_untouched(turn_context, 
     assert "[Doc 1]" in final.content
 
 
+async def test_a_decline_is_not_forced_to_cite_irrelevant_passages(turn_context, scripted_model):
+    """The check that stopped the irrelevant citations, by removing what caused them.
+
+    Retrieval cannot tell "about LangGraph" from "answers this LangGraph question", so a search
+    for something absent still returns five confident passages. Requiring a citation whenever
+    passages arrived left one way to comply: write a sentence about whatever came back and cite
+    that — "it discusses subgraph communication [Doc 1][Doc 2][Doc 5]" beneath an answer about
+    shortest paths. The enforcement was producing the noise it existed to prevent.
+
+    What is required now is narrower and truer: an answer whose *wording came from* the
+    passages must credit them. A decline shares almost nothing with them and owes nothing.
+    """
+    final = await _run(
+        scripted_model,
+        [
+            AIMessage(content="", tool_calls=[{"name": "search_documentation", "args": {"query": "shortest path"}, "id": "a"}]),
+            AIMessage(content="The documentation does not cover calculating shortest paths between nodes."),
+        ],
+        turn_context,
+        tool_results={
+            "search_documentation": (
+                "[Doc 1: langgraph/Subgraphs - Call a subgraph inside a node]\n"
+                "When adding subgraphs you define how the parent graph and the subgraph "
+                "communicate through shared state keys and wrapper functions."
+            )
+        },
+    )
+    assert turn_context.grounding_corrections == 0, "a decline must not be sent back to add sources"
+    assert "does not cover" in final.content
+    assert "[Doc" not in final.content, "the decline should carry no citation at all"
+
+
 def test_the_uncited_correction_offers_declining_as_well_as_citing():
     """The correction must not have exactly one exit, because it fires on correct answers too.
 
