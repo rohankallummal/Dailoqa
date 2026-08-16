@@ -145,10 +145,13 @@ class JiraClient:
         )
 
     async def list_attachments(self, issue_key: str) -> list[dict]:
-        """Return the issue's attachments as {"id", "filename"} entries."""
+        """Return the issue's attachments as {"id", "filename", "size"} entries."""
         response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
         attachments = response.json().get("fields", {}).get("attachment") or []
-        return [{"id": item["id"], "filename": item["filename"]} for item in attachments]
+        return [
+            {"id": item["id"], "filename": item["filename"], "size": item.get("size") or 0}
+            for item in attachments
+        ]
 
     async def list_attachment_filenames(self, issue_key: str) -> set[str]:
         """Return the filenames already attached to an issue.
