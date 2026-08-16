@@ -15,6 +15,8 @@ export type ChatEvent =
       text: string;
       conversationId: string;
       stage?: string;
+      /** Set on the turn's final event: `text` is the whole answer, not another delta. */
+      replace?: boolean;
       tool?: string | null;
       inputState?: InputState;
     }
@@ -53,7 +55,11 @@ export function applyDelta(messages: Message[], event: Extract<ChatEvent, { type
   const next = [...messages];
   next[index] = {
     ...next[index],
-    content: next[index].content + event.text,
+    // The turn's final event carries the whole answer, so it overwrites rather than appends.
+    // That makes the last word the server's: if a `restart` was missed and a superseded draft
+    // is still on screen, this corrects it, and what the user ends up reading always matches
+    // what was persisted. Streaming still appends, so the answer arrives as it is written.
+    content: event.replace ? event.text : next[index].content + event.text,
     stage: event.stage ?? next[index].stage,
     streaming,
   };

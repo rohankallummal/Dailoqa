@@ -235,11 +235,21 @@ async def run_turn(
         if trailing:
             await stream.token(trailing)
         await _persist(conversation_id, turn_id, stream.text, stage)
-        await stream.publish({"text": "", "stage": stage, "input_state": input_state})
+        # The terminal event carries the whole answer and asks the client to replace what it
+        # has, rather than closing an accumulation it has to have got exactly right. Tokens
+        # still stream for immediacy, but the final render is authoritative and equals what
+        # was persisted -- so a dropped or unhandled `restart` self-corrects here instead of
+        # leaving a superseded draft on screen with the real answer appended to it.
+        await stream.publish(
+            {"text": stream.text, "stage": stage, "input_state": input_state, "replace": True}
+        )
     except Exception as error:
         logger.exception("turn %s failed for conversation %s: %s", turn_id, conversation_id, error)
         try:
             await _persist(conversation_id, turn_id, TURN_FAILED, "error")
         except Exception:
             logger.exception("could not persist the failure notice for turn %s", turn_id)
-        await stream.publish({"text": TURN_FAILED, "stage": "error", "input_state": "open"})
+        # Replaces too: a half-streamed answer must not sit above the failure notice.
+        await stream.publish(
+            {"text": TURN_FAILED, "stage": "error", "input_state": "open", "replace": True}
+        )
