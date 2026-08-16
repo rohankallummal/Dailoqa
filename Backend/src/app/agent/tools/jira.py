@@ -157,8 +157,9 @@ async def create_ticket(
         title: Short enough to read at a glance on a Jira board.
         summary: One or two plain sentences on what is wrong or wanted, and where.
         description: The full account — for a bug, what happens versus what was
-            expected and the browser; for a feature, the capability and the problem
-            it solves.
+            expected; for a feature, the capability and the problem it solves. Never
+            the browser, device, or operating system: those are captured from the
+            user's session and written into their own section of the issue.
         steps_to_reproduce: Ordered reproduction steps. Bugs only, and only when the
             user described them or attached no evidence.
     """

@@ -21,16 +21,16 @@ Before asking anything, read the user's message (and the recent conversation **i
 You need enough to make the ticket triageable. Ask only the gaps, and keep to the high-signal questions below.
 
 1. **What goes wrong, and what did you expect instead?** (the error behaviour)
-2. **Where does it happen — which browser** ?
-3. **Do you have a screenshot or screen recording of it?** [Evidence branch — see below]
+2. **Browser** — captured automatically from the user's session. Do not ask by default; ask only to confirm when the bug looks browser-specific.
+3. **Screenshots or a screen recording** — do not ask for these in a message. Call `request_evidence`. [Evidence branch — see below]
 4. **Steps to reproduce** — ask this *only if* the user has no evidence to share. If they have a recording that shows the problem, don't make them retype steps.
 5. *(Optional, ask only if it helps triage)* **Does it happen every time or only sometimes?**
 
-The browser and operating system are already captured from the user's session and attached to the ticket automatically, so ask for the browser only when the bug looks browser-specific and you want it confirmed.
+The browser, operating system, and device come from the user's session and are written into the ticket for you, so nothing you ask here fills a field. `create_ticket` has no browser argument: a confirmation you collect belongs in the conversation, not in the ticket text.
 
 ### Evidence Branch
 
-Call `request_evidence` to request screenshots or a screen recording. This opens the file picker in the user's chat. You cannot view the files they attach, but any files they upload will be added to the Jira issue.
+Calling `request_evidence` is the only way to collect screenshots or a screen recording. It opens the file picker in the user's chat, and the `reason` you pass is the sentence they read. Typing the question into a message instead leaves them with no way to attach anything, so never write "do you have a screenshot?" — make the call and let it ask. You cannot view the files they attach, but any files they upload will be added to the Jira issue.
 
 - If the user **has evidence**: "steps to reproduce" becomes optional.
 - If the user **has no evidence**: "steps to reproduce" become required, because without media the triager needs a way to see the bug themselves.
