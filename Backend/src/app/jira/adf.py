@@ -76,7 +76,9 @@ def build_document(text: str, files: list[dict] | None = None) -> dict:
     return document
 
 
-SIMILAR_REPORTS_HEADING = "Similar Reports"
+MORE_EVIDENCE_HEADING = "More Evidence"
+AFFECTED_USERS_HEADING = "Affected Users"
+LEGACY_SIMILAR_REPORTS_HEADING = "Similar Reports"
 
 
 def _heading(text: str) -> dict:
@@ -139,16 +141,64 @@ def _reporter_section(title: str, reporter: dict) -> list[dict]:
     ]
 
 
-def similar_reports_section(filename: str) -> list[dict]:
-    """Build the Similar Reports heading pointing at the attached spreadsheet."""
+def more_evidence_section(files: list[dict]) -> list[dict]:
+    """Build the More Evidence heading and the file list contributed by later reporters.
+
+    Returns an empty list when there are no files, so a caller can replace the section
+    unconditionally and have it disappear when the last attachment is removed.
+    """
+    if not files:
+        return []
+    lines = [
+        f"{item['name']} ({item['category']}, {format_size(int(item['size']))})" for item in files
+    ]
+    return [_heading(MORE_EVIDENCE_HEADING), _bullet_list(lines)]
+
+
+def affected_users_section(filename: str) -> list[dict]:
+    """Build the Affected Users heading pointing at the attached spreadsheet."""
     return [
-        _heading(SIMILAR_REPORTS_HEADING),
+        _heading(AFFECTED_USERS_HEADING),
         _paragraph(
             f"More than one user has reported this issue. The attached {filename} lists every "
             "affected user and the date they reported it, and is updated automatically as "
             "further reports arrive."
         ),
     ]
+
+
+def _is_heading_at(node: dict, level: int | None) -> bool:
+    """Report whether a node is a heading at the given level."""
+    return node.get("type") == "heading" and node.get("attrs", {}).get("level") == level
+
+
+def _heading_index(content: list[dict], text: str) -> int | None:
+    """Return the position of the heading carrying the given text, or None."""
+    for index, node in enumerate(content):
+        if node.get("type") != "heading":
+            continue
+        if any(child.get("text") == text for child in node.get("content") or []):
+            return index
+    return None
+
+
+def replace_section(document: dict, heading: str, nodes: list[dict]) -> dict:
+    """Return the document with one section's nodes swapped for new ones.
+
+    A section runs from its heading to the next heading of the same level. The link path
+    regenerates More Evidence on every report, so appending would stack a fresh copy under
+    each link; replacing keeps exactly one. An absent heading appends, which is how the
+    first link adds the section, and empty nodes remove it.
+    """
+    content = document.get("content") or []
+    start = _heading_index(content, heading)
+    if start is None:
+        return {**document, "content": [*content, *nodes]}
+    level = content[start].get("attrs", {}).get("level")
+    end = start + 1
+    while end < len(content) and not _is_heading_at(content[end], level):
+        end += 1
+    return {**document, "content": [*content[:start], *nodes, *content[end:]]}
 
 
 def has_heading(document: dict, text: str) -> bool:
