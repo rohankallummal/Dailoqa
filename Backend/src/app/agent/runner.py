@@ -96,6 +96,33 @@ def _is_retry(chunk) -> bool:
     )
 
 
+def _is_preamble(chunk) -> bool:
+    """Whether the model narrated before calling a tool, so its text is not the answer.
+
+    Asked something it needs to look up, the model often says "let me search the
+    documentation, one moment" *and* calls the tool in the same message. That text streams
+    like any other, so the real answer lands directly after it -- "One moment.The
+    documentation doesn't cover..." -- reading as one garbled paragraph.
+    """
+    if not isinstance(chunk, dict):
+        return False
+    for update in chunk.values():
+        if not isinstance(update, dict):
+            continue
+        for message in update.get("messages") or []:
+            if getattr(message, "tool_calls", None) and _message_text(message).strip():
+                return True
+    return False
+
+
+def _message_text(message) -> str:
+    """Flatten a message's content, which providers return as a string or as blocks."""
+    content = getattr(message, "content", "")
+    if isinstance(content, str):
+        return content
+    return "".join(part.get("text", "") for part in content if isinstance(part, dict))
+
+
 def _write_summary(value) -> str:
     """Describe a pending ticket write in one line, from the args the model drafted."""
     requests = (value or {}).get("action_requests") or []
@@ -194,10 +221,11 @@ async def run_turn(
                     message_chunk, _ = chunk
                     if isinstance(message_chunk, AIMessageChunk):
                         await stream.token(_chunk_text(message_chunk))
-                elif mode == "updates" and _is_retry(chunk):
-                    # A middleware sent the answer back to the model. Whatever was streamed
-                    # belongs to the attempt being replaced, so drop it before the rewrite
-                    # arrives; otherwise both answers reach the user run together.
+                elif mode == "updates" and (_is_retry(chunk) or _is_preamble(chunk)):
+                    # Whatever has been streamed is superseded: either a middleware sent the
+                    # answer back to be rewritten, or the model narrated before calling a tool
+                    # and the real answer is still coming. One rule covers both -- the bubble
+                    # holds the current answer, not a transcript of arriving at it.
                     await stream.restart()
             final = await agent.aget_state(config)
             stage, input_state, fallback = _terminal(final.interrupts)
