@@ -51,9 +51,23 @@ async def _turn(messages: list[str]) -> tuple[str, list[str]]:
         agent = build_agent(saver, lambda *_a, **_k: None)
         config = {"configurable": {"thread_id": thread}}
         for message in messages:
-            result = await agent.ainvoke({"messages": [{"role": "user", "content": message}]}, config, context=context)
-            calls = [c.get("name") for m in result["messages"] for c in (getattr(m, "tool_calls", None) or [])]
-            answers = [m for m in result["messages"] if isinstance(m, AIMessage) and not m.tool_calls]
+            # Streamed, because `run_turn` streams and the two are not equivalent. Measured on
+            # "shortest distance between nodes of langgraph": ainvoke called the search tool 4
+            # times out of 4, astream 0 out of 5, deterministically. Only that question differed of the
+            # five tried, so it is a borderline case rather than a broken mode -- but a suite
+            # that invokes cannot see a failure that only happens when streaming, which is the
+            # only way a user ever reaches it.
+            async for _ in agent.astream(
+                {"messages": [{"role": "user", "content": message}]},
+                config,
+                context=context,
+                stream_mode=["messages", "updates"],
+            ):
+                pass
+            state = await agent.aget_state(config)
+            history = state.values.get("messages", [])
+            calls = [c.get("name") for m in history for c in (getattr(m, "tool_calls", None) or [])]
+            answers = [m for m in history if isinstance(m, AIMessage) and not m.tool_calls]
             answer = answers[-1].text if answers else ""
     return answer, calls
 
@@ -112,6 +126,31 @@ async def test_a_greeting_gets_a_short_scope_statement_not_small_talk(greeting):
     assert len(answer) < 400, f"a greeting reply should be one short sentence, got {len(answer)}"
     assert re.search(r"dailoqa|langchain|langgraph|deep\s*agents|bug|feature", answer, re.I), (
         f"the reply should name what it helps with:\n{answer[:200]}"
+    )
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        # Each names a product but asks something the corpus does not cover, so the honest
+        # answer is "I looked, it is not there" -- never "that is outside my scope".
+        "i want yoou to explain how to caluclate shortest distance between the nodes of langgraph",
+        "does langgraph support pathfinding between nodes",
+        "how does langgraph handle graph colouring",
+    ],
+)
+async def test_a_question_naming_a_product_is_always_searched(question):
+    """Refusing a LangGraph question unsearched is the most confusing answer available.
+
+    This sat exactly on the decision boundary: the model read "shortest distance between
+    nodes" as graph theory and refused outright. Streaming tipped it -- ainvoke searched,
+    astream did not, deterministically, and only for this one question out of five. Since
+    production streams, the failure was only ever reachable the way users reach it, which is
+    why these run through astream rather than the simpler invoke path.
+    """
+    _answer, calls = await _turn([question])
+    assert "search_documentation" in calls or "fetch_document_section" in calls, (
+        f"refused a question naming a product without looking it up: {question!r}"
     )
 
 

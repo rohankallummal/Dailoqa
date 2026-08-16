@@ -103,10 +103,15 @@ async def test_an_off_corpus_question_is_declined_without_citing(question):
 # Tolerates an adverb between the negation and the verb. The first version demanded "does not
 # mention" adjacently and failed a perfectly correct "does not *specifically* mention", which is
 # a test defect rather than a behaviour one -- the kind that gets a real fix reverted.
+# Both apostrophe forms, because the model emits a curly one often enough to matter: a run
+# failed on "doesn’t specifically mention" while the behaviour was perfectly correct. Tolerates
+# an adverb between the negation and the verb for the same reason -- the first version demanded
+# "does not mention" adjacently and reported a correct decline as a confabulation.
 _DENIAL = re.compile(
-    r"does(?:n't| not)\s+(?:\w+\s+){0,2}(?:mention|cover|describe|discuss|include|provide|specify)"
+    r"does(?:n['’]t| not)\s+(?:\w+\s+){0,2}"
+    r"(?:mention|cover|describe|discuss|include|provide|specify)"
     r"|no mention|not (?:mentioned|covered|documented|described)"
-    r"|couldn't find|could not find|no .{0,12}reference",
+    r"|could(?:n['’]t| not) find|no .{0,12}reference",
     re.I,
 )
 
