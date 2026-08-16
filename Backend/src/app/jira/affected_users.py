@@ -1,11 +1,12 @@
-"""Generation of the Similar Reports spreadsheet attached to a shared issue."""
+"""Generation of the Affected Users spreadsheet attached to a shared issue."""
 
 from datetime import datetime
 from io import BytesIO
 
 from openpyxl import Workbook
 
-SIMILAR_REPORTS_FILENAME = "similar-reports.xlsx"
+AFFECTED_USERS_FILENAME = "affected-users.xlsx"
+LEGACY_FILENAME = "similar-reports.xlsx"
 
 _COLUMNS = ["Google OAuth Name", "Google OAuth ID", "Date Reported"]
 _COLUMN_WIDTHS = [32, 32, 16]
@@ -26,7 +27,7 @@ def build_workbook(rows: list[dict]) -> bytes:
     """
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = "Similar Reports"
+    sheet.title = "Affected Users"
     sheet.append(_COLUMNS)
     for index, width in enumerate(_COLUMN_WIDTHS, start=1):
         sheet.column_dimensions[sheet.cell(row=1, column=index).column_letter].width = width
