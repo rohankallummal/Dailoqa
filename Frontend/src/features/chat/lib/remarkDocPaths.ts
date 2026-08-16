@@ -19,9 +19,16 @@ import type { Root } from "mdast";
  * the drift that `test_a_cited_route_is_byte_identical_to_the_manifest` exists to catch.
  */
 
-// A docs route: /docs, optionally followed by segments. Trailing punctuation is excluded so a
-// path ending a sentence — "...see /docs/langgraph." — does not swallow the full stop.
-const DOC_PATH = /\/docs(?:\/[a-z0-9-]+)*\/?/gi;
+// A docs route: /docs, optionally followed by segments, and **optionally a #section**.
+//
+// The fragment is the point of the citation. Without it here the link was built from
+// "/docs/langgraph/subgraphs" while "#call-a-subgraph-inside-a-node" was left behind as plain
+// text, so every citation opened the top of a page instead of the passage it quoted — the
+// backend was emitting the anchor correctly and this threw it away.
+//
+// Trailing punctuation stays excluded so a path ending a sentence — "...see /docs/langgraph." —
+// does not swallow the full stop.
+const DOC_PATH = /\/docs(?:\/[a-z0-9-]+)*\/?(?:#[a-z0-9-]+)?/gi;
 
 export function remarkDocPaths() {
   return (tree: Root) => {
