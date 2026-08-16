@@ -40,13 +40,17 @@ def _resume_value(interrupt_value, text: str, evidence: list[dict] | None):
     """Shape the user's reply into what the suspended point expects.
 
     An evidence interrupt resumes with the manifest, which ``request_evidence`` reads
-    straight off ``interrupt``. A write gate resumes with the ``decisions`` envelope
+    straight off ``interrupt``. A steps interrupt resumes with the user's message
+    verbatim, because their own wording is what becomes the ticket's steps. A write gate
+    resumes with the ``decisions`` envelope
     HumanInTheLoopMiddleware unwraps, carrying one decision per tool call it is
     holding — it raises if that count disagrees, so the count is read off the request
     rather than assumed to be one.
     """
     if isinstance(interrupt_value, dict) and "evidence_request" in interrupt_value:
         return evidence or []
+    if isinstance(interrupt_value, dict) and "steps_request" in interrupt_value:
+        return text
     requests = interrupt_value.get("action_requests") if isinstance(interrupt_value, dict) else None
     held = len(requests) if requests else 1
     decision = {"type": "approve"} if _is_affirmative(text) else {"type": "reject", "message": text}
@@ -110,6 +114,8 @@ def _terminal(interrupts) -> tuple[str, str, str]:
     value = interrupts[0].value
     if isinstance(value, dict) and "evidence_request" in value:
         return "evidence", "awaiting_evidence", str(value.get("reason") or "")
+    if isinstance(value, dict) and "steps_request" in value:
+        return "steps", "open", str(value.get("question") or "")
     return "confirm", "awaiting_confirm", _write_summary(value if isinstance(value, dict) else {})
 
 

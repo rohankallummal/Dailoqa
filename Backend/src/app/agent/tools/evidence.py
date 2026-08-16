@@ -3,26 +3,38 @@
 from langchain.tools import ToolRuntime, tool
 from langgraph.types import interrupt
 
+from app.agent.tools.steps import captured_steps
+
+_STEPS_FIRST = (
+    "The picker was not opened. Ask for the steps to reproduce first, by calling "
+    "request_steps. Evidence is optional and only supplements them."
+)
+
 _ALREADY_ANSWERED = (
     "Evidence was already requested for this report and the user has answered. The picker "
     "was not reopened. Move on: collect steps to reproduce if you still need them."
 )
 
 
-def _already_asked(runtime: ToolRuntime) -> bool:
+def evidence_requested(messages) -> bool:
     """Report whether this conversation has already been through the file picker.
 
     A completed request leaves its own ToolMessage in the thread, so the message history
     is the record of whether the user has been asked, and it survives the resume that
-    re-executes this tool.
+    re-executes this tool. The write tools read it too: the user may decline evidence, but
+    they have to have been offered it.
     """
-    messages = (runtime.state or {}).get("messages") or []
     return any(getattr(message, "name", None) == "request_evidence" for message in messages)
 
 
 @tool
 async def request_evidence(reason: str, runtime: ToolRuntime) -> str:
     """Ask the user to attach screenshots or a screen recording.
+
+    Call this only once the user has given you the steps to reproduce. Evidence is
+    optional and supplements those steps; the steps are the account you reason about,
+    and asking for a screenshot first buries the one thing the report cannot be filed
+    without.
 
     This opens the file picker in their chat. Use it when visual evidence would let a
     triager see the problem themselves — which is most visual or hard-to-describe
@@ -33,7 +45,10 @@ async def request_evidence(reason: str, runtime: ToolRuntime) -> str:
     Args:
         reason: One short sentence on why the evidence helps, shown to the user.
     """
-    if _already_asked(runtime):
+    messages = (runtime.state or {}).get("messages") or []
+    if not captured_steps(messages):
+        return _STEPS_FIRST
+    if evidence_requested(messages):
         return _ALREADY_ANSWERED
     provided = interrupt({"evidence_request": True, "reason": reason})
     files = provided or []

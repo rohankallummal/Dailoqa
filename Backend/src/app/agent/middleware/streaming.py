@@ -9,6 +9,7 @@ _LABELS = {
     "create_ticket": "Submitting your report",
     "link_to_existing": "Adding you to the existing report",
     "load_skill": "Getting up to speed",
+    "request_steps": "Waiting for the steps to reproduce",
     "request_evidence": "Waiting for your attachments",
     "search_documentation": "Searching the documentation",
     "read_documentation": "Reading the documentation",

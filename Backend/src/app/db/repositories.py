@@ -10,6 +10,7 @@ STAGE_INPUT_STATES = {
     "reply": "open",
     "error": "open",
     "evidence": "awaiting_evidence",
+    "steps": "open",
     "confirm": "awaiting_confirm",
 }
 

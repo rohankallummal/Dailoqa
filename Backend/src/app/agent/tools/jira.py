@@ -13,6 +13,8 @@ from langchain.tools import ToolRuntime, tool
 from app.db.base import async_session
 from app.db.models import Job
 from app.db.repositories import reported_issue_keys
+from app.agent.tools.evidence import evidence_requested
+from app.agent.tools.steps import captured_steps
 from app.evidence.storage import evidence_dir, normalize_manifest
 from app.jira.client import JiraClient
 
@@ -21,10 +23,16 @@ logger = logging.getLogger(__name__)
 _MAX_CANDIDATES = 20
 
 STEPS_REQUIRED = (
-    "Not filed. A bug needs steps to reproduce before it can reach the team, and none were "
-    "given. You cannot see screenshots or video, so the steps are the only account of the "
-    "problem you can reason about. Ask the user for them. If they still will not give them, "
-    "reply with exactly: Sorry, we can’t proceed with raising this issue."
+    "Not filed. A bug needs steps to reproduce before it can reach the team, and the user "
+    "has not given any. Call request_steps to ask them. Do not write the steps yourself: "
+    "they are captured from the user's own reply and attached for you."
+)
+
+
+EVIDENCE_REQUIRED = (
+    "Not filed. The user has not been offered the chance to attach a screenshot or a "
+    "recording yet. Call request_evidence first. They are free to decline and the report "
+    "is filed either way, but they have to be asked."
 )
 
 
@@ -160,7 +168,6 @@ async def create_ticket(
     summary: str,
     description: str,
     runtime: ToolRuntime,
-    steps_to_reproduce: list[str] | None = None,
 ) -> str:
     """File a new ticket with the DailoQA development team.
 
@@ -176,17 +183,21 @@ async def create_ticket(
             expected; for a feature, the capability and the problem it solves. Never
             the browser, device, or operating system: those are captured from the
             user's session and written into their own section of the issue.
-        steps_to_reproduce: Ordered reproduction steps, exactly as the user described
-            them. Required for every bug, and never guessed: a step the user did not
-            give sends a triager looking for a control that may not exist.
+
+    Steps to reproduce are not an argument. They are taken from the user's own reply to
+    request_steps and attached for you, so they can never be a paraphrase or a guess.
     """
-    if missing_steps(kind, steps_to_reproduce):
+    messages = (runtime.state or {}).get("messages") or []
+    steps = captured_steps(messages)
+    if missing_steps(kind, steps):
         return STEPS_REQUIRED
+    if kind == "bug" and not evidence_requested(messages):
+        return EVIDENCE_REQUIRED
     ticket = {
         "title": title,
         "summary": summary,
         "issue_description" if kind == "bug" else "feature": description,
-        "steps_to_reproduce": steps_to_reproduce or [],
+        "steps_to_reproduce": steps,
     }
     if kind == "feature":
         ticket["problem_statement"] = summary
@@ -200,7 +211,6 @@ async def link_to_existing(
     note: str,
     kind: Literal["bug", "feature"],
     runtime: ToolRuntime,
-    steps_to_reproduce: list[str] | None = None,
 ) -> str:
     """Attach this user's report to an existing Jira issue instead of filing a duplicate.
 
@@ -213,17 +223,22 @@ async def link_to_existing(
         note: What this reporter adds — a different trigger, extra detail, or
             "same as described".
         kind: "bug" or "feature", matching the existing issue.
-        steps_to_reproduce: The ordered steps this reporter described, exactly as they
-            gave them. Required for a bug: they are how you judge it to be the same
-            problem. They are not written into the existing issue.
+
+    Steps to reproduce are not an argument. A bug needs them here for the same reason a
+    new ticket does: they are how the match is judged. They come from the user's reply to
+    request_steps and are not written into the existing issue.
     """
-    if missing_steps(kind, steps_to_reproduce):
+    messages = (runtime.state or {}).get("messages") or []
+    steps = captured_steps(messages)
+    if missing_steps(kind, steps):
         return STEPS_REQUIRED
+    if kind == "bug" and not evidence_requested(messages):
+        return EVIDENCE_REQUIRED
     ticket = {
         "title": issue_key,
         "summary": note,
         "issue_description": note,
-        "steps_to_reproduce": steps_to_reproduce or [],
+        "steps_to_reproduce": steps,
     }
     payload = _payload(runtime, kind, ticket)
     job_id = await _enqueue(runtime, payload, issue_key, "link")
