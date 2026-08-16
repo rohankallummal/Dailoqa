@@ -53,11 +53,19 @@ export function asDocsPath(href: string): string | null {
     if (url.pathname.startsWith("/docs")) {
       return `${url.pathname}${url.hash}`;
     }
+    const hostParts = url.hostname.split(".");
     const hostIsBareDocs = url.hostname === "docs";
     const hostLooksLikeDocs = hostIsBareDocs || url.hostname.startsWith("docs.");
     const firstSegment = url.pathname.split("/")[1] ?? "";
     if (hostLooksLikeDocs && (hostIsBareDocs || DOC_TOPICS.has(firstSegment))) {
       return `/docs${url.pathname}${url.hash}`;
+    }
+    // The host swallowed the topic as well: "https://docs.langgraph/checkpoints#base-contract",
+    // whose real route is /docs/langgraph/checkpoints. Requiring exactly two host labels is what
+    // keeps this off real sites -- "docs.langchain.com" has three, so it is never rewritten,
+    // while ".langgraph" is not a TLD that can exist.
+    if (hostParts.length === 2 && hostParts[0] === "docs" && DOC_TOPICS.has(hostParts[1])) {
+      return `/docs/${hostParts[1]}${url.pathname}${url.hash}`;
     }
     return null;
   } catch {

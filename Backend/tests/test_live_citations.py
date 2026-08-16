@@ -55,6 +55,35 @@ async def _answer(question: str) -> str:
     return answers[-1].text if answers else ""
 
 
+async def _conversation(*questions: str) -> list[str]:
+    """Several turns on one thread, returning each answer.
+
+    A fresh ``TurnContext`` per turn, because that is what ``runner.run_turn`` does -- reusing one
+    across turns spends the whole conversation's grounding-correction budget on the first turn and
+    invents a failure the server does not have. Reproducing the server's shape is the point: the
+    defect this exists for is invisible to any single-turn probe.
+    """
+    thread = f"live-convo-{uuid4()}"
+    answers: list[str] = []
+    async with build_checkpointer() as saver:
+        agent = build_agent(saver, lambda *_a, **_k: None)
+        for question in questions:
+            context = TurnContext(
+                user_sub="live-test",
+                conversation_id=thread,
+                surface="full",
+                reporter_name="Live Test",
+            )
+            result = await agent.ainvoke(
+                {"messages": [{"role": "user", "content": question}]},
+                {"configurable": {"thread_id": thread}},
+                context=context,
+            )
+            replies = [m for m in result["messages"] if isinstance(m, AIMessage) and not m.tool_calls]
+            answers.append(replies[-1].text if replies else "")
+    return answers
+
+
 @pytest.mark.parametrize(
     "question",
     [
@@ -231,11 +260,16 @@ async def test_an_invented_documentation_hostname_stays_repairable(question):
         # name; and a `docs.*` host whose first path segment is a real documentation topic --
         # "https://docs.dailoqa.com/deepagents/subagents" is that last shape, and asserting only
         # the path rule reported it as unrepairable when the renderer handles it.
+        topics = {"deepagents", "langchain", "langgraph"}
         first_segment = path.lstrip("/").split("/")[0].split("#")[0]
+        host_parts = host.split(".")
         repairable = (
             path.startswith("/docs")
             or host == "docs"
-            or (host.startswith("docs.") and first_segment in {"deepagents", "langchain", "langgraph"})
+            or (host.startswith("docs.") and first_segment in topics)
+            # The topic can land in the host: "https://docs.langgraph/checkpoints". Two labels
+            # only, so a real "docs.langchain.com" is never treated as one of these.
+            or (len(host_parts) == 2 and host_parts[0] == "docs" and host_parts[1] in topics)
         )
         assert repairable, f"invented a documentation URL the renderer cannot repair: {url!r}"
 
@@ -346,6 +380,42 @@ async def test_a_false_premise_in_the_question_is_corrected_not_adopted(question
         answer,
         re.I,
     ), f"speculated the false premise into plausibility instead of correcting it:\n{answer[:400]}"
+
+
+async def test_a_decline_does_not_anchor_the_next_question():
+    """One "no" must not become a run of them.
+
+    Reported from a real conversation and reproduced: turn one correctly declines shortest-path
+    algorithms, and the follow-up about creating agents in LangGraph -- which the overview page
+    covers, and which is answered correctly in a fresh conversation -- is declined too. The model
+    reads its own previous decline as a verdict on the area rather than on the question.
+
+    No single-turn probe can see this, which is why several rounds of them missed it. The first
+    assertion is the control: if the follow-up stopped being answerable on its own the test would
+    be measuring the wrong thing.
+
+    The follow-up is deliberately a question with its own page. "How do I create agents using
+    LangGraph?" was the reported one and is the wrong probe here -- it fails the control, because
+    LangGraph's agent material is thin and filed under *Install*, so it is borderline even in a
+    fresh conversation. Anchoring and that ranking gap are separate defects, and a question that
+    trips both cannot tell them apart.
+    """
+    follow_up_question = "How do checkpointers work in LangGraph?"
+
+    standalone = await _answer(follow_up_question)
+    assert not _DENIAL.search(standalone), (
+        "the control failed: this question is not answerable even on its own, so the anchoring "
+        f"assertion below would be meaningless:\n{standalone[:300]}"
+    )
+
+    _first, follow_up = await _conversation(
+        "how is the shortest distance calculated between the nodes of langgraph",
+        follow_up_question,
+    )
+    assert not _DENIAL.search(follow_up), (
+        "declined after an earlier decline a question it answers on its own:\n"
+        f"{follow_up[:300]}"
+    )
 
 
 @pytest.mark.parametrize(

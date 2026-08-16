@@ -35,6 +35,14 @@ describe("asDocsPath", () => {
     expect(asDocsPath("https://docs.dailoqa/deepagents")).toBe("/docs/deepagents");
   });
 
+  it("recovers the route when the host swallowed the topic too", () => {
+    // Seen live: the topic ends up in the host and the path carries only the page.
+    expect(asDocsPath("https://docs.langgraph/checkpoints#base-contract")).toBe(
+      "/docs/langgraph/checkpoints#base-contract",
+    );
+    expect(asDocsPath("https://docs.deepagents/subagents")).toBe("/docs/deepagents/subagents");
+  });
+
   it("leaves genuine external links alone", () => {
     expect(asDocsPath("https://example.com/blog/post")).toBeNull();
     expect(asDocsPath("https://github.com/langchain-ai/docs")).toBeNull();
