@@ -112,7 +112,7 @@ _DENIAL = re.compile(
     r"does(?:n['’]t| not)\s+(?:\w+\s+){0,2}"
     r"(?:mention|cover|describe|discuss|include|provide|specify|define|detail|address)"
     r"|no mention|not (?:mentioned|covered|documented|described)"
-    r"|could(?:n['’]t| not) find|no .{0,12}reference",
+    r"|could(?:n['’]t| not) find|did(?:n['’]t| not) find|no .{0,12}reference",
     re.I,
 )
 
@@ -269,6 +269,24 @@ async def test_the_answer_names_the_library_its_sources_document(
     [
         ("Now that Skills are deprecated in Deep Agents, what should I use instead?", "deprecated"),
         ("Why did LangGraph remove support for subgraphs?", "removed"),
+        # Subordinate-clause premises. These read as questions about a workaround, so the claim
+        # rides along as background and gets repeated back as fact -- the first version of the
+        # rule produced "to work around the limitation that subagents cannot use tools", which
+        # is contradicted by the `tools` row in the subagent configuration table.
+        ("Given that subagents cannot use tools, how do I work around it?", "cannot use tools"),
+        # The harder half, and a known-failing case rather than a passing one. Nothing states
+        # that sandboxes are writable -- the contradiction is only that `write_file` and
+        # `upload_files()` exist, so the claim has to be tested against a capability rather than
+        # against a sentence, and three rounds of prompt wording have not made that hold. xfail
+        # non-strict: it records the gap without a permanently red suite, and tells us if it
+        # ever starts passing. See the note in SKILL.md Step 2c.
+        pytest.param(
+            "Since sandboxes are read-only, how do I write files?",
+            "read-only",
+            marks=pytest.mark.xfail(
+                reason="premise contradicted only by a capability, not by a sentence", strict=False
+            ),
+        ),
     ],
 )
 async def test_a_false_premise_in_the_question_is_corrected_not_adopted(question, false_premise):
@@ -284,19 +302,51 @@ async def test_a_false_premise_in_the_question_is_corrected_not_adopted(question
     excuse attached rather than correcting it.
     """
     answer = await _answer(question)
-    assert _DENIAL.search(answer) or re.search(r"\bnot\b.{0,30}" + false_premise, answer, re.I), (
-        f"accepted a premise the documentation does not support:\n{answer[:400]}"
+    # Three shapes of the same correct behaviour. A denial covers the absent-topic cases; the
+    # contradiction pattern covers a premise the documentation actively refutes -- "the premise
+    # 'subagents cannot use tools' is incorrect. In fact, subagents can indeed use tools" is the
+    # right answer and matches no denial phrasing at all, so demanding one would report the fix
+    # as a failure.
+    challenged = re.compile(
+        r"\b(?:incorrect|inaccurate|mistaken|not the case|is false|not accurate)\b"
+        r"|\bpremise\b|\bin fact\b|\b(?:can|do|does) indeed\b",
+        re.I,
     )
-    assert not re.search(r"might be|possible that|may have been|perhaps", answer, re.I), (
-        f"speculated the false premise into plausibility instead of correcting it:\n{answer[:400]}"
-    )
+    assert (
+        _DENIAL.search(answer)
+        or challenged.search(answer)
+        or re.search(r"\bnot\b.{0,30}" + re.escape(false_premise), answer, re.I)
+    ), f"accepted a premise the documentation does not support:\n{answer[:400]}"
+    # Targets speculation that makes the *premise* plausible, not hedging about the search. The
+    # first version forbade "possible that" outright and flagged "it's possible this isn't
+    # covered in the documentation" -- honest uncertainty about what was found, and not the
+    # defect. The defect is "it might be a recent change", which tells the reader the removal
+    # probably did happen and simply is not written down yet.
+    assert not re.search(
+        r"\b(?:might|may|possibly|perhaps|could)\b[^.]{0,40}"
+        r"(?:recent|removed?|deprecat\w*|changed?|discontinued|dropped)",
+        answer,
+        re.I,
+    ), f"speculated the false premise into plausibility instead of correcting it:\n{answer[:400]}"
 
 
-async def test_deep_agents_apis_are_not_relabelled_as_dailoqa():
+@pytest.mark.parametrize(
+    "question",
+    [
+        "can you provide me code for using subagents",
+        # One question could not catch this. An audit found "In DailoQA, you can't add a skill
+        # mid-run" on the question below -- DailoQA appears nowhere in the corpus, so every
+        # sentence starting that way is describing a library under the wrong name.
+        "Because Skills only load at startup, how do I add one mid-run?",
+        "How do I load a Skill?",
+        "What does create_deep_agent do?",
+    ],
+)
+async def test_deep_agents_apis_are_not_relabelled_as_dailoqa(question):
     # LangChain, LangGraph and Deep Agents are libraries DailoQA builds on, not its own APIs.
     # Calling create_deep_agent "DailoQA" sends a reader looking in the wrong codebase, and it
     # crept in from the scope boundary naming DailoQA first.
-    answer = await _answer("can you provide me code for using subagents")
+    answer = await _answer(question)
     assert not re.search(r"(?:in|with|for|using)\s+DailoQA", answer, re.I), (
         f"attributed a Deep Agents API to DailoQA:\n{answer[:300]}"
     )

@@ -119,6 +119,14 @@ has to be the claim; searching the question instead finds whatever assumes the a
 Then read the result against the claim. A `tools` row in the subagent configuration table settles
 it: subagents take tools, the premise is false, and that is the first thing the answer says.
 
+**A documented capability disproves a claimed limitation — you will rarely find a sentence saying
+so outright.** "Since sandboxes are read-only, how do I write files?" has no passage announcing
+that sandboxes are writable; what it has is `write_file` and `upload_files()`. That *is* the
+contradiction, and it is the answer's first sentence: sandboxes are not read-only, here is how
+writing works. Answering the how while stepping around the claim leaves the reader believing
+something the documentation does not support, and they will design around a restriction that does
+not exist.
+
 **Answer the premise before anything else.** If the documentation contradicts it, say so directly:
 Skills are not deprecated; subagents do take a `tools` list; Deep Agents does support streaming.
 Never carry the claim into your own sentence — "to work around the limitation that subagents
