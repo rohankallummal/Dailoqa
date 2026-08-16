@@ -1,0 +1,146 @@
+# --- Google ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="google_genai:gemini-3.6-flash",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)
+
+# --- OpenAI ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="openai:gpt-5.5",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)
+
+# --- Anthropic ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="anthropic:claude-sonnet-4-6",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)
+
+# --- OpenRouter ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="openrouter:z-ai/glm-5.2",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)
+
+# --- Fireworks ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="fireworks:accounts/fireworks/models/glm-5p2",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)
+
+# --- Baseten ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="baseten:zai-org/GLM-5.2",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)
+
+# --- Ollama ---
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddleware
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for a query and return a short summary."""
+    return f"Search results for: {query}"
+
+
+agent = create_agent(
+    model="ollama:north-mini-code-1.0",
+    tools=[search],
+    middleware=[
+        ModelRetryMiddleware(max_retries=3),
+        ToolRetryMiddleware(max_retries=2),
+    ],
+)

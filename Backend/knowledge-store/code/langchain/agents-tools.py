@@ -1,0 +1,90 @@
+# --- Google ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="google_genai:gemini-3.6-flash", tools=[search])
+
+# --- OpenAI ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="openai:gpt-5.5", tools=[search])
+
+# --- Anthropic ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="anthropic:claude-sonnet-4-6", tools=[search])
+
+# --- OpenRouter ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="openrouter:z-ai/glm-5.2", tools=[search])
+
+# --- Fireworks ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="fireworks:accounts/fireworks/models/glm-5p2", tools=[search])
+
+# --- Baseten ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="baseten:zai-org/GLM-5.2", tools=[search])
+
+# --- Ollama ---
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+
+agent = create_agent(model="ollama:north-mini-code-1.0", tools=[search])

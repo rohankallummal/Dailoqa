@@ -190,3 +190,64 @@ body {
   border: 0;
   border-top: 1px solid var(--line);
 }
+
+.chatMarkdown .hljs-comment,
+.chatMarkdown .hljs-quote {
+  color: #7f8ba3;
+  font-style: italic;
+}
+
+.chatMarkdown .hljs-keyword,
+.chatMarkdown .hljs-selector-tag,
+.chatMarkdown .hljs-literal,
+.chatMarkdown .hljs-type {
+  color: #c792ea;
+}
+
+.chatMarkdown .hljs-string,
+.chatMarkdown .hljs-meta .hljs-string,
+.chatMarkdown .hljs-regexp {
+  color: #c3e88d;
+}
+
+.chatMarkdown .hljs-number,
+.chatMarkdown .hljs-symbol,
+.chatMarkdown .hljs-bullet {
+  color: #f78c6c;
+}
+
+.chatMarkdown .hljs-title,
+.chatMarkdown .hljs-title.function_,
+.chatMarkdown .hljs-section {
+  color: #82aaff;
+}
+
+.chatMarkdown .hljs-attr,
+.chatMarkdown .hljs-attribute,
+.chatMarkdown .hljs-variable,
+.chatMarkdown .hljs-params,
+.chatMarkdown .hljs-property {
+  color: #ffcb6b;
+}
+
+.chatMarkdown .hljs-built_in,
+.chatMarkdown .hljs-class .hljs-title,
+.chatMarkdown .hljs-meta {
+  color: #89ddff;
+}
+
+.chatMarkdown .hljs-deletion {
+  color: #ff5370;
+}
+
+.chatMarkdown .hljs-addition {
+  color: #c3e88d;
+}
+
+.chatMarkdown .hljs-emphasis {
+  font-style: italic;
+}
+
+.chatMarkdown .hljs-strong {
+  font-weight: 600;
+}

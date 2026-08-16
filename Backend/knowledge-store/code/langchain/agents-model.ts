@@ -1,0 +1,34 @@
+// --- Google ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "google-genai:gemini-3.6-flash", tools });
+
+// --- OpenAI ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "openai:gpt-5.4", tools });
+
+// --- Anthropic ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "anthropic:claude-sonnet-4-6", tools });
+
+// --- OpenRouter ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "openrouter:anthropic/claude-sonnet-4-6", tools });
+
+// --- Fireworks ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "fireworks:accounts/fireworks/models/qwen3p5-397b-a17b", tools });
+
+// --- Baseten ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "baseten:zai-org/GLM-5.2", tools });
+
+// --- Ollama ---
+import { createAgent } from "langchain";
+
+var agent = createAgent({ model: "ollama:devstral-2", tools });

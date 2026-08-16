@@ -1,0 +1,3 @@
+const result = await agent.invoke({
+  messages: [{ role: "user", content: "Run a workflow that reviews every file in src/routes/ and summarizes the top risks." }],
+});

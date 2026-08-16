@@ -10,6 +10,8 @@ _LABELS = {
     "link_to_existing": "Adding you to the existing report",
     "load_skill": "Getting up to speed",
     "request_evidence": "Waiting for your attachments",
+    "search_documentation": "Searching the documentation",
+    "read_documentation": "Reading the documentation",
 }
 
 

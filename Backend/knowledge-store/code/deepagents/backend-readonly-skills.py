@@ -1,0 +1,195 @@
+# --- Google ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="google_genai:gemini-3.6-flash",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)
+
+# --- OpenAI ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="openai:gpt-5.5",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)
+
+# --- Anthropic ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)
+
+# --- OpenRouter ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="openrouter:z-ai/glm-5.2",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)
+
+# --- Fireworks ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="fireworks:accounts/fireworks/models/glm-5p2",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)
+
+# --- Baseten ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="baseten:zai-org/GLM-5.2",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)
+
+# --- Ollama ---
+from deepagents import FilesystemPermission, create_deep_agent
+from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from langgraph.store.memory import InMemoryStore
+
+store = InMemoryStore()  # Good for local dev; omit for LangSmith Deployment
+
+agent = create_deep_agent(
+    model="ollama:north-mini-code-1.0",
+    backend=CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/skills/": StoreBackend(
+                namespace=lambda rt: ("curated-skills", rt.context.org_id),
+            ),
+        },
+    ),
+    skills=["/skills/"],
+    permissions=[
+        FilesystemPermission(
+            operations=["write"],
+            paths=["/skills/**"],
+            mode="deny",
+        ),
+    ],
+    store=store,
+)

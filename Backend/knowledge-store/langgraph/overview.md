@@ -1,0 +1,110 @@
+---
+type: Documentation Page
+title: LangGraph overview
+description: Gain control with LangGraph to design agents that reliably handle complex tasks
+product: langgraph
+resource: /docs/langgraph
+source: /oss/langgraph/overview
+tags:
+  - langgraph
+  - overview
+timestamp: 2026-08-13T13:03:43Z
+---
+
+# LangGraph overview
+
+Trusted by companies shaping the future of agents—including Klarna, Uber, J.P. Morgan, and more—LangGraph is a low-level orchestration framework and runtime for building, managing, and deploying long-running, stateful agents. LangGraph gives you fine-grained control to mix deterministic, hand-coded steps with LLM-driven agentic steps in the same graph, so you can build bespoke agents that behave exactly the way your application requires.
+
+LangGraph is very low-level, and focused entirely on agent **orchestration**. Before using LangGraph, we recommend you familiarize yourself with some of the components used to build agents, starting with [models](../langchain/models.md) and tools.
+
+We will commonly use [LangChain](../langchain/overview.md) components throughout the documentation to integrate models and tools, but you don't need to use LangChain to use LangGraph. If you are just getting started with agents or want a higher-level abstraction, we recommend you use LangChain's [agents](../langchain/agents.md) that provide prebuilt architectures for common LLM and tool-calling loops.
+
+LangGraph is focused on the underlying capabilities important for agent orchestration: durable execution, streaming, human-in-the-loop, and more.
+
+One of LangGraph's core strengths is the ability to mix deterministic steps with LLM-driven agentic steps in a single graph. This lets you build bespoke workflows where parts of the logic are fully predictable and auditable while other parts are flexible and model-driven, giving you fine-grained control over exactly where and how AI is applied.
+
+**how LangChain products fit together**
+
+- [Deep Agents](../deepagents/overview.md) is an agent harness: planning, subagents, filesystem tools, and context management on top of LangGraph.
+- [LangChain](../langchain/overview.md) is the agent framework: abstractions and integrations for models, tools, and agent loops.
+- [LangGraph](../langgraph/overview.md) is the orchestration runtime: durable execution, streaming, human-in-the-loop, and persistence.
+
+## Install
+
+**Python**
+
+```bash pip
+pip install -U langgraph
+```
+
+```bash uv
+uv add langgraph
+```
+
+**JavaScript / TypeScript**
+
+```bash npm
+npm install @langchain/langgraph @langchain/core
+```
+
+```bash pnpm
+pnpm add @langchain/langgraph @langchain/core
+```
+
+```bash yarn
+yarn add @langchain/langgraph @langchain/core
+```
+
+```bash bun
+bun add @langchain/langgraph @langchain/core
+```
+
+Then, create a simple hello world example:
+
+**Python**
+```python
+from langgraph.graph import StateGraph, MessagesState, START, END
+
+def mock_llm(state: MessagesState):
+    return {"messages": [{"role": "ai", "content": "hello world"}]}
+
+graph = StateGraph(MessagesState)
+graph.add_node(mock_llm)
+graph.add_edge(START, "mock_llm")
+graph.add_edge("mock_llm", END)
+graph = graph.compile()
+
+graph.invoke({"messages": [{"role": "user", "content": "hi!"}]})
+```
+
+**JavaScript / TypeScript**
+```typescript
+import { StateSchema, MessagesValue, type GraphNode, StateGraph, START, END } from "@langchain/langgraph";
+
+const State = new StateSchema({
+  messages: MessagesValue,
+});
+
+const mockLlm: GraphNode<typeof State> = (state) => {
+  return { messages: [{ role: "ai", content: "hello world" }] };
+};
+
+const graph = new StateGraph(State)
+  .addNode("mock_llm", mockLlm)
+  .addEdge(START, "mock_llm")
+  .addEdge("mock_llm", END)
+  .compile();
+
+await graph.invoke({ messages: [{ role: "user", content: "hi!" }] });
+```
+
+## Core benefits
+
+LangGraph provides low-level supporting infrastructure for *any* long-running, stateful workflow or agent. LangGraph does not abstract prompts or architecture, and provides the following central benefits:
+
+* **Mix deterministic and agentic steps**: Combine hand-coded, deterministic logic with LLM-driven decision-making in a single graph. Use deterministic steps where you need reliability and predictability, and agentic steps where you need flexibility—giving you precise control over every part of your agent's behavior.
+* [Persistence](../langgraph/persistence.md): Build agents that persist through failures and can run for extended periods, resuming from where they left off.
+* [Human-in-the-loop](../langgraph/interrupts.md): Incorporate human oversight by inspecting and modifying agent state at any point.
+* Comprehensive memory: Create stateful agents with both short-term working memory for ongoing reasoning and long-term memory across sessions.
+* Debugging with LangSmith: Gain deep visibility into complex agent behavior with visualization tools that trace execution paths, capture state transitions, and provide detailed runtime metrics.
+* Production-ready deployment: Deploy sophisticated agent systems confidently with scalable infrastructure designed to handle the unique challenges of stateful, long-running workflows.

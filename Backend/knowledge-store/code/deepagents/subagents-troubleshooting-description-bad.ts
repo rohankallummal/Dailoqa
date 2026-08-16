@@ -1,0 +1,5 @@
+// ❌ Bad
+const badDescription = {
+  name: "helper",
+  description: "helps with stuff",
+};

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Message } from "../lib/messageReducer";
+import { MessageContent } from "./MessageContent";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 export function ChatMessages({
@@ -26,11 +27,13 @@ export function ChatMessages({
           <div
             data-message-id={message.id}
             tabIndex={-1}
-            className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-              message.role === "user" ? "bg-accent text-white" : "border border-line bg-white text-ink"
+            className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+              message.role === "user"
+                ? "whitespace-pre-wrap bg-accent text-white"
+                : "border border-line bg-white text-ink"
             }`}
           >
-            {message.content}
+            {message.role === "user" ? message.content : <MessageContent content={message.content} />}
             {message.streaming ? (
               <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-ink-muted" />
             ) : null}

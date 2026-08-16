@@ -1,0 +1,2 @@
+// All namespaces that start with ["alice"], truncated to two levels deep.
+const namespaces = await store.listNamespaces({ prefix: ["alice"], maxDepth: 2 });

@@ -1,0 +1,62 @@
+# --- Google ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="google_genai:gemini-3.6-flash",
+    tools=[search, fetch_url, run_query],
+)
+
+# --- OpenAI ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="openai:gpt-5.5",
+    tools=[search, fetch_url, run_query],
+)
+
+# --- Anthropic ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="anthropic:claude-sonnet-4-6",
+    tools=[search, fetch_url, run_query],
+)
+
+# --- OpenRouter ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="openrouter:z-ai/glm-5.2",
+    tools=[search, fetch_url, run_query],
+)
+
+# --- Fireworks ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="fireworks:accounts/fireworks/models/glm-5p2",
+    tools=[search, fetch_url, run_query],
+)
+
+# --- Baseten ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="baseten:zai-org/GLM-5.2",
+    tools=[search, fetch_url, run_query],
+)
+
+# --- Ollama ---
+from deepagents import create_deep_agent
+
+
+agent = create_deep_agent(
+    model="ollama:north-mini-code-1.0",
+    tools=[search, fetch_url, run_query],
+)

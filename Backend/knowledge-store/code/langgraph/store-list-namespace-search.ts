@@ -1,0 +1,2 @@
+// Return up to 100 items stored under ["alice", "memories"].
+const items = await store.search(["alice", "memories"], { limit: 100 });

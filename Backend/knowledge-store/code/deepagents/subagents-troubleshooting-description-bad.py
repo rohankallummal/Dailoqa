@@ -1,0 +1,5 @@
+# ❌ Bad
+bad_subagent = {
+    "name": "helper",
+    "description": "helps with stuff",
+}

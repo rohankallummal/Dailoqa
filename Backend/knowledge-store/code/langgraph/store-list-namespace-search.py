@@ -1,0 +1,2 @@
+# Return up to 100 items stored under ("alice", "memories").
+items = store.search(("alice", "memories"), limit=100)

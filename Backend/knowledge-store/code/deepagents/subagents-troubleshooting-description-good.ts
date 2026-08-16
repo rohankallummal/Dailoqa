@@ -1,0 +1,6 @@
+// ✅ Good
+const goodDescription = {
+  name: "research-specialist",
+  description:
+    "Conducts in-depth research on specific topics using web search. Use when you need detailed information that requires multiple searches.",
+};

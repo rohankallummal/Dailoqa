@@ -1,0 +1,5 @@
+// ✅ Good: Focused tool set
+const emailAgent = {
+  name: "email-sender",
+  tools: [sendEmail, validateEmail], // Only email-related
+};

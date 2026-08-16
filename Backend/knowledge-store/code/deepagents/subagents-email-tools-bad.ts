@@ -1,0 +1,5 @@
+// ❌ Bad: Too many tools
+const emailAgentBad = {
+  name: "email-sender",
+  tools: [sendEmail, webSearch, databaseQuery, fileUpload], // Unfocused
+};

@@ -1,0 +1,5 @@
+# ❌ Bad: Too many tools
+email_agent = {
+    "name": "email-sender",
+    "tools": [send_email, web_search_tool, database_query, format_document],  # Unfocused
+}

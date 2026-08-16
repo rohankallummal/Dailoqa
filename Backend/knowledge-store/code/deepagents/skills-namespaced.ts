@@ -1,0 +1,19 @@
+import {
+  createDeepAgent,
+  CompositeBackend,
+  StateBackend,
+  StoreBackend,
+} from "deepagents";
+
+const agent = await createDeepAgent({
+  model: "anthropic:claude-sonnet-4-6",
+  skills: ["/skills/"],
+  backend: new CompositeBackend(new StateBackend(), {
+    "/skills/": new StoreBackend({
+      namespace: (ctx) => [
+        ctx.assistantId ?? "default",
+        ctx.config?.configurable?.user_id ?? "anonymous",
+      ],
+    }),
+  }),
+});

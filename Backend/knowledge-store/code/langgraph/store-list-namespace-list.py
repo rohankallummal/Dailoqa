@@ -1,0 +1,2 @@
+# All namespaces that start with ("alice",), truncated to two levels deep.
+namespaces = store.list_namespaces(prefix=("alice",), max_depth=2)
