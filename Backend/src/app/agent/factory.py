@@ -1,7 +1,5 @@
 """Assembly of the DailoQA agent from its model, tools, and middleware."""
 
-import json
-
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
@@ -17,12 +15,7 @@ from app.agent.middleware.streaming import StreamPublisherMiddleware
 from app.agent.tools import TOOLS
 from app.llm import get_chat_model
 
-_MAX_MODEL_CALLS = 12
-
-
-def _describe_write(tool_call, state, runtime) -> str:
-    """Render a pending ticket write so the chat can preview exactly what will be filed."""
-    return json.dumps({"action": tool_call["name"], "ticket": tool_call["args"]}, indent=2)
+_MAX_MODEL_CALLS = 24
 
 
 def _write_gate() -> HumanInTheLoopMiddleware:
@@ -31,13 +24,19 @@ def _write_gate() -> HumanInTheLoopMiddleware:
     This is a structural gate rather than a prompt instruction: the tool call is
     suspended by the graph, so no wording the model produces and no reply the user
     types can cause a filing without an approve decision.
+
+    No ``description`` is configured. The line the user actually reads is built by
+    ``runner._write_summary`` from the drafted arguments, and nothing consumes the one on
+    the interrupt itself, so supplying it only produced a second rendering that no reader
+    ever saw.
     """
-    approval = InterruptOnConfig(
-        allowed_decisions=["approve", "reject"],
-        description=_describe_write,
-    )
+    approval = InterruptOnConfig(allowed_decisions=["approve", "reject"])
     return HumanInTheLoopMiddleware(
-        interrupt_on={"create_ticket": approval, "link_to_existing": approval}
+        interrupt_on={
+            "create_bug": approval,
+            "create_feature": approval,
+            "link_to_existing": approval,
+        }
     )
 
 

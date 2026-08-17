@@ -6,7 +6,9 @@ from langchain.agents.middleware import AgentMiddleware
 
 _LABELS = {
     "search_existing_issues": "Checking for similar reports",
-    "create_ticket": "Submitting your report",
+    "record_findings": "Noting down what you have told me",
+    "create_bug": "Submitting your report",
+    "create_feature": "Submitting your request",
     "link_to_existing": "Adding you to the existing report",
     "load_skill": "Getting up to speed",
     "request_steps": "Waiting for the steps to reproduce",

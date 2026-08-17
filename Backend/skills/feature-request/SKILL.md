@@ -35,7 +35,7 @@ Every result also carries `already_reported_by_you`. When it is true on a candid
 
 ## Step 4 — File it
 
-Call `create_ticket` with `kind="feature"`:
+Call `create_feature`:
 
 - **title** — the capability, short enough to scan on a board.
 - **summary** — one or two plain sentences on what is being asked for.

@@ -51,9 +51,7 @@ async def create_ticket(session, job, client) -> str:
     reporter = job.payload.get("reporter", {})
     evidence = evidence_of(job)
     title = ticket.get("title") or "Untitled"
-    document = build_ticket_document(
-        kind, ticket, job.payload.get("client_environment", {}), reporter, evidence
-    )
+    document = build_ticket_document(kind, ticket, job.payload.get("client_environment", {}), reporter)
     issue_type = client.issue_type_for(kind)
     result = await client.create_issue(issue_type, title, document, labels=["agent-filed"])
     key = result["key"]

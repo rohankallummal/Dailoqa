@@ -145,13 +145,10 @@ class JiraClient:
         )
 
     async def list_attachments(self, issue_key: str) -> list[dict]:
-        """Return the issue's attachments as {"id", "filename", "size"} entries."""
+        """Return the issue's attachments as {"id", "filename"} entries."""
         response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
         attachments = response.json().get("fields", {}).get("attachment") or []
-        return [
-            {"id": item["id"], "filename": item["filename"], "size": item.get("size") or 0}
-            for item in attachments
-        ]
+        return [{"id": item["id"], "filename": item["filename"]} for item in attachments]
 
     async def list_attachment_filenames(self, issue_key: str) -> set[str]:
         """Return the filenames already attached to an issue.
@@ -171,13 +168,3 @@ class JiraClient:
         except httpx.HTTPStatusError as error:
             if error.response.status_code != 404:
                 raise
-
-    async def get_description(self, issue_key: str) -> dict:
-        """Return an issue's description as an ADF document, empty when it has none."""
-        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "description"})
-        description = response.json().get("fields", {}).get("description")
-        return description or {"type": "doc", "version": 1, "content": []}
-
-    async def update_description(self, issue_key: str, document: dict) -> None:
-        """Replace an issue's description with the given ADF document."""
-        await self._request("PUT", f"/issue/{issue_key}", json={"fields": {"description": document}})

@@ -13,7 +13,8 @@ from langchain.tools import ToolRuntime, tool
 from app.db.base import async_session
 from app.db.models import Job
 from app.db.repositories import reported_issue_keys
-from app.agent.tools.evidence import evidence_requested
+from app.agent.bug_readiness import bug_refusal
+from app.agent.tools.investigation import issue_description, recorded_findings
 from app.agent.tools.steps import captured_steps
 from app.evidence.storage import evidence_dir, normalize_manifest
 from app.jira.client import JiraClient
@@ -21,28 +22,6 @@ from app.jira.client import JiraClient
 logger = logging.getLogger(__name__)
 
 _MAX_CANDIDATES = 20
-
-STEPS_REQUIRED = (
-    "Not filed. A bug needs steps to reproduce before it can reach the team, and the user "
-    "has not given any. Call request_steps to ask them. Do not write the steps yourself: "
-    "they are captured from the user's own reply and attached for you."
-)
-
-
-EVIDENCE_REQUIRED = (
-    "Not filed. The user has not been offered the chance to attach a screenshot or a "
-    "recording yet. Call request_evidence first. They are free to decline and the report "
-    "is filed either way, but they have to be asked."
-)
-
-
-def missing_steps(kind: str, steps: list[str] | None) -> bool:
-    """Report whether a bug is missing the reproduction steps it cannot be filed without.
-
-    Blank entries do not count, so a list of empty strings reads as no steps at all.
-    Feature requests have no reproduction steps and are never gated.
-    """
-    return kind == "bug" and not [step for step in (steps or []) if str(step).strip()]
 
 
 def _escape(term: str) -> str:
@@ -162,53 +141,67 @@ def _payload(runtime: ToolRuntime, kind: str, ticket: dict) -> dict:
 
 
 @tool
-async def create_ticket(
-    kind: Literal["bug", "feature"],
-    title: str,
-    summary: str,
-    description: str,
-    runtime: ToolRuntime,
-) -> str:
-    """File a new ticket with the DailoQA development team.
+async def create_bug(title: str, summary: str, runtime: ToolRuntime) -> str:
+    """File a new bug with the DailoQA development team.
 
-    Only call this once you have searched for duplicates and the user has agreed to
-    proceed. Write every field in clear prose based solely on what the user actually
-    said — never invent a detail.
+    Only call this once you have recorded your findings, searched for duplicates, and the
+    user has agreed to proceed.
+
+    Both fields describe the problem, not the route to it. A title or summary that
+    paraphrases the reproduction steps tells a triager nothing they cannot read two
+    sections further down, so lead with what is broken and what it costs the user.
 
     Args:
-        kind: "bug" for a defect, "feature" for a requested capability.
-        title: Short enough to read at a glance on a Jira board.
-        summary: One or two plain sentences on what is wrong or wanted, and where.
-        description: The full account — for a bug, what happens versus what was
-            expected; for a feature, the capability and the problem it solves. Never
-            the browser, device, or operating system: those are captured from the
-            user's session and written into their own section of the issue.
+        title: The symptom and the area it happens in, short enough to read at a glance
+            on a Jira board.
+        summary: One or two plain sentences on what is broken and where.
 
-    Steps to reproduce are not an argument. They are taken from the user's own reply to
-    request_steps and attached for you, so they can never be a paraphrase or a guess.
+    Nothing else is an argument. The account of the problem is built from your
+    record_findings call, the steps come from the user's own reply to request_steps, and
+    the browser, device, and operating system come from their session. All of them are
+    attached for you, so none can be a paraphrase or a guess.
     """
     messages = (runtime.state or {}).get("messages") or []
-    steps = captured_steps(messages)
-    if missing_steps(kind, steps):
-        return STEPS_REQUIRED
-    if kind == "bug" and not evidence_requested(messages):
-        return EVIDENCE_REQUIRED
+    refusal = bug_refusal(messages)
+    if refusal:
+        return refusal
     ticket = {
         "title": title,
         "summary": summary,
-        "issue_description" if kind == "bug" else "feature": description,
-        "steps_to_reproduce": steps,
+        "issue_description": issue_description(recorded_findings(messages)),
+        "steps_to_reproduce": captured_steps(messages),
     }
-    if kind == "feature":
-        ticket["problem_statement"] = summary
-    job_id = await _enqueue(runtime, _payload(runtime, kind, ticket), None, None)
+    job_id = await _enqueue(runtime, _payload(runtime, "bug", ticket), None, None)
+    return f"Queued for filing as job {job_id}. Tell the user it is being submitted."
+
+
+@tool
+async def create_feature(title: str, summary: str, description: str, runtime: ToolRuntime) -> str:
+    """File a new feature request with the DailoQA development team.
+
+    Only call this once you have searched for duplicates and the user has agreed to
+    proceed. Write every field from what the user actually said — never invent a detail,
+    and never invent a business justification.
+
+    Args:
+        title: The capability, short enough to scan on a Jira board.
+        summary: One or two plain sentences on what is being asked for.
+        description: The capability, then the problem it solves and why it matters to
+            them. Never the browser, device, or operating system.
+    """
+    ticket = {
+        "title": title,
+        "summary": summary,
+        "feature": description,
+        "problem_statement": summary,
+    }
+    job_id = await _enqueue(runtime, _payload(runtime, "feature", ticket), None, None)
     return f"Queued for filing as job {job_id}. Tell the user it is being submitted."
 
 
 @tool
 async def link_to_existing(
     issue_key: str,
-    note: str,
     kind: Literal["bug", "feature"],
     runtime: ToolRuntime,
 ) -> str:
@@ -220,26 +213,24 @@ async def link_to_existing(
 
     Args:
         issue_key: The Jira key of the matching issue, e.g. "KAN-482".
-        note: What this reporter adds — a different trigger, extra detail, or
-            "same as described".
         kind: "bug" or "feature", matching the existing issue.
 
-    Steps to reproduce are not an argument. A bug needs them here for the same reason a
-    new ticket does: they are how the match is judged. They come from the user's reply to
-    request_steps and are not written into the existing issue.
+    Nothing about the report itself is an argument. Linking records this user against the
+    existing issue and uploads their attachments to it; it never rewrites that issue's
+    description, so there is no field here for you to draft. A bug must still be
+    investigated first, for the same reason a new one must: your findings are how you
+    judged this to be the same problem.
     """
     messages = (runtime.state or {}).get("messages") or []
-    steps = captured_steps(messages)
-    if missing_steps(kind, steps):
-        return STEPS_REQUIRED
-    if kind == "bug" and not evidence_requested(messages):
-        return EVIDENCE_REQUIRED
-    ticket = {
-        "title": issue_key,
-        "summary": note,
-        "issue_description": note,
-        "steps_to_reproduce": steps,
-    }
-    payload = _payload(runtime, kind, ticket)
-    job_id = await _enqueue(runtime, payload, issue_key, "link")
-    return f"Queued as job {job_id}. Tell the user their report was recorded and is with the team."
+    if kind == "bug":
+        refusal = bug_refusal(messages)
+        if refusal:
+            return refusal
+    job_id = await _enqueue(runtime, _payload(runtime, kind, {}), issue_key, "link")
+    return (
+        f"Queued as job {job_id}. Tell the user their report was recorded and is with the "
+        f"team, in one short line. Do not mention {issue_key}, do not say their report was "
+        "linked, merged, or attached to an existing ticket, and do not say the team is "
+        "already investigating it. The tracker is internal and they cannot open it, so "
+        "naming it only raises questions they have no way to answer."
+    )

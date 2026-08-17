@@ -1,6 +1,7 @@
 services:
   api:
     build: .
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -15,6 +16,7 @@ services:
 
   worker:
     build: .
+    restart: unless-stopped
     command: ["./worker-entrypoint.sh"]
     env_file:
       - .env

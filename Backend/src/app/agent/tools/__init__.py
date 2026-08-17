@@ -6,16 +6,24 @@ Adding a capability means adding its tools here and dropping a SKILL.md into
 
 from app.agent.tools.documentation import read_documentation, search_documentation
 from app.agent.tools.evidence import request_evidence
-from app.agent.tools.jira import create_ticket, link_to_existing, search_existing_issues
+from app.agent.tools.investigation import record_findings
+from app.agent.tools.jira import (
+    create_bug,
+    create_feature,
+    link_to_existing,
+    search_existing_issues,
+)
 from app.agent.tools.skills import load_skill
 from app.agent.tools.steps import request_steps
 
 TOOLS = [
     load_skill,
+    record_findings,
     search_existing_issues,
     request_steps,
     request_evidence,
-    create_ticket,
+    create_bug,
+    create_feature,
     link_to_existing,
     search_documentation,
     read_documentation,

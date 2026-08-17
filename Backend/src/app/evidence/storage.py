@@ -68,11 +68,12 @@ def _size_limit_error(name: str, size: int) -> str | None:
 def normalize_manifest(user_sub: str, conversation_id: str, manifest: list[dict]) -> list[dict]:
     """Return the manifest rebuilt from the files actually on disk.
 
-    Callers persist the result, so the name the worker later joins onto the evidence
-    directory is the same one validate_manifest checked. Category and size are re-derived
-    here rather than copied from the client, so the ticket's Evidence list cannot state a
-    media type or a size the stored file contradicts. Client-supplied fields beyond these
-    three are dropped rather than carried into the job payload.
+    The name is what the worker later joins onto the evidence directory to find the file to
+    upload, so it is the sanitised one validate_manifest checked rather than whatever the
+    client sent. Category and size are re-derived from the stored file for the same reason:
+    the manifest is persisted into the job payload, and a client should not be able to write
+    a media type or a size there that the file on disk contradicts. Client-supplied fields
+    beyond these three are dropped rather than carried into the payload.
     """
     directory = evidence_dir(user_sub, conversation_id)
     normalized = []
@@ -165,8 +166,8 @@ def sweep_orphans(
     A directory whose conversation id is in keep_conversation_ids is left alone however
     old it is. Age alone is not evidence of abandonment: a report can sit at its
     confirmation prompt overnight and still be resumable, and a job can wait in the queue
-    while the worker is down. Sweeping either would file the ticket with an Evidence list
-    naming files that no longer exist.
+    while the worker is down. Sweeping either would file the ticket with its screenshots
+    already deleted, and nothing re-uploads them.
     """
     root = Path(get_settings().evidence_root)
     if not root.is_dir():

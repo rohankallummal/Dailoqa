@@ -17,8 +17,15 @@ logger = logging.getLogger(__name__)
 
 TURN_FAILED = "Something went wrong on our side. Please send that again."
 SERVICE_UNAVAILABLE = "Unable to connect to the service right now. Please try again in a few minutes."
+CONFIRM_WRITE = "Shall I send this to the DailoQA development team?"
 
 _AFFIRMATIVE = {"yes", "y", "yeah", "yep", "yup", "confirm", "ok", "okay", "sure", "create", "approve", "go"}
+
+DECLINED = (
+    "Not filed. Nothing was sent to the team and no ticket exists. The user was asked to "
+    "confirm and declined, saying: {message}. Do not tell them it was recorded. Ask what "
+    "they want changed, or drop it if that is what they meant."
+)
 
 
 def _is_affirmative(text: str) -> bool:
@@ -46,6 +53,10 @@ def _resume_value(interrupt_value, text: str, evidence: list[dict] | None):
     HumanInTheLoopMiddleware unwraps, carrying one decision per tool call it is
     holding — it raises if that count disagrees, so the count is read off the request
     rather than assumed to be one.
+
+    A rejection's message becomes the tool result the model reads next, so it says what
+    happened rather than passing the user's bare word through. Resuming with "no" alone
+    left the model announcing that a report it never filed had reached the team.
     """
     if isinstance(interrupt_value, dict) and "evidence_request" in interrupt_value:
         return evidence or []
@@ -53,7 +64,10 @@ def _resume_value(interrupt_value, text: str, evidence: list[dict] | None):
         return text
     requests = interrupt_value.get("action_requests") if isinstance(interrupt_value, dict) else None
     held = len(requests) if requests else 1
-    decision = {"type": "approve"} if _is_affirmative(text) else {"type": "reject", "message": text}
+    if _is_affirmative(text):
+        decision = {"type": "approve"}
+    else:
+        decision = {"type": "reject", "message": DECLINED.format(message=text.strip() or "nothing")}
     return {"decisions": [dict(decision) for _ in range(held)]}
 
 
@@ -87,15 +101,14 @@ def _write_summary(value) -> str:
     """
     requests = (value or {}).get("action_requests") or []
     if not requests:
-        return "Shall I send this to the DailoQA development team?"
+        return CONFIRM_WRITE
     request = requests[0]
-    args = request.get("args") or {}
     if request.get("name") == "link_to_existing":
         return "Ready to send this to the DailoQA development team. Send it?"
-    title = str(args.get("title") or "").strip()
-    if title:
-        return f'Ready to file this as "{title}". Send it?'
-    return "Shall I send this to the DailoQA development team?"
+    title = str((request.get("args") or {}).get("title") or "").strip()
+    if not title:
+        return CONFIRM_WRITE
+    return f'Ready to file this as "{title}". Send it?'
 
 
 def _terminal(interrupts) -> tuple[str, str, str]:

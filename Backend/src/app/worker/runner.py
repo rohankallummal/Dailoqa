@@ -139,10 +139,18 @@ async def run_one(maker, client, worker_id: str, model=None) -> bool:
 async def run_forever(poll_interval: float = 2.0) -> None:
     """Continuously drain the queue; sleep briefly when idle.
 
+    Nothing may abort the loop, so every call in it swallows its failures. The drain itself
+    needs that as much as the chores do: ``claim_next_job`` opens the loop's first database
+    call, so a transient disconnect there -- Postgres restarting, a laptop waking, the Docker
+    VM reconnecting -- used to escape this function and end the process. With no restart
+    policy on the container the queue then had no worker at all, and every report already
+    confirmed by a user sat at "Submitting..." forever, with nothing to time it out or tell
+    them. A claim that committed before the failure is left running and its lease expires,
+    which is what the reaper below exists to return to the queue.
+
     Three periodic chores run alongside the drain: expired job leases are reaped,
     evidence directories orphaned by discarded conversations are swept, and notifications
-    past their retention window are purged. None may abort the loop, so all three swallow
-    their failures. LEASE_SECONDS must stay
+    past their retention window are purged. LEASE_SECONDS must stay
     comfortably above the worst-case job duration -- dedupe, issue creation, and an
     attachment upload bounded by JiraClient._UPLOAD_TIMEOUT -- or a healthy long job is
     reaped mid-flight and re-claimed by another worker. The completion fence keeps that
@@ -179,6 +187,10 @@ async def run_forever(poll_interval: float = 2.0) -> None:
                     logger.info("purged %s expired notification(s)", purged)
             except Exception as error:  # noqa: BLE001
                 logger.warning("notification purge failed: %s", error)
-        handled = await run_one(maker, client, worker_id)
+        try:
+            handled = await run_one(maker, client, worker_id)
+        except Exception as error:  # noqa: BLE001
+            logger.warning("job drain failed, retrying after the poll interval: %s", error)
+            handled = False
         if not handled:
             await asyncio.sleep(poll_interval)
