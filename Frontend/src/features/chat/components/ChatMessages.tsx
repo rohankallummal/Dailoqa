@@ -16,7 +16,7 @@ export function ChatMessages({
   toolStatus?: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-3 px-4 py-4">
+    <div className="flex flex-col gap-5 px-4 py-4">
       {!connected && (
         <div className="mx-auto rounded-full bg-hover px-3 py-1 text-[11px] font-medium text-ink-muted">
           Reconnecting…
@@ -27,10 +27,10 @@ export function ChatMessages({
           <div
             data-message-id={message.id}
             tabIndex={-1}
-            className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            className={`text-sm leading-relaxed outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               message.role === "user"
-                ? "whitespace-pre-wrap bg-accent text-white"
-                : "border border-line bg-white text-ink"
+                ? "max-w-[85%] whitespace-pre-wrap rounded-2xl bg-accent px-3.5 py-2 text-white"
+                : "w-full min-w-0 text-ink"
             }`}
           >
             {message.role === "user" ? message.content : <MessageContent content={message.content} />}

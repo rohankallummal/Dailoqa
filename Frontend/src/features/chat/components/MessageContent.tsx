@@ -114,7 +114,7 @@ export const MessageContent = memo(function MessageContent({ content }: { conten
   const shown = useThrottledContent(content, THROTTLE_MS);
 
   return (
-    <div className="chatMarkdown max-w-[70ch] leading-[1.6] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+    <div className="chatMarkdown leading-[1.6] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
       <MarkdownBody content={shown} />
     </div>
   );
