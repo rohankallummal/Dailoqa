@@ -6,7 +6,6 @@ from io import BytesIO
 from openpyxl import Workbook
 
 AFFECTED_USERS_FILENAME = "affected-users.xlsx"
-LEGACY_FILENAME = "similar-reports.xlsx"
 
 _COLUMNS = ["Google OAuth Name", "Google OAuth ID", "Date Reported"]
 _COLUMN_WIDTHS = [32, 32, 16]

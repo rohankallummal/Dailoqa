@@ -8,13 +8,12 @@ from app.db.models import Ticket, TicketReporter
 from app.evidence.storage import categorize
 from app.jira.adf import (
     AFFECTED_USERS_HEADING,
-    LEGACY_SIMILAR_REPORTS_HEADING,
     MORE_EVIDENCE_HEADING,
     affected_users_section,
     more_evidence_section,
     replace_section,
 )
-from app.jira.affected_users import AFFECTED_USERS_FILENAME, LEGACY_FILENAME, build_workbook
+from app.jira.affected_users import AFFECTED_USERS_FILENAME, build_workbook
 from app.worker.create_step import record_reporter
 from app.worker.evidence_step import attach_evidence, evidence_of, reporter_prefix, upload_names
 from app.worker.queue import set_job_action
@@ -74,28 +73,21 @@ def linked_evidence(attachments: list[dict], prefixes: list[str]) -> list[dict]:
 
 
 async def _replace_spreadsheet(client, issue_key: str, rows: list[dict]) -> None:
-    """Upload a freshly generated workbook, removing whatever it supersedes.
-
-    Both the current and the legacy filename are removed, so an issue last touched before
-    the rename ends up holding one spreadsheet rather than two.
-    """
-    superseded = {AFFECTED_USERS_FILENAME, LEGACY_FILENAME}
+    """Upload a freshly generated workbook, removing the one it supersedes."""
     for attachment in await client.list_attachments(issue_key):
-        if attachment["filename"] in superseded:
+        if attachment["filename"] == AFFECTED_USERS_FILENAME:
             await client.delete_attachment(attachment["id"])
     await client.add_attachment_bytes(issue_key, AFFECTED_USERS_FILENAME, build_workbook(rows))
 
 
 async def _refresh_sections(client, issue_key: str, prefixes: list[str]) -> None:
-    """Rewrite More Evidence and Affected Users, dropping the legacy section.
+    """Rewrite the More Evidence and Affected Users sections.
 
     Both are replaced rather than appended because their contents change with every new
-    report, and the legacy Similar Reports heading is removed so a migrated issue does not
-    carry two descriptions of the same thing.
+    report, so appending would stack a fresh copy of each under every link.
     """
     files = linked_evidence(await client.list_attachments(issue_key), prefixes)
     document = await client.get_description(issue_key)
-    document = replace_section(document, LEGACY_SIMILAR_REPORTS_HEADING, [])
     document = replace_section(document, MORE_EVIDENCE_HEADING, more_evidence_section(files))
     document = replace_section(
         document, AFFECTED_USERS_HEADING, affected_users_section(AFFECTED_USERS_FILENAME)
@@ -140,7 +132,7 @@ async def link_ticket(session, job, client, match_key: str) -> bool:
     written would never be retried, and the caller deletes the files once the job
     commits, so the screenshots proving a duplicate report would be lost for good.
 
-    The Similar Reports refresh runs on every attempt for the same reason: it is driven by
+    The shared sections refresh runs on every attempt for the same reason: it is driven by
     the reporter rows, so a retry after the row was written still produces the spreadsheet.
     """
     ticket = (await session.execute(select(Ticket).where(Ticket.jira_key == match_key))).scalar_one_or_none()

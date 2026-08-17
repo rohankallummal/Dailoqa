@@ -78,7 +78,6 @@ def build_document(text: str, files: list[dict] | None = None) -> dict:
 
 MORE_EVIDENCE_HEADING = "More Evidence"
 AFFECTED_USERS_HEADING = "Affected Users"
-LEGACY_SIMILAR_REPORTS_HEADING = "Similar Reports"
 
 
 def _heading(text: str) -> dict:
@@ -206,9 +205,11 @@ def build_bug_document(
 ) -> dict:
     """Build a Bug Report description in the order Ticket-Structure.md specifies.
 
-    Steps to Reproduce appears only when no evidence was attached; supplied images or video
-    stand in for the walkthrough. Similar Reports is not written here -- it is appended to
-    the live issue by the link path once a second user reports the same problem.
+    Steps to Reproduce is always written. It is required for every bug and is the only
+    account of the problem a triager can follow without opening an attachment, so evidence
+    supplements it rather than standing in for it. More Evidence and Affected Users are not
+    written here -- the link path adds them to the live issue once a second user reports
+    the same problem.
     """
     evidence = evidence or []
     content = _text_section("Summary", ticket.get("summary", ""))
@@ -216,7 +217,7 @@ def build_bug_document(
     content.extend(_text_section("Issue Description", ticket.get("issue_description", "")))
     content.extend(_environment_section(client_environment or {}))
     steps = ticket.get("steps_to_reproduce") or []
-    if not evidence and steps:
+    if steps:
         content.extend([_heading("Steps to Reproduce"), _ordered_list(steps)])
     content.extend(_reporter_section("Reported By", reporter or {}))
     return {"type": "doc", "version": 1, "content": content}

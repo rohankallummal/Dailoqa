@@ -181,7 +181,7 @@ async def reported_issue_keys(session, user_sub: str, jira_keys: list[str]) -> f
     """Return which of the given Jira keys this user is already recorded against.
 
     A ticket_reporters row is written once per (ticket, reporter) and is what generates both
-    the Similar Reports spreadsheet and the Reported By section, so it answers "has this user
+    the Affected Users spreadsheet and the Reported By section, so it answers "has this user
     already reported this" without reading either artifact back out of Jira.
 
     Callers pass candidates the JQL has already narrowed to open issues, so a closed ticket
