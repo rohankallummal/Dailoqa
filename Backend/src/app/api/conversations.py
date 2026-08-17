@@ -5,16 +5,16 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, update
 
 from app.agent.checkpointer import reset_thread
 from app.auth import AuthContext, require_auth
 from app.db.base import async_session
-from app.db.models import Conversation, Job, Message
+from app.db.models import Conversation, Message
 from app.db.repositories import (
-    ACTIVE_JOB_STATUSES,
     get_input_state,
     get_owned_conversation,
+    has_active_job,
     list_conversations,
     list_messages,
     list_unfinished_conversation_ids,
@@ -33,7 +33,13 @@ async def _reset_thread_quietly(thread_id: str) -> None:
         logger.warning("thread reset failed for %s: %s", thread_id, error)
 
 
-async def _owned_or_404(session, conversation_id: str, user_sub: str) -> Conversation:
+async def owned_or_404(session, conversation_id: str, user_sub: str) -> Conversation:
+    """Return the caller's conversation, or reject the id as a 404.
+
+    Every entry point that takes a caller-supplied conversation id goes through this. The
+    agent is keyed by ``thread_id = conversation_id``, so without it an attacker could
+    append to, resume, and confirm a paused thread belonging to someone else.
+    """
     conversation = await get_owned_conversation(session, conversation_id, user_sub)
     if conversation is None:
         raise HTTPException(status_code=404, detail="not found")
@@ -52,7 +58,7 @@ async def get_conversations(surface: str, auth: AuthContext = Depends(require_au
 async def get_messages(conversation_id: str, auth: AuthContext = Depends(require_auth)) -> dict:
     """List a conversation's messages with the state its chat input should be in."""
     async with async_session() as session:
-        await _owned_or_404(session, conversation_id, auth.user_sub)
+        await owned_or_404(session, conversation_id, auth.user_sub)
         rows = await list_messages(session, conversation_id)
         return {
             "messages": [
@@ -67,14 +73,8 @@ async def get_messages(conversation_id: str, auth: AuthContext = Depends(require
 async def delete_conversation(conversation_id: str, auth: AuthContext = Depends(require_auth)) -> dict:
     """Graceful-exit delete: soft-delete if a job is in flight, else hard-delete."""
     async with async_session() as session:
-        await _owned_or_404(session, conversation_id, auth.user_sub)
-        has_job = (
-            await session.execute(
-                select(Job.id)
-                .where(Job.conversation_id == conversation_id, Job.status.in_(ACTIVE_JOB_STATUSES))
-                .limit(1)
-            )
-        ).first() is not None
+        await owned_or_404(session, conversation_id, auth.user_sub)
+        has_job = await has_active_job(session, conversation_id)
         if has_job:
             await session.execute(
                 update(Conversation)

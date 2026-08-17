@@ -4,12 +4,10 @@ from pathlib import Path
 
 from app.evidence.storage import evidence_dir, safe_filename
 
-EVIDENCE_FIELD = "evidence"
-
 
 def evidence_of(job) -> list[dict]:
     """Return the job's evidence manifest, or an empty list when it carries none."""
-    return job.payload.get(EVIDENCE_FIELD) or []
+    return job.payload.get("evidence") or []
 
 
 def reporter_prefix(user_name: str, user_sub: str) -> str:
@@ -54,12 +52,12 @@ async def attach_evidence(job, client, jira_key: str, names: dict[str, str]) -> 
     if not names:
         return
     directory = evidence_dir(job.user_sub, job.conversation_id)
-    already_attached = await client.list_attachment_filenames(jira_key)
+    already_attached = {item["filename"] for item in await client.list_attachments(jira_key)}
     pending = [
         (upload, directory / source)
         for source, upload in sorted(names.items())
         if upload not in already_attached
     ]
-    existing = [(upload, path) for upload, path in pending if path.is_file()]
-    if existing:
-        await client.add_named_attachments(jira_key, existing)
+    await client.add_attachments(
+        jira_key, [(upload, path.read_bytes()) for upload, path in pending if path.is_file()]
+    )

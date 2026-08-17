@@ -1,5 +1,6 @@
 """Filesystem storage, validation, and cleanup for bug-report evidence."""
 
+import contextlib
 import re
 import shutil
 import time
@@ -137,10 +138,8 @@ def _prune_if_empty(directory: Path) -> None:
     rmdir refuses a non-empty directory, so a concurrent report for the same user is
     left untouched rather than raced away.
     """
-    try:
+    with contextlib.suppress(OSError):
         directory.rmdir()
-    except OSError:
-        return
 
 
 def delete_dir(user_sub: str, conversation_id: str) -> None:
@@ -157,11 +156,8 @@ def delete_dir(user_sub: str, conversation_id: str) -> None:
     _prune_if_empty(directory.parent)
 
 
-def sweep_orphans(
-    max_age_seconds: int = ORPHAN_AGE_SECONDS,
-    keep_conversation_ids: frozenset[str] = frozenset(),
-) -> int:
-    """Delete conversation directories older than max_age_seconds; return how many.
+def sweep_orphans(keep_conversation_ids: frozenset[str] = frozenset()) -> int:
+    """Delete conversation directories older than ORPHAN_AGE_SECONDS; return how many.
 
     A directory whose conversation id is in keep_conversation_ids is left alone however
     old it is. Age alone is not evidence of abandonment: a report can sit at its
@@ -172,7 +168,7 @@ def sweep_orphans(
     root = Path(get_settings().evidence_root)
     if not root.is_dir():
         return 0
-    cutoff = time.time() - max_age_seconds
+    cutoff = time.time() - ORPHAN_AGE_SECONDS
     removed = 0
     for user_directory in root.iterdir():
         if not user_directory.is_dir():

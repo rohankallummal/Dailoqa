@@ -1,175 +1,50 @@
-import { compileSource, readDoc, type MdxComponent } from "./compileMdx";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { compileSource, langdocsRoot, readDoc, type MdxComponent } from "./compileMdx";
 import { splitFrontmatter } from "./frontmatter";
 
-const snippetFiles: Record<string, string> = {
-  AgentInvocationThreadAndContextJs: "snippets/code-samples/agent-invocation-thread-and-context-js.mdx",
-  AgentInvocationThreadAndContextPy: "snippets/code-samples/agent-invocation-thread-and-context-py.mdx",
-  AgentInvocationThreadIdJs: "snippets/code-samples/agent-invocation-thread-id-js.mdx",
-  AgentInvocationThreadIdPy: "snippets/code-samples/agent-invocation-thread-id-py.mdx",
-  AgentsAgentStateJs: "snippets/code-samples/agents-agent-state-js.mdx",
-  AgentsAgentStatePy: "snippets/code-samples/agents-agent-state-py.mdx",
-  AgentsContextManagementJs: "snippets/code-samples/agents-context-management-js.mdx",
-  AgentsContextManagementPy: "snippets/code-samples/agents-context-management-py.mdx",
-  AgentsExecutionEnvironmentJs: "snippets/code-samples/agents-execution-environment-js.mdx",
-  AgentsExecutionEnvironmentPy: "snippets/code-samples/agents-execution-environment-py.mdx",
-  AgentsFaultToleranceJs: "snippets/code-samples/agents-fault-tolerance-js.mdx",
-  AgentsFaultTolerancePy: "snippets/code-samples/agents-fault-tolerance-py.mdx",
-  AgentsGuardrailsJs: "snippets/code-samples/agents-guardrails-js.mdx",
-  AgentsGuardrailsPy: "snippets/code-samples/agents-guardrails-py.mdx",
-  AgentsIntroJs: "snippets/code-samples/agents-intro-js.mdx",
-  AgentsIntroPy: "snippets/code-samples/agents-intro-py.mdx",
-  AgentsModelJs: "snippets/code-samples/agents-model-js.mdx",
-  AgentsModelPy: "snippets/code-samples/agents-model-py.mdx",
-  AgentsNameJs: "snippets/code-samples/agents-name-js.mdx",
-  AgentsNamePy: "snippets/code-samples/agents-name-py.mdx",
-  AgentsPlanningDelegationJs: "snippets/code-samples/agents-planning-delegation-js.mdx",
-  AgentsPlanningDelegationPy: "snippets/code-samples/agents-planning-delegation-py.mdx",
-  AgentsSteeringJs: "snippets/code-samples/agents-steering-js.mdx",
-  AgentsSteeringPy: "snippets/code-samples/agents-steering-py.mdx",
-  AgentsStreamingProgressJs: "snippets/code-samples/agents-streaming-progress-js.mdx",
-  AgentsStreamingProgressPy: "snippets/code-samples/agents-streaming-progress-py.mdx",
-  AgentsStructuredOutputJs: "snippets/code-samples/agents-structured-output-js.mdx",
-  AgentsStructuredOutputPy: "snippets/code-samples/agents-structured-output-py.mdx",
-  AgentsSystemPromptJs: "snippets/code-samples/agents-system-prompt-js.mdx",
-  AgentsSystemPromptPy: "snippets/code-samples/agents-system-prompt-py.mdx",
-  AgentsToolsJs: "snippets/code-samples/agents-tools-js.mdx",
-  AgentsToolsPy: "snippets/code-samples/agents-tools-py.mdx",
-  BackendReadonlySkillsJs: "snippets/code-samples/backend-readonly-skills-js.mdx",
-  BackendReadonlySkillsPy: "snippets/code-samples/backend-readonly-skills-py.mdx",
-  ChatModelTabsJS: "snippets/chat-model-tabs-js.mdx",
-  ChatModelTabsPy: "snippets/chat-model-tabs.mdx",
-  CustomizationToolsJs: "snippets/code-samples/customization-tools-js.mdx",
-  CustomizationToolsPy: "snippets/code-samples/customization-tools-py.mdx",
-  DeepagentsSandboxAsToolJs: "snippets/code-samples/deepagents-sandbox-as-tool-js.mdx",
-  DeepagentsSandboxAsToolPy: "snippets/code-samples/deepagents-sandbox-as-tool-py.mdx",
-  DeepagentsSandboxBasicDaytonaPy: "snippets/code-samples/deepagents-sandbox-basic-daytona-py.mdx",
-  DeepagentsSandboxBasicJs: "snippets/code-samples/deepagents-sandbox-basic-js.mdx",
-  DeepagentsSandboxBasicLangsmithPy: "snippets/code-samples/deepagents-sandbox-basic-langsmith-py.mdx",
-  DeepagentsSandboxDownloadJs: "snippets/code-samples/deepagents-sandbox-download-js.mdx",
-  DeepagentsSandboxDownloadLangsmithPy: "snippets/code-samples/deepagents-sandbox-download-langsmith-py.mdx",
-  DeepagentsSandboxExecuteLangsmithPy: "snippets/code-samples/deepagents-sandbox-execute-langsmith-py.mdx",
-  DeepagentsSandboxLifecycleFactoryAssistantPy: "snippets/code-samples/deepagents-sandbox-lifecycle-factory-assistant-py.mdx",
-  DeepagentsSandboxLifecycleFactoryAssistantTs: "snippets/code-samples/deepagents-sandbox-lifecycle-factory-assistant-js.mdx",
-  DeepagentsSandboxLifecycleFactoryThreadPy: "snippets/code-samples/deepagents-sandbox-lifecycle-factory-thread-py.mdx",
-  DeepagentsSandboxLifecycleFactoryThreadTs: "snippets/code-samples/deepagents-sandbox-lifecycle-factory-thread-js.mdx",
-  DeepagentsSandboxUploadJs: "snippets/code-samples/deepagents-sandbox-upload-js.mdx",
-  DeepagentsSandboxUploadLangsmithPy: "snippets/code-samples/deepagents-sandbox-upload-langsmith-py.mdx",
-  DynamicSubagentsInvokeJs: "snippets/code-samples/dynamic-subagents-invoke-js.mdx",
-  DynamicSubagentsInvokePy: "snippets/code-samples/dynamic-subagents-invoke-py.mdx",
-  DynamicSubagentsQuickstartJs: "snippets/code-samples/dynamic-subagents-quickstart-js.mdx",
-  DynamicSubagentsQuickstartPy: "snippets/code-samples/dynamic-subagents-quickstart-py.mdx",
-  FrontendTodoListSetupJs: "snippets/code-samples/frontend-todo-list-setup-js.mdx",
-  FrontendTodoListSetupPy: "snippets/code-samples/frontend-todo-list-setup-py.mdx",
-  LanggraphInterruptsApprovalPy: "snippets/code-samples/langgraph-interrupts-approval-py.mdx",
-  LanggraphInterruptsHitlStreamJs: "snippets/code-samples/langgraph-interrupts-hitl-stream-js.mdx",
-  LanggraphInterruptsHitlStreamPy: "snippets/code-samples/langgraph-interrupts-hitl-stream-py.mdx",
-  LanggraphInterruptsMultiplePy: "snippets/code-samples/langgraph-interrupts-multiple-py.mdx",
-  LanggraphInterruptsResumeV2Py: "snippets/code-samples/langgraph-interrupts-resume-v2-py.mdx",
-  LanggraphInterruptsReviewPy: "snippets/code-samples/langgraph-interrupts-review-py.mdx",
-  LanggraphInterruptsValidateConditionalEdgeJs: "snippets/code-samples/langgraph-interrupts-validate-conditional-edge-js.mdx",
-  LanggraphInterruptsValidateConditionalEdgePatternJs: "snippets/code-samples/langgraph-interrupts-validate-conditional-edge-pattern-js.mdx",
-  LanggraphInterruptsValidateConditionalEdgePatternPy: "snippets/code-samples/langgraph-interrupts-validate-conditional-edge-pattern-py.mdx",
-  LanggraphInterruptsValidateConditionalEdgePy: "snippets/code-samples/langgraph-interrupts-validate-conditional-edge-py.mdx",
-  LanggraphSubgraphsInterruptV2Py: "snippets/code-samples/langgraph-subgraphs-interrupt-v2-py.mdx",
-  MultimodalCaptureScreenshotJs: "snippets/code-samples/multimodal-capture-screenshot-js.mdx",
-  MultimodalCaptureScreenshotPy: "snippets/code-samples/multimodal-capture-screenshot-py.mdx",
-  MultimodalSummarizationJs: "snippets/code-samples/multimodal-summarization-js.mdx",
-  MultimodalSummarizationPy: "snippets/code-samples/multimodal-summarization-py.mdx",
-  MultimodalUserInputJs: "snippets/code-samples/multimodal-user-input-js.mdx",
-  MultimodalUserInputPy: "snippets/code-samples/multimodal-user-input-py.mdx",
-  OverviewQuickstartJs: "snippets/code-samples/overview-quickstart-js.mdx",
-  OverviewQuickstartPy: "snippets/code-samples/overview-quickstart-py.mdx",
-  OverviewToolsPy: "snippets/code-samples/overview-tools-py.mdx",
-  RubricConfigurePy: "snippets/code-samples/rubric-configure-py.mdx",
-  SandboxesBasicTabsPy: "snippets/sandboxes-basic-tabs-py.mdx",
-  SkillsApprovalJs: "snippets/code-samples/skills-approval-js.mdx",
-  SkillsApprovalPy: "snippets/code-samples/skills-approval-py.mdx",
-  SkillsCreateAgentJs: "snippets/code-samples/skills-create-agent-js.mdx",
-  SkillsCreateAgentPy: "snippets/code-samples/skills-create-agent-py.mdx",
-  SkillsDynamicListsJs: "snippets/code-samples/skills-dynamic-lists-js.mdx",
-  SkillsDynamicListsPy: "snippets/code-samples/skills-dynamic-lists-py.mdx",
-  SkillsInvokeJs: "snippets/code-samples/skills-invoke-js.mdx",
-  SkillsInvokePy: "snippets/code-samples/skills-invoke-py.mdx",
-  SkillsNamespacedJs: "snippets/code-samples/skills-namespaced-js.mdx",
-  SkillsNamespacedPy: "snippets/code-samples/skills-namespaced-py.mdx",
-  SkillsPersonalWritableJs: "snippets/code-samples/skills-personal-writable-js.mdx",
-  SkillsPersonalWritablePy: "snippets/code-samples/skills-personal-writable-py.mdx",
-  SkillsSandboxJs: "snippets/code-samples/skills-sandbox-js.mdx",
-  SkillsSandboxPy: "snippets/code-samples/skills-sandbox-py.mdx",
-  SkillsSubagentsJs: "snippets/code-samples/skills-subagents-js.mdx",
-  SkillsSubagentsPy: "snippets/code-samples/skills-subagents-py.mdx",
-  SkillsUsageFilesystemJs: "snippets/code-samples/skills-usage-filesystem-js.mdx",
-  SkillsUsageFilesystemPy: "snippets/code-samples/skills-usage-filesystem-py.mdx",
-  SkillsUsageStateJs: "snippets/code-samples/skills-usage-state-js.mdx",
-  SkillsUsageStatePy: "snippets/code-samples/skills-usage-state-py.mdx",
-  SkillsUsageStoreJs: "snippets/code-samples/skills-usage-store-js.mdx",
-  SkillsUsageStorePy: "snippets/code-samples/skills-usage-store-py.mdx",
-  SkillsUsageTabsJs: "snippets/skills-usage-tabs-js.mdx",
-  SkillsUsageTabsPy: "snippets/skills-usage-tabs-py.mdx",
-  StoreListNamespaceListJs: "snippets/code-samples/store-list-namespace-list-js.mdx",
-  StoreListNamespaceListPy: "snippets/code-samples/store-list-namespace-list-py.mdx",
-  StoreListNamespacePaginateJs: "snippets/code-samples/store-list-namespace-paginate-js.mdx",
-  StoreListNamespacePaginatePy: "snippets/code-samples/store-list-namespace-paginate-py.mdx",
-  StoreListNamespaceSearchJs: "snippets/code-samples/store-list-namespace-search-js.mdx",
-  StoreListNamespaceSearchPy: "snippets/code-samples/store-list-namespace-search-py.mdx",
-  SubagentBasicJs: "snippets/code-samples/subagent-basic-js.mdx",
-  SubagentBasicPy: "snippets/code-samples/subagent-basic-py.mdx",
-  SubagentStreamProgressJs: "snippets/code-samples/subagent-stream-progress-js.mdx",
-  SubagentStreamProgressPy: "snippets/code-samples/subagent-stream-progress-py.mdx",
-  SubagentsChooseModelsJs: "snippets/code-samples/subagents-choose-models-js.mdx",
-  SubagentsChooseModelsPy: "snippets/code-samples/subagents-choose-models-py.mdx",
-  SubagentsCompiledSubagentJs: "snippets/code-samples/subagents-compiled-subagent-js.mdx",
-  SubagentsCompiledSubagentPy: "snippets/code-samples/subagents-compiled-subagent-py.mdx",
-  SubagentsConciseResultsJs: "snippets/code-samples/subagents-concise-results-js.mdx",
-  SubagentsConciseResultsPy: "snippets/code-samples/subagents-concise-results-py.mdx",
-  SubagentsContextPropagationJs: "snippets/code-samples/subagents-context-propagation-js.mdx",
-  SubagentsContextPropagationPy: "snippets/code-samples/subagents-context-propagation-py.mdx",
-  SubagentsEmailToolsBadJs: "snippets/code-samples/subagents-email-tools-bad-js.mdx",
-  SubagentsEmailToolsBadPy: "snippets/code-samples/subagents-email-tools-bad-py.mdx",
-  SubagentsEmailToolsGoodJs: "snippets/code-samples/subagents-email-tools-good-js.mdx",
-  SubagentsEmailToolsGoodPy: "snippets/code-samples/subagents-email-tools-good-py.mdx",
-  SubagentsFlexibleSearchJs: "snippets/code-samples/subagents-flexible-search-js.mdx",
-  SubagentsFlexibleSearchPy: "snippets/code-samples/subagents-flexible-search-py.mdx",
-  SubagentsGeneralPurposeOverrideJs: "snippets/code-samples/subagents-general-purpose-override-js.mdx",
-  SubagentsGeneralPurposeOverridePy: "snippets/code-samples/subagents-general-purpose-override-py.mdx",
-  SubagentsMultipleSpecializedJs: "snippets/code-samples/subagents-multiple-specialized-js.mdx",
-  SubagentsMultipleSpecializedPy: "snippets/code-samples/subagents-multiple-specialized-py.mdx",
-  SubagentsPerSubagentContextJs: "snippets/code-samples/subagents-per-subagent-context-js.mdx",
-  SubagentsPerSubagentContextPy: "snippets/code-samples/subagents-per-subagent-context-py.mdx",
-  SubagentsResearchPromptJs: "snippets/code-samples/subagents-research-prompt-js.mdx",
-  SubagentsResearchPromptPy: "snippets/code-samples/subagents-research-prompt-py.mdx",
-  SubagentsSharedLookupJs: "snippets/code-samples/subagents-shared-lookup-js.mdx",
-  SubagentsSharedLookupPy: "snippets/code-samples/subagents-shared-lookup-py.mdx",
-  SubagentsStructuredOutputJs: "snippets/code-samples/subagents-structured-output-js.mdx",
-  SubagentsStructuredOutputPy: "snippets/code-samples/subagents-structured-output-py.mdx",
-  SubagentsTroubleshootingConcisePromptJs: "snippets/code-samples/subagents-troubleshooting-concise-prompt-js.mdx",
-  SubagentsTroubleshootingConcisePromptPy: "snippets/code-samples/subagents-troubleshooting-concise-prompt-py.mdx",
-  SubagentsTroubleshootingDelegateJs: "snippets/code-samples/subagents-troubleshooting-delegate-js.mdx",
-  SubagentsTroubleshootingDelegatePy: "snippets/code-samples/subagents-troubleshooting-delegate-py.mdx",
-  SubagentsTroubleshootingDescriptionBadJs: "snippets/code-samples/subagents-troubleshooting-description-bad-js.mdx",
-  SubagentsTroubleshootingDescriptionBadPy: "snippets/code-samples/subagents-troubleshooting-description-bad-py.mdx",
-  SubagentsTroubleshootingDescriptionGoodJs: "snippets/code-samples/subagents-troubleshooting-description-good-js.mdx",
-  SubagentsTroubleshootingDescriptionGoodPy: "snippets/code-samples/subagents-troubleshooting-description-good-py.mdx",
-  SubagentsTroubleshootingDifferentiateJs: "snippets/code-samples/subagents-troubleshooting-differentiate-js.mdx",
-  SubagentsTroubleshootingDifferentiatePy: "snippets/code-samples/subagents-troubleshooting-differentiate-py.mdx",
-  SubagentsTroubleshootingFilesystemPromptJs: "snippets/code-samples/subagents-troubleshooting-filesystem-prompt-js.mdx",
-  SubagentsTroubleshootingFilesystemPromptPy: "snippets/code-samples/subagents-troubleshooting-filesystem-prompt-py.mdx",
-  ToolsMcpJs: "snippets/code-samples/tools-mcp-js.mdx",
-  ToolsMcpPy: "snippets/code-samples/tools-mcp-py.mdx",
-  ToolsPassToolsJs: "snippets/code-samples/tools-pass-tools-js.mdx",
-  ToolsPassToolsPy: "snippets/code-samples/tools-pass-tools-py.mdx",
+const SNIPPETS_DIR = "snippets";
+
+const nameOverrides: Record<string, string> = {
+  "snippets/chat-model-tabs.mdx": "ChatModelTabsPy",
+  "snippets/chat-model-tabs-js.mdx": "ChatModelTabsJS",
+  "snippets/sandboxes-basic-tabs-py.mdx": "SandboxesBasicTabsPy",
+  "snippets/skills-usage-tabs-js.mdx": "SkillsUsageTabsJs",
+  "snippets/skills-usage-tabs-py.mdx": "SkillsUsageTabsPy",
+  "snippets/code-samples/deepagents-sandbox-lifecycle-factory-assistant-js.mdx":
+    "DeepagentsSandboxLifecycleFactoryAssistantTs",
+  "snippets/code-samples/deepagents-sandbox-lifecycle-factory-thread-js.mdx":
+    "DeepagentsSandboxLifecycleFactoryThreadTs",
 };
+
+export function componentName(relPath: string): string {
+  return (
+    nameOverrides[relPath] ??
+    path
+      .basename(relPath, ".mdx")
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("")
+  );
+}
+
+export async function snippetPaths(): Promise<string[]> {
+  const entries = await readdir(path.join(langdocsRoot, SNIPPETS_DIR), { recursive: true });
+  return entries
+    .map((entry) => `${SNIPPETS_DIR}/${entry.split(path.sep).join("/")}`)
+    .filter((entry) => entry.endsWith(".mdx"))
+    .sort();
+}
 
 let cache: Record<string, MdxComponent> | null = null;
 
 export async function compileSnippets(): Promise<Record<string, MdxComponent>> {
   if (cache) return cache;
+  const paths = await snippetPaths();
   const entries = await Promise.all(
-    Object.entries(snippetFiles).map(async ([name, relPath]) => {
-      const raw = await readDoc(relPath);
-      const { body } = splitFrontmatter(raw);
-      const Component = await compileSource(body);
-      return [name, Component] as const;
+    paths.map(async (relPath) => {
+      const { body } = splitFrontmatter(await readDoc(relPath));
+      return [componentName(relPath), await compileSource(body)] as const;
     }),
   );
   cache = Object.fromEntries(entries);

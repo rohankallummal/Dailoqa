@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useRef, type ChangeEvent, type KeyboardEvent } from "react";
 import { Send } from "lucide-react";
+import { useComposer } from "../hooks/useComposer";
 
 export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => void; disabled?: boolean }) {
-  const [value, setValue] = useState("");
+  const { value, setValue, submit } = useComposer(onSend, disabled);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const resize = () => {
@@ -14,12 +15,8 @@ export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => v
     el.style.height = `${el.scrollHeight}px`;
   };
 
-  const submit = () => {
-    const text = value.trim();
-    if (!text || disabled) return;
-    onSend(text);
-    setValue("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  const send = () => {
+    if (submit() && textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -30,7 +27,7 @@ export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => v
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      submit();
+      send();
     }
   };
 
@@ -48,7 +45,7 @@ export function ChatComposer({ onSend, disabled }: { onSend: (text: string) => v
         />
         <button
           type="button"
-          onClick={submit}
+          onClick={send}
           disabled={disabled}
           aria-label="Send message"
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-40"

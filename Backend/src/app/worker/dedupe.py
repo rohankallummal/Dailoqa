@@ -20,19 +20,16 @@ class DedupeVerdict(BaseModel):
     confidence: float = Field(default=0.0, description="Confidence between 0 and 1 that the match is a true duplicate.")
 
 
-def build_jql(project_key: str, issue_type: str) -> str:
-    """Build a JQL query for open issues of the matching type in the project."""
-    return f'project = {project_key} AND issuetype = "{issue_type}" AND statusCategory != Done ORDER BY created DESC'
-
-
 async def find_duplicate(kind: str, ticket: dict, client=None, model=None) -> DedupeVerdict:
     """Search Jira for candidates and ask the LLM whether any is a true duplicate."""
     client = client or JiraClient()
     model = model or get_chat_model()
     issue_type = client.issue_type_for(kind)
-    candidates = await client.search_issues(
-        build_jql(client.project_key, issue_type), fields=["summary"], max_results=20
+    jql = (
+        f'project = {client.project_key} AND issuetype = "{issue_type}" '
+        "AND statusCategory != Done ORDER BY created DESC"
     )
+    candidates = await client.search_issues(jql, fields=["summary"], max_results=20)
     if not candidates:
         return DedupeVerdict(match_key=None, confidence=0.0)
     structured = model.with_structured_output(DedupeVerdict)

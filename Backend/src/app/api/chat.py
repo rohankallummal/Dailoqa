@@ -9,32 +9,26 @@ from pydantic import BaseModel
 
 from app.agent.runner import run_turn
 from app.agent.title import generate_title
+from app.api.conversations import owned_or_404
 from app.auth import AuthContext, require_auth
 from app.db.base import async_session
-from app.db.repositories import (
-    append_message,
-    create_conversation,
-    get_owned_conversation,
-    set_conversation_title,
-)
+from app.db.repositories import append_message, create_conversation, set_conversation_title
 from app.evidence.storage import normalize_manifest, validate_manifest
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
-_title_tasks: set = set()
-
-_turn_tasks: set = set()
+_tasks: set = set()
 
 _running_turns: set[str] = set()
 
 
-def _schedule_title(conversation_id: str, first_message: str) -> None:
-    """Fire-and-forget: generate and persist a title without blocking the turn."""
-    task = asyncio.create_task(_generate_and_store_title(conversation_id, first_message))
-    _title_tasks.add(task)
-    task.add_done_callback(_title_tasks.discard)
+def _spawn(coroutine) -> None:
+    """Run a coroutine detached, holding a reference so it is not garbage collected."""
+    task = asyncio.create_task(coroutine)
+    _tasks.add(task)
+    task.add_done_callback(_tasks.discard)
 
 
 async def _generate_and_store_title(conversation_id: str, first_message: str) -> None:
@@ -76,17 +70,6 @@ class SendRequest(BaseModel):
     client_environment: ClientEnvironmentInput | None = None
 
 
-async def _require_owned(conversation_id: str, user_sub: str) -> None:
-    """Reject a conversation id the caller does not own, as a 404.
-
-    The agent is keyed by ``thread_id = conversation_id``, so without this an attacker
-    could append to, resume, and confirm a paused thread belonging to someone else.
-    """
-    async with async_session() as session:
-        if await get_owned_conversation(session, conversation_id, user_sub) is None:
-            raise HTTPException(status_code=404, detail="not found")
-
-
 async def _start_turn(user_sub: str, conversation_id: str | None, surface: str, text: str) -> str:
     """Create the conversation if needed and persist the user message; return its id."""
     async with async_session() as session:
@@ -103,7 +86,6 @@ async def _finish_turn(
     user_name: str,
     conversation_id: str,
     turn_id: str,
-    surface: str,
     text: str,
     evidence: list[dict] | None,
     client_environment: dict | None,
@@ -117,19 +99,12 @@ async def _finish_turn(
     """
     try:
         await run_turn(
-            user_sub, user_name, conversation_id, turn_id, surface, text, evidence, client_environment
+            user_sub, user_name, conversation_id, turn_id, text, evidence, client_environment
         )
         if is_new:
-            _schedule_title(conversation_id, text)
+            _spawn(_generate_and_store_title(conversation_id, text))
     finally:
         _running_turns.discard(conversation_id)
-
-
-def _spawn_turn(*args) -> None:
-    """Run a turn in the background, holding a reference so it is not garbage collected."""
-    task = asyncio.create_task(_finish_turn(*args))
-    _turn_tasks.add(task)
-    task.add_done_callback(_turn_tasks.discard)
 
 
 async def accept_turn(
@@ -166,16 +141,17 @@ async def accept_turn(
     if conversation_id in _running_turns:
         raise HTTPException(status_code=409, detail="a turn is already running")
     _running_turns.add(conversation_id)
-    _spawn_turn(
-        user_sub,
-        user_name,
-        conversation_id,
-        turn_id,
-        surface,
-        text,
-        evidence,
-        client_environment,
-        is_new,
+    _spawn(
+        _finish_turn(
+            user_sub,
+            user_name,
+            conversation_id,
+            turn_id,
+            text,
+            evidence,
+            client_environment,
+            is_new,
+        )
     )
     return conversation_id, turn_id
 
@@ -194,7 +170,8 @@ async def chat_send(body: SendRequest, auth: AuthContext = Depends(require_auth)
     about what happened.
     """
     if body.conversation_id is not None:
-        await _require_owned(body.conversation_id, auth.user_sub)
+        async with async_session() as session:
+            await owned_or_404(session, body.conversation_id, auth.user_sub)
     manifest = [file.model_dump() for file in body.evidence] if body.evidence else None
     if manifest:
         if body.conversation_id is None:

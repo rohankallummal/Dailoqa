@@ -1,9 +1,12 @@
 """Middleware that advertises available skills without loading their bodies."""
 
+from pathlib import Path
+
 from langchain.agents.middleware import dynamic_prompt
 
-from app.agent.prompt import CORE_PROMPT
 from app.agent.skills import skill_descriptions
+
+CORE_PROMPT = (Path(__file__).resolve().parents[1] / "prompt.md").read_text(encoding="utf-8")
 
 
 def _skill_catalogue() -> str:

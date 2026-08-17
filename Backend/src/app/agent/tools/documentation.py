@@ -7,7 +7,8 @@ was built from and a reader can check it.
 
 from langchain.tools import tool
 
-from app.knowledge import Hit, Page, Section, outline, page, search
+from app.knowledge.bundle import Page, Section, outline, page
+from app.knowledge.search import Hit, search
 
 _PREVIEW_CHARACTERS = 600
 _SECTION_CHARACTERS = 12000

@@ -75,17 +75,6 @@ def is_unestablished(value) -> bool:
     return not normalized or normalized in _GAP_PHRASES or normalized.startswith("not established")
 
 
-def _last_refusal(messages) -> int | None:
-    """Return the index of the most recent gaps refusal, or None if there has not been one."""
-    for index in range(len(messages) - 1, -1, -1):
-        message = messages[index]
-        if getattr(message, "name", None) == "record_findings" and str(message.content).startswith(
-            GAPS_REFUSED_MARKER
-        ):
-            return index
-    return None
-
-
 def gaps_unasked(messages) -> bool:
     """Whether the agent still owes the user a question about the gaps it wants to record.
 
@@ -96,10 +85,13 @@ def gaps_unasked(messages) -> bool:
     ``interrupt``, so what the user gives them lands as a tool result rather than a human
     turn -- which is right, because neither one asks about the problem itself.
     """
-    refused_at = _last_refusal(messages)
-    if refused_at is None:
-        return True
-    return not any(isinstance(message, HumanMessage) for message in messages[refused_at + 1 :])
+    for index in range(len(messages) - 1, -1, -1):
+        message = messages[index]
+        if getattr(message, "name", None) == "record_findings" and str(message.content).startswith(
+            GAPS_REFUSED_MARKER
+        ):
+            return not any(isinstance(later, HumanMessage) for later in messages[index + 1 :])
+    return True
 
 
 def _gaps(findings: dict) -> list[str]:

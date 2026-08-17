@@ -64,13 +64,6 @@ async def _record_attempt_failure(session, job_id: str, error_text: str) -> None
         )
 
 
-async def _record_failure(maker, job_id: str, error_text: str) -> None:
-    """Record a failed attempt in its own session."""
-    async with maker() as session:
-        await _record_attempt_failure(session, job_id, error_text)
-        await session.commit()
-
-
 async def reap_stale_jobs(maker, lease_seconds: float = LEASE_SECONDS) -> int:
     """Return jobs abandoned by a dead worker to the queue; return how many were reaped.
 
@@ -117,6 +110,13 @@ async def _purge_notifications(maker) -> int:
     return removed
 
 
+_CHORES = (
+    (REAP_INTERVAL_SECONDS, reap_stale_jobs, "stale-job sweep", None),
+    (SWEEP_INTERVAL_SECONDS, _sweep_evidence, "evidence sweep", "swept %s orphaned evidence directories"),
+    (PURGE_INTERVAL_SECONDS, _purge_notifications, "notification purge", "purged %s expired notification(s)"),
+)
+
+
 async def run_one(maker, client, worker_id: str, model=None) -> bool:
     """Claim and process one job; record failure on error. Return whether a job was handled.
 
@@ -132,7 +132,9 @@ async def run_one(maker, client, worker_id: str, model=None) -> bool:
 
     error_text = await _process_claimed_job(maker, job_id, worker_id, client, model=model)
     if error_text is not None:
-        await _record_failure(maker, job_id, error_text)
+        async with maker() as session:
+            await _record_attempt_failure(session, job_id, error_text)
+            await session.commit()
     return True
 
 
@@ -148,10 +150,12 @@ async def run_forever(poll_interval: float = 2.0) -> None:
     them. A claim that committed before the failure is left running and its lease expires,
     which is what the reaper below exists to return to the queue.
 
-    Three periodic chores run alongside the drain: expired job leases are reaped,
-    evidence directories orphaned by discarded conversations are swept, and notifications
-    past their retention window are purged. LEASE_SECONDS must stay
-    comfortably above the worst-case job duration -- dedupe, issue creation, and an
+    The periodic chores in _CHORES run alongside the drain, each on its own interval:
+    expired job leases are reaped, evidence directories orphaned by discarded
+    conversations are swept, and notifications past their retention window are purged.
+    Each returns how much it did, and one carrying a done-message logs it.
+
+    LEASE_SECONDS must stay comfortably above the worst-case job duration -- dedupe, issue creation, and an
     attachment upload bounded by JiraClient._UPLOAD_TIMEOUT -- or a healthy long job is
     reaped mid-flight and re-claimed by another worker. The completion fence keeps that
     from being reported twice, but it still costs the job one of its attempts, so the
@@ -161,32 +165,19 @@ async def run_forever(poll_interval: float = 2.0) -> None:
     maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     client = JiraClient()
     worker_id = f"worker-{uuid.uuid4().hex[:8]}"
-    next_reap = 0.0
-    next_sweep = 0.0
-    next_purge = 0.0
+    due = {label: 0.0 for _, _, label, _ in _CHORES}
     while True:
-        if time.monotonic() >= next_reap:
-            next_reap = time.monotonic() + REAP_INTERVAL_SECONDS
+        for interval, chore, label, done in _CHORES:
+            if time.monotonic() < due[label]:
+                continue
+            due[label] = time.monotonic() + interval
             try:
-                await reap_stale_jobs(maker)
+                count = await chore(maker)
             except Exception as error:  # noqa: BLE001
-                logger.warning("stale-job sweep failed: %s", error)
-        if time.monotonic() >= next_sweep:
-            next_sweep = time.monotonic() + SWEEP_INTERVAL_SECONDS
-            try:
-                removed = await _sweep_evidence(maker)
-                if removed:
-                    logger.info("swept %s orphaned evidence director%s", removed, "y" if removed == 1 else "ies")
-            except Exception as error:  # noqa: BLE001
-                logger.warning("evidence sweep failed: %s", error)
-        if time.monotonic() >= next_purge:
-            next_purge = time.monotonic() + PURGE_INTERVAL_SECONDS
-            try:
-                purged = await _purge_notifications(maker)
-                if purged:
-                    logger.info("purged %s expired notification(s)", purged)
-            except Exception as error:  # noqa: BLE001
-                logger.warning("notification purge failed: %s", error)
+                logger.warning("%s failed: %s", label, error)
+                continue
+            if done and count:
+                logger.info(done, count)
         try:
             handled = await run_one(maker, client, worker_id)
         except Exception as error:  # noqa: BLE001

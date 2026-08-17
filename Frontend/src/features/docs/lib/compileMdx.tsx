@@ -33,7 +33,7 @@ const runtime = {
   jsxs: jsxRuntime.jsxs,
 };
 
-const langdocsRoot = path.join(
+export const langdocsRoot = path.join(
   process.cwd(),
   "src",
   "features",

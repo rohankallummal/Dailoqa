@@ -7,10 +7,7 @@ from app.db.models import Conversation, Job, Message, Ticket, TicketReporter
 ACTIVE_JOB_STATUSES = ("queued", "running")
 
 STAGE_INPUT_STATES = {
-    "reply": "open",
-    "error": "open",
     "evidence": "awaiting_evidence",
-    "steps": "open",
     "confirm": "awaiting_confirm",
 }
 
@@ -150,9 +147,10 @@ async def get_input_state(session, conversation_id: str) -> str:
     A job still in flight outranks everything: the confirmed turn writes no message, so
     the confirmation prompt remains the latest assistant message while the worker runs.
 
-    Every stage a turn can persist is spelled out in STAGE_INPUT_STATES. The default
-    survives for a stage added without one, and resolves it to an open composer rather
-    than a locked one, so an unregistered stage strands nobody.
+    STAGE_INPUT_STATES holds only the stages that suspend the composer. Everything else --
+    the reply, steps, and error stages a turn can persist, and any stage added later --
+    falls to the default and resolves to an open composer rather than a locked one, so an
+    unregistered stage strands nobody.
     """
     if await has_active_job(session, conversation_id):
         return "pending"

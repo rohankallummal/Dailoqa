@@ -13,21 +13,6 @@ function normalize(cols: number | string | undefined): number {
   return 2;
 }
 
-function Grid({
-  cols,
-  children,
-}: {
-  cols?: number | string;
-  children: ReactNode;
-}) {
-  const count = normalize(cols);
-  return (
-    <div className={`my-5 grid grid-cols-1 gap-4 ${columnClasses[count]}`}>
-      {children}
-    </div>
-  );
-}
-
 export function AccordionGroup({ children }: { children: ReactNode }) {
   return <div className="my-4">{children}</div>;
 }
@@ -39,5 +24,9 @@ export function CardGroup({
   cols?: number | string;
   children: ReactNode;
 }) {
-  return <Grid cols={cols}>{children}</Grid>;
+  return (
+    <div className={`my-5 grid grid-cols-1 gap-4 ${columnClasses[normalize(cols)]}`}>
+      {children}
+    </div>
+  );
 }

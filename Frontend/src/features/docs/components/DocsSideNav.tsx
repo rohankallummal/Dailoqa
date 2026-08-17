@@ -1,29 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSelectedLayoutSegment } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { docsSideNav, type DocsSideNavItem } from "../lib/docsNavConfig";
 import { LanguageSelect } from "./LanguageSelect";
 
 function NavItem({ item, active }: { item: DocsSideNavItem; active: boolean }) {
-  const base = "block rounded-lg px-3 py-1.5 text-sm transition-colors";
-
-  if (!item.href) {
-    return (
-      <span
-        aria-disabled
-        className={`${base} cursor-default text-ink-muted/50`}
-      >
-        {item.label}
-      </span>
-    );
-  }
-
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`${base} ${
+      className={`block rounded-lg px-3 py-1.5 text-sm transition-colors ${
         active
           ? "bg-accent/10 font-medium text-accent"
           : "text-ink-soft hover:bg-page hover:text-ink"
@@ -35,9 +22,8 @@ function NavItem({ item, active }: { item: DocsSideNavItem; active: boolean }) {
 }
 
 export function DocsSideNav() {
-  const segment = useSelectedLayoutSegment();
   const pathname = usePathname();
-  const section = segment ? docsSideNav[segment] : undefined;
+  const section = docsSideNav[pathname.split("/")[2] ?? ""];
 
   if (!section) return null;
 

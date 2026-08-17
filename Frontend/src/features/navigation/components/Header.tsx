@@ -1,7 +1,6 @@
 import { AskAiButton } from "@/features/chat";
 import { NotificationBell } from "@/features/notifications";
 import { SearchBar } from "./SearchBar";
-import { SearchHint } from "./SearchHint";
 
 export function Header() {
   return (
@@ -9,7 +8,7 @@ export function Header() {
       <div className="flex items-center gap-3">
         <AskAiButton />
 
-        <SearchBar hint={<SearchHint />} />
+        <SearchBar />
 
         <NotificationBell />
       </div>

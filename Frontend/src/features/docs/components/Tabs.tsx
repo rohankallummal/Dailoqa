@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  Children,
-  isValidElement,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import type { ReactNode } from "react";
+import { useTabbedChildren } from "../lib/tabbedChildren";
 
 type TabProps = {
   title?: string;
@@ -18,15 +13,9 @@ export function Tab({ children }: TabProps) {
 }
 
 export function Tabs({ children }: { children: ReactNode }) {
-  const tabs = Children.toArray(children).filter((child) =>
-    isValidElement(child),
-  ) as ReactElement<TabProps>[];
-
-  const [active, setActive] = useState(0);
+  const { tabs, current, setActive } = useTabbedChildren<TabProps>(children);
 
   if (tabs.length === 0) return null;
-
-  const current = Math.min(active, tabs.length - 1);
 
   return (
     <div className="my-4">

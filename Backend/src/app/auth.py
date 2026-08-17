@@ -1,7 +1,6 @@
 """Verification of the short-lived service JWT minted by the frontend."""
 
 import logging
-import time
 
 import jwt
 from fastapi import Header, HTTPException
@@ -20,7 +19,6 @@ class AuthContext(BaseModel):
     """Identity derived from a verified service JWT."""
 
     user_sub: str
-    user_id: str
     user_name: str
 
 
@@ -35,8 +33,8 @@ def verify_service_token(token: str) -> AuthContext:
 
     Leeway absorbs clock drift between the frontend that mints the token and this
     process. Tokens live two minutes, and without leeway a container running even a few
-    seconds ahead of its host rejects tokens that were valid when issued -- the cause of
-    the intermittent 401 bursts _reject_reason was added to diagnose.
+    seconds ahead of its host rejects tokens that were valid when issued, which is what
+    the intermittent 401 bursts turned out to be.
     """
     payload = jwt.decode(
         token,
@@ -48,26 +46,8 @@ def verify_service_token(token: str) -> AuthContext:
     )
     return AuthContext(
         user_sub=payload["sub"],
-        user_id=payload["userId"],
         user_name=payload.get("name") or payload["sub"],
     )
-
-
-def _reject_reason(token: str) -> str:
-    """Describe a rejected token's timing and audience claims, without verifying it.
-
-    TEMPORARY DIAGNOSTIC for intermittent 401 bursts. The signature is deliberately not
-    checked here -- the caller has already established the token is invalid, and the goal
-    is to learn why. The token itself is never logged, only its claims.
-    """
-    try:
-        claims = jwt.decode(token, options={"verify_signature": False, "verify_aud": False})
-    except jwt.InvalidTokenError:
-        return "claims unreadable"
-    now = int(time.time())
-    exp = claims.get("exp")
-    overdue = f"{now - exp}s" if isinstance(exp, int) else "n/a"
-    return f"now={now} iat={claims.get('iat')} exp={exp} expired_by={overdue} aud={claims.get('aud')}"
 
 
 async def require_auth(authorization: str | None = Header(default=None)) -> AuthContext:
@@ -79,5 +59,5 @@ async def require_auth(authorization: str | None = Header(default=None)) -> Auth
     try:
         return verify_service_token(token)
     except jwt.InvalidTokenError as error:
-        logger.warning("auth 401: %s (%s); %s", type(error).__name__, error, _reject_reason(token))
+        logger.warning("auth 401: %s (%s)", type(error).__name__, error)
         raise HTTPException(status_code=401, detail="invalid token") from error

@@ -7,6 +7,12 @@ from app.worker.notify import deliver_result
 from app.worker.outcome import ALREADY_REPORTED, outcome_body
 from app.worker.queue import complete_job
 
+_NOTIFICATIONS = {
+    "already_reported": ("ticket_already_reported", "Already reported"),
+    "create": ("ticket_created", "Ticket created"),
+    "link": ("ticket_linked", "Linked to existing"),
+}
+
 
 async def _resolve_ticket(session, job, client, model) -> tuple[str, str]:
     """Return the (jira_key, action) for a job, resuming a prior run when anchored.
@@ -50,19 +56,11 @@ async def process_job(session, job, client, model=None, worker_id: str | None = 
     key, action = await _resolve_ticket(session, job, client, model)
     if not await complete_job(session, job.id, worker_id):
         return False
+    kind = job.payload["kind"]
     if action == "already_reported":
-        await deliver_result(
-            session,
-            job,
-            "ticket_already_reported",
-            "Already reported",
-            ALREADY_REPORTED[job.payload["kind"]],
-            key,
-        )
-        return True
-    body = await outcome_body(job.payload["kind"], action, key)
-    if action == "create":
-        await deliver_result(session, job, "ticket_created", "Ticket created", body, key)
+        body = ALREADY_REPORTED[kind]
     else:
-        await deliver_result(session, job, "ticket_linked", "Linked to existing", body, key)
+        body = await outcome_body(kind, action, key)
+    notification_type, title = _NOTIFICATIONS[action]
+    await deliver_result(session, job, notification_type, title, body, key)
     return True

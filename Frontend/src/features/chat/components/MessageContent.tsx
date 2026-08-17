@@ -1,12 +1,23 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { balanceCodeFences } from "../lib/markdown";
 import { InsideCodeBlock, MessageCodeBlock, useInsideCodeBlock } from "./MessageCodeBlock";
+
+type MarkdownProps = ComponentProps<typeof ReactMarkdown>;
+
+const THROTTLE_MS = 60;
+
+const remarkPlugins: MarkdownProps["remarkPlugins"] = [remarkGfm];
+
+const rehypePlugins: MarkdownProps["rehypePlugins"] = [
+  [rehypeSanitize, defaultSchema],
+  rehypeHighlight,
+];
 
 const components: Components = {
   pre: ({ node, children }) => <MessageCodeBlock node={node}>{children}</MessageCodeBlock>,
@@ -63,24 +74,48 @@ function InlineOrBlockCode({
   );
 }
 
-export const MessageContent = memo(function MessageContent({ content }: { content: string }) {
+const MarkdownBody = memo(function MarkdownBody({ content }: { content: string }) {
   const prepared = useMemo(() => balanceCodeFences(content), [content]);
-  const rendered = useMemo(
-    () => (
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeSanitize, defaultSchema], rehypeHighlight]}
-        components={components}
-      >
-        {prepared}
-      </ReactMarkdown>
-    ),
-    [prepared],
+
+  return (
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={components}
+    >
+      {prepared}
+    </ReactMarkdown>
   );
+});
+
+function useThrottledContent(content: string, intervalMs: number): string {
+  const [shown, setShown] = useState(content);
+  const latest = useRef(content);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    latest.current = content;
+  }, [content]);
+
+  useEffect(() => {
+    if (content === shown || timer.current !== undefined) return;
+    timer.current = setTimeout(() => {
+      timer.current = undefined;
+      setShown(latest.current);
+    }, intervalMs);
+  }, [content, shown, intervalMs]);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  return shown;
+}
+
+export const MessageContent = memo(function MessageContent({ content }: { content: string }) {
+  const shown = useThrottledContent(content, THROTTLE_MS);
 
   return (
     <div className="chatMarkdown max-w-[70ch] leading-[1.6] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-      {rendered}
+      <MarkdownBody content={shown} />
     </div>
   );
 });

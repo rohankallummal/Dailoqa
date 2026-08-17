@@ -2,17 +2,13 @@
 
 import { useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { useLanguage, type DocsLanguage } from "./LanguageProvider";
-
-const options: { label: string; value: DocsLanguage }[] = [
-  { label: "Python", value: "python" },
-  { label: "TypeScript", value: "js" },
-];
+import { LANGUAGE_OPTIONS, useLanguage } from "../lib/language";
 
 export function LanguageSelect() {
   const { lang, setLang } = useLanguage();
   const [open, setOpen] = useState(false);
-  const selected = options.find((option) => option.value === lang) ?? options[0];
+  const selected =
+    LANGUAGE_OPTIONS.find((option) => option.value === lang) ?? LANGUAGE_OPTIONS[0];
 
   return (
     <div className="px-3">
@@ -31,7 +27,7 @@ export function LanguageSelect() {
       </button>
       {open ? (
         <ul className="mt-1 overflow-hidden rounded-lg border border-line bg-white py-1">
-          {options.map((option) => {
+          {LANGUAGE_OPTIONS.map((option) => {
             const active = option.value === lang;
             return (
               <li key={option.value}>

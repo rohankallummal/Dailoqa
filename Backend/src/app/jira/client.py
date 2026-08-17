@@ -1,7 +1,5 @@
 """Async Jira Cloud client routed through the scoped-token endpoint."""
 
-from pathlib import Path
-
 import httpx
 
 from app.config import Settings, get_settings
@@ -26,9 +24,6 @@ class JiraClient:
         self.issue_type_feature = settings.jira_issue_type_feature
         self._cloud_id: str | None = None
 
-    def _auth(self) -> tuple[str, str]:
-        return (self._email or "", self._token or "")
-
     async def resolve_cloud_id(self) -> str:
         """Resolve and cache the site's cloudId via the unauthenticated tenant_info endpoint."""
         if self._cloud_id is None:
@@ -48,7 +43,8 @@ class JiraClient:
         """Send an authenticated request to the scoped Jira API and raise on error."""
         base = await self._api_base()
         async with httpx.AsyncClient(timeout=timeout) as http:
-            response = await http.request(method, f"{base}{path}", auth=self._auth(), **kwargs)
+            auth = (self._email or "", self._token or "")
+            response = await http.request(method, f"{base}{path}", auth=auth, **kwargs)
             response.raise_for_status()
             return response
 
@@ -110,53 +106,34 @@ class JiraClient:
         update = {"labels": [{"add": label} for label in labels]}
         await self._request("PUT", f"/issue/{issue_key}", json={"update": update})
 
-    async def add_named_attachments(self, issue_key: str, items: list[tuple[str, Path]]) -> list[str]:
-        """Upload files under explicit names and return the filenames Jira accepted.
+    async def add_attachments(self, issue_key: str, files: list[tuple[str, bytes]]) -> None:
+        """Upload files to an issue under explicit ``(name, content)`` pairs.
 
-        The name is passed separately from the path because the link path renames a
-        reporter's evidence to match their Affected Users row.
+        The name is passed separately from the content because the link path renames a
+        reporter's evidence to match their Affected Users row, and the Affected Users
+        workbook is generated per link and never touches disk.
 
         Jira rejects multipart uploads without the X-Atlassian-Token: no-check header.
         """
-        if not items:
-            return []
-        files = [("file", (name, path.read_bytes())) for name, path in items]
-        response = await self._request(
-            "POST",
-            f"/issue/{issue_key}/attachments",
-            timeout=_UPLOAD_TIMEOUT,
-            files=files,
-            headers={"X-Atlassian-Token": "no-check"},
-        )
-        return [item["filename"] for item in response.json()]
-
-    async def add_attachment_bytes(self, issue_key: str, filename: str, data: bytes) -> None:
-        """Upload one in-memory file to an issue.
-
-        The Affected Users workbook is generated per link and never touches disk, so it
-        has no path for add_named_attachments to take.
-        """
+        if not files:
+            return
         await self._request(
             "POST",
             f"/issue/{issue_key}/attachments",
             timeout=_UPLOAD_TIMEOUT,
-            files=[("file", (filename, data))],
+            files=[("file", item) for item in files],
             headers={"X-Atlassian-Token": "no-check"},
         )
 
     async def list_attachments(self, issue_key: str) -> list[dict]:
-        """Return the issue's attachments as {"id", "filename"} entries."""
-        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
-        attachments = response.json().get("fields", {}).get("attachment") or []
-        return [{"id": item["id"], "filename": item["filename"]} for item in attachments]
-
-    async def list_attachment_filenames(self, issue_key: str) -> set[str]:
-        """Return the filenames already attached to an issue.
+        """Return the issue's attachments as {"id", "filename"} entries.
 
         Lets a retried job skip what a previous attempt already uploaded instead of
         duplicating it.
         """
-        return {item["filename"] for item in await self.list_attachments(issue_key)}
+        response = await self._request("GET", f"/issue/{issue_key}", params={"fields": "attachment"})
+        attachments = response.json().get("fields", {}).get("attachment") or []
+        return [{"id": item["id"], "filename": item["filename"]} for item in attachments]
 
     async def delete_attachment(self, attachment_id: str) -> None:
         """Delete one attachment, tolerating an id Jira no longer holds.

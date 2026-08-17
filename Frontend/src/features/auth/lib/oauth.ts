@@ -1,8 +1,16 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { getGoogleCredentials } from "./googleCredentials";
+import { getAppUrl, getGoogleClientId, getGoogleClientSecret } from "./env";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+
+function getGoogleCredentials() {
+  return {
+    clientId: getGoogleClientId(),
+    clientSecret: getGoogleClientSecret(),
+    redirectUri: `${getAppUrl()}/api/auth/callback/google`,
+  };
+}
 
 export function buildAuthorizationUrl(state: string): string {
   const { clientId, redirectUri } = getGoogleCredentials();

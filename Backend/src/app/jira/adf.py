@@ -29,20 +29,15 @@ def _paragraph(text: str) -> dict:
     return {"type": "paragraph", "content": [{"type": "text", "text": str(text)}]}
 
 
-def _bullet_list(lines: list[str]) -> dict:
-    """Build a bulleted list node from non-empty lines."""
+def _list(node_type: str, lines: list[str], attrs: dict | None = None) -> dict:
+    """Build a list node of the given type from non-empty lines."""
     items = [
         {"type": "listItem", "content": [_paragraph(line)]} for line in lines if str(line).strip()
     ]
-    return {"type": "bulletList", "content": items}
-
-
-def _ordered_list(lines: list[str]) -> dict:
-    """Build a numbered list node from non-empty lines."""
-    items = [
-        {"type": "listItem", "content": [_paragraph(line)]} for line in lines if str(line).strip()
-    ]
-    return {"type": "orderedList", "attrs": {"order": 1}, "content": items}
+    node = {"type": node_type, "content": items}
+    if attrs:
+        node["attrs"] = attrs
+    return node
 
 
 def _text_section(title: str, body: str) -> list[dict]:
@@ -54,7 +49,8 @@ def _environment_section(environment: dict) -> list[dict]:
     """Build the Client Environment heading and its labelled bullet list."""
     return [
         _heading("Client Environment"),
-        _bullet_list(
+        _list(
+            "bulletList",
             [
                 f"Device: {environment.get('device') or 'Unknown'}",
                 f"Browser: {environment.get('browser') or 'Unknown'}",
@@ -68,10 +64,11 @@ def _reporter_section(title: str, reporter: dict) -> list[dict]:
     """Build a Reported By / Requested by heading and its identity bullets."""
     return [
         _heading(title),
-        _bullet_list(
+        _list(
+            "bulletList",
             [
-                f"Google OAuth Name: {reporter.get('name') or 'Unknown'}",
-                f"Google OAuth ID: {reporter.get('oauth_id') or 'Unknown'}",
+                f"Name: {reporter.get('name') or 'Unknown'}",
+                f"ID: {reporter.get('oauth_id') or 'Unknown'}",
             ]
         ),
     ]
@@ -93,7 +90,7 @@ def build_bug_document(ticket: dict, client_environment: dict, reporter: dict) -
     content.extend(_environment_section(client_environment or {}))
     steps = ticket.get("steps_to_reproduce") or []
     if steps:
-        content.extend([_heading("Steps to Reproduce"), _ordered_list(steps)])
+        content.extend([_heading("Steps to Reproduce"), _list("orderedList", steps, {"order": 1})])
     content.extend(_reporter_section("Reported By", reporter or {}))
     return {"type": "doc", "version": 1, "content": content}
 

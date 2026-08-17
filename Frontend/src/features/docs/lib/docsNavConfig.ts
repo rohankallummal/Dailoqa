@@ -12,8 +12,8 @@ export const docsNavItems: DocsNavItem[] = [
 
 export type DocsSideNavItem = {
   label: string;
-  href?: string;
-  source?: string;
+  href: string;
+  source: string;
 };
 
 type DocsSideNavSection = {
@@ -132,9 +132,15 @@ export const docsSideNav: Record<string, DocsSideNavSection> = {
   },
 };
 
+export const docsPages: DocsSideNavItem[] = Object.values(docsSideNav).flatMap((section) => [
+  ...section.primary,
+  ...section.pages,
+]);
+
 export const docsSourceHrefs: Record<string, string> = Object.fromEntries(
-  Object.values(docsSideNav)
-    .flatMap((section) => [...section.primary, ...section.pages])
-    .filter((item) => item.href && item.source)
-    .map((item) => [item.source as string, item.href as string]),
+  docsPages.map((item) => [item.source, item.href]),
+);
+
+export const docsPageSources: Record<string, string> = Object.fromEntries(
+  docsPages.map((item) => [item.href, `${item.source.replace("/oss/", "")}.mdx`]),
 );

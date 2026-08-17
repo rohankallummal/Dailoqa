@@ -26,6 +26,18 @@ type Viewport = {
 const EMPTY_GEOMETRY: Geometry = { anchors: [], scrollHeight: 0, clientHeight: 0 };
 const FULL_VIEWPORT: Viewport = { start: 0, size: 1 };
 
+function sameAnchors(left: MessageAnchor[], right: MessageAnchor[]) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (anchor, index) =>
+        anchor.id === right[index].id &&
+        anchor.top === right[index].top &&
+        anchor.preview === right[index].preview,
+    )
+  );
+}
+
 function whenScrollSettles(element: HTMLElement, done: () => void) {
   let idle: ReturnType<typeof setTimeout>;
   let finished = false;
@@ -78,10 +90,11 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
     if (!scroller) return;
     const { scrollTop, scrollHeight, clientHeight } = scroller;
     const scrollable = Math.max(1, scrollHeight - clientHeight);
-    setViewport({
-      start: scrollTop / Math.max(1, scrollHeight),
-      size: Math.min(1, clientHeight / Math.max(1, scrollHeight)),
-    });
+    const start = scrollTop / Math.max(1, scrollHeight);
+    const size = Math.min(1, clientHeight / Math.max(1, scrollHeight));
+    setViewport((previous) =>
+      previous.start === start && previous.size === size ? previous : { start, size },
+    );
     if (suppressed.current) return;
     const atBottom = scrollTop >= scrollable - BOTTOM_EPSILON;
     setActiveId(resolveActiveId(anchorsRef.current, scrollTop + clientHeight * READING_LINE, atBottom));
@@ -105,11 +118,14 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
     });
 
     anchorsRef.current = anchors;
-    setGeometry({
-      anchors,
-      scrollHeight: scroller.scrollHeight,
-      clientHeight: scroller.clientHeight,
-    });
+    const { scrollHeight, clientHeight } = scroller;
+    setGeometry((previous) =>
+      previous.scrollHeight === scrollHeight &&
+      previous.clientHeight === clientHeight &&
+      sameAnchors(previous.anchors, anchors)
+        ? previous
+        : { anchors, scrollHeight, clientHeight },
+    );
     sync();
   }, [scroller, sync]);
 
@@ -137,7 +153,7 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
 
   useEffect(() => {
     scheduleMeasure();
-  }, [messages, scheduleMeasure]);
+  }, [messages.length, scheduleMeasure]);
 
   useEffect(() => {
     if (!scroller) return;

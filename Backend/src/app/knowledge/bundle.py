@@ -70,7 +70,10 @@ class Page:
 
 
 def split_frontmatter(text: str) -> tuple[dict, str]:
-    """Split a concept file into its parsed frontmatter mapping and its body."""
+    """Split a Markdown file into its parsed frontmatter mapping and its body.
+
+    Shared with the agent's SKILL.md loader, which uses the same file shape.
+    """
     if not text.startswith(_DELIMITER):
         return {}, text
     parts = text.split(_DELIMITER, 2)
@@ -134,7 +137,7 @@ def _anchors(body: str) -> list[tuple[int, int, str, str]]:
 
 def _sections(body: str, meta: dict, path: str) -> tuple[Section, ...]:
     """Split a page body into its lead passage and one passage per H2 or H3."""
-    lines = [line for _, line in prose_lines(body)]
+    lines = body.split("\n")
     headings = _anchors(body)
     boundaries = [index for index, _, _, _ in headings]
     title = str(meta.get("title") or path)

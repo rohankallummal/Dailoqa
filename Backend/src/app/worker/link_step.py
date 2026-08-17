@@ -46,7 +46,7 @@ async def _replace_spreadsheet(client, issue_key: str, rows: list[dict]) -> None
     for attachment in await client.list_attachments(issue_key):
         if attachment["filename"] == AFFECTED_USERS_FILENAME:
             await client.delete_attachment(attachment["id"])
-    await client.add_attachment_bytes(issue_key, AFFECTED_USERS_FILENAME, build_workbook(rows))
+    await client.add_attachments(issue_key, [(AFFECTED_USERS_FILENAME, build_workbook(rows))])
 
 
 async def update_affected_users(session, client, ticket_id: str, issue_key: str) -> None:

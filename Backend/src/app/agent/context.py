@@ -15,6 +15,5 @@ class TurnContext:
 
     user_sub: str
     conversation_id: str
-    surface: str
     reporter_name: str
     client_environment: dict = field(default_factory=dict)

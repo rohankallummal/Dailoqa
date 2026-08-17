@@ -12,7 +12,6 @@ import type { ReactNode } from "react";
 
 type ChatPanelContextValue = {
   open: boolean;
-  openPanel: () => void;
   closePanel: () => void;
   togglePanel: () => void;
 };
@@ -22,7 +21,6 @@ const ChatPanelContext = createContext<ChatPanelContextValue | null>(null);
 export function ChatPanelProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
-  const openPanel = useCallback(() => setOpen(true), []);
   const closePanel = useCallback(() => setOpen(false), []);
   const togglePanel = useCallback(() => setOpen((previous) => !previous), []);
 
@@ -36,8 +34,8 @@ export function ChatPanelProvider({ children }: { children: ReactNode }) {
   }, [open]);
 
   const value = useMemo(
-    () => ({ open, openPanel, closePanel, togglePanel }),
-    [open, openPanel, closePanel, togglePanel],
+    () => ({ open, closePanel, togglePanel }),
+    [open, closePanel, togglePanel],
   );
 
   return (

@@ -3,10 +3,9 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
 from app.api import chat, conversations, events, jira_webhook, notifications
-from app.auth import AuthContext, require_auth
 from app.db.base import async_session
 from app.sse.backplane import run_listener
 
@@ -37,9 +36,3 @@ app.include_router(jira_webhook.router)
 async def health() -> dict[str, str]:
     """Liveness probe."""
     return {"status": "ok"}
-
-
-@app.get("/me")
-async def me(auth: AuthContext = Depends(require_auth)) -> dict[str, str]:
-    """Return the identity derived from the caller's service JWT."""
-    return {"user_sub": auth.user_sub, "user_id": auth.user_id}

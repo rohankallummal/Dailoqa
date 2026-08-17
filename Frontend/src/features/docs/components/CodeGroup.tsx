@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  Children,
-  cloneElement,
-  isValidElement,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { cloneElement, type ReactNode } from "react";
+import { useTabbedChildren } from "../lib/tabbedChildren";
 
 type CodeBlockProps = {
   language?: string;
@@ -17,16 +11,10 @@ type CodeBlockProps = {
 };
 
 export function CodeGroup({ children }: { children: ReactNode }) {
-  const blocks = Children.toArray(children).filter((child) =>
-    isValidElement(child),
-  ) as ReactElement<CodeBlockProps>[];
-
-  const [active, setActive] = useState(0);
+  const { tabs: blocks, current, setActive } = useTabbedChildren<CodeBlockProps>(children);
 
   if (blocks.length === 0) return null;
   if (blocks.length === 1) return <>{blocks[0]}</>;
-
-  const current = Math.min(active, blocks.length - 1);
 
   return (
     <div className="my-4 overflow-hidden rounded-xl border border-line bg-[#1e2230]">

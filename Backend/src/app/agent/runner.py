@@ -165,7 +165,6 @@ async def run_turn(
     user_name: str,
     conversation_id: str,
     turn_id: str,
-    surface: str,
     text: str,
     evidence: list[dict] | None = None,
     client_environment: dict | None = None,
@@ -175,7 +174,6 @@ async def run_turn(
     context = TurnContext(
         user_sub=user_sub,
         conversation_id=conversation_id,
-        surface=surface,
         reporter_name=user_name,
         client_environment=client_environment or {},
     )

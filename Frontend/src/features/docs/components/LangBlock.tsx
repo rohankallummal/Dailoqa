@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useLanguage, type DocsLanguage } from "./LanguageProvider";
+import { useLanguage, type DocsLanguage } from "../lib/language";
 
 export function LangBlock({
   lang,

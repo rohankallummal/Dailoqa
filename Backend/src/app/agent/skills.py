@@ -8,22 +8,9 @@ so the per-turn prompt stays the same size no matter how many skills exist.
 from functools import lru_cache
 from pathlib import Path
 
-import yaml
+from app.knowledge.bundle import split_frontmatter
 
 SKILLS_ROOT = Path(__file__).resolve().parents[3] / "skills"
-
-_DELIMITER = "---"
-
-
-def _split(text: str) -> tuple[dict, str]:
-    """Split a SKILL.md into its parsed frontmatter mapping and its body."""
-    if not text.startswith(_DELIMITER):
-        return {}, text
-    parts = text.split(_DELIMITER, 2)
-    if len(parts) < 3:
-        return {}, text
-    meta = yaml.safe_load(parts[1]) or {}
-    return (meta if isinstance(meta, dict) else {}), parts[2].lstrip("\n")
 
 
 @lru_cache
@@ -31,7 +18,7 @@ def _registry() -> dict[str, tuple[str, Path]]:
     """Map skill name to its description and file path, scanning the skills tree once."""
     found: dict[str, tuple[str, Path]] = {}
     for path in sorted(SKILLS_ROOT.glob("*/SKILL.md")):
-        meta, _ = _split(path.read_text(encoding="utf-8"))
+        meta, _ = split_frontmatter(path.read_text(encoding="utf-8"))
         name = meta.get("name")
         description = meta.get("description")
         if not name or not description:
@@ -51,4 +38,4 @@ def skill_body(name: str) -> str:
     entry = _registry().get(name)
     if entry is None:
         raise KeyError(name)
-    return _split(entry[1].read_text(encoding="utf-8"))[1]
+    return split_frontmatter(entry[1].read_text(encoding="utf-8"))[1]

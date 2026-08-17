@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, LogOut } from "lucide-react";
 import { navSections } from "../lib/navConfig";
-import { NavIcon, Chevron, LogoutIcon } from "./icons";
+import { NavIcon } from "./icons";
 import { Logo } from "@/shared/ui";
 import { signOut } from "@/features/auth/lib/signOut";
 import { useChatPanel } from "@/features/chat";
@@ -99,7 +100,7 @@ export function Sidebar({ userName }: { userName: string }) {
                 collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
               }`}
             >
-              <LogoutIcon className="h-[18px] w-[18px] shrink-0" />
+              <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
               {!collapsed && "Log out"}
             </button>
           </div>
@@ -126,10 +127,11 @@ export function Sidebar({ userName }: { userName: string }) {
                   {profileRole}
                 </span>
               </div>
-              <Chevron
-                direction={menuOpen ? "up" : "down"}
-                className="ml-auto h-4 w-4 flex-shrink-0 text-ink-muted"
-              />
+              {menuOpen ? (
+                <ChevronUp className="ml-auto h-4 w-4 flex-shrink-0 text-ink-muted" />
+              ) : (
+                <ChevronDown className="ml-auto h-4 w-4 flex-shrink-0 text-ink-muted" />
+              )}
             </>
           )}
         </button>

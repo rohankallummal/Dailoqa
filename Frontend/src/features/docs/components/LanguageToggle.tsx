@@ -1,18 +1,13 @@
 "use client";
 
-import { useLanguage, type DocsLanguage } from "./LanguageProvider";
-
-const options: { label: string; value: DocsLanguage }[] = [
-  { label: "Python", value: "python" },
-  { label: "TypeScript", value: "js" },
-];
+import { LANGUAGE_OPTIONS, useLanguage } from "../lib/language";
 
 export function LanguageToggle() {
   const { lang, setLang } = useLanguage();
 
   return (
     <div className="flex gap-6 border-b border-line">
-      {options.map((option) => {
+      {LANGUAGE_OPTIONS.map((option) => {
         const isActive = option.value === lang;
         return (
           <button
