@@ -14,7 +14,6 @@ const MAX_RAIL_HEIGHT = 260;
 const PANEL_RATIO = 0.7;
 const MIN_PANEL_HEIGHT = 220;
 const MAX_PANEL_HEIGHT = 420;
-const MIN_THUMB_HEIGHT = 10;
 const ROW_PREFIX = "conversation-navigator-row";
 
 function fit(value: number, min: number, max: number) {
@@ -30,8 +29,10 @@ export function ConversationNavigator({
 }) {
   const reducedMotion = useReducedMotion();
   const hasHover = useMediaQuery(HOVER_QUERY);
-  const { anchors, scrollHeight, clientHeight, scrollable, activeId, viewport, jumpTo } =
-    useConversationMap(scroller, messages);
+  const { anchors, clientHeight, scrollable, activeId, jumpTo } = useConversationMap(
+    scroller,
+    messages,
+  );
 
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
@@ -83,13 +84,7 @@ export function ConversationNavigator({
   const railHeight = fit(clientHeight * RAIL_RATIO, MIN_RAIL_HEIGHT, MAX_RAIL_HEIGHT);
   const panelHeight = fit(clientHeight * PANEL_RATIO, MIN_PANEL_HEIGHT, MAX_PANEL_HEIGHT);
 
-  const markers = useMemo(
-    () => buildMarkers({ anchors, scrollHeight, railHeight, activeId }),
-    [anchors, scrollHeight, railHeight, activeId],
-  );
-
-  const thumbHeight = fit(viewport.size * railHeight, MIN_THUMB_HEIGHT, railHeight);
-  const thumbTop = fit(viewport.start * railHeight, 0, railHeight - thumbHeight);
+  const markers = useMemo(() => buildMarkers({ anchors, activeId }), [anchors, activeId]);
 
   const moveCursor = (index: number) => {
     const target = anchors[Math.min(anchors.length - 1, Math.max(0, index))];
@@ -156,9 +151,6 @@ export function ConversationNavigator({
               animation: reducedMotion ? undefined : "conversationNavigatorIn 160ms ease-out",
             }}
           >
-            <p className="flex-shrink-0 border-b border-line px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-muted">
-              Jump to message
-            </p>
             <div
               ref={listRef}
               role="listbox"
@@ -183,7 +175,7 @@ export function ConversationNavigator({
                       if (!hasHover) close();
                     }}
                     onMouseEnter={() => setCursorId(anchor.id)}
-                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors duration-200 motion-reduce:transition-none ${
+                    className={`cursor-pointer truncate rounded-lg px-2.5 py-2 text-[13px] transition-colors duration-200 motion-reduce:transition-none ${
                       isActive
                         ? "bg-active font-medium text-accent"
                         : isCursor
@@ -191,13 +183,7 @@ export function ConversationNavigator({
                           : "text-ink-soft"
                     }`}
                   >
-                    <span
-                      aria-hidden="true"
-                      className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${
-                        anchor.role === "user" ? "bg-accent" : "bg-ink-muted"
-                      } ${isActive ? "" : "opacity-70"}`}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{anchor.preview}</span>
+                    {anchor.preview}
                   </div>
                 );
               })}
@@ -222,22 +208,16 @@ export function ConversationNavigator({
             setPinned(true);
             requestAnimationFrame(() => listRef.current?.focus());
           }}
-          className="absolute inset-0 rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="absolute inset-0 flex flex-col items-end justify-center gap-1 rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-          <span
-            aria-hidden="true"
-            className="absolute right-0 rounded-full bg-accent/15"
-            style={{ top: thumbTop, height: thumbHeight, width: MARKER_WIDTH }}
-          />
           {markers.map((marker) => (
             <span
               key={marker.key}
               aria-hidden="true"
-              className={`absolute right-0 rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${
+              className={`flex-shrink-0 rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none ${
                 marker.active ? "bg-accent" : "bg-ink-muted/50"
               }`}
               style={{
-                top: marker.top,
                 height: MARKER_HEIGHT,
                 width: marker.active ? MARKER_WIDTH : MARKER_WIDTH - 4,
               }}

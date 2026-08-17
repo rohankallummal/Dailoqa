@@ -18,13 +18,7 @@ type Geometry = {
   clientHeight: number;
 };
 
-type Viewport = {
-  start: number;
-  size: number;
-};
-
 const EMPTY_GEOMETRY: Geometry = { anchors: [], scrollHeight: 0, clientHeight: 0 };
-const FULL_VIEWPORT: Viewport = { start: 0, size: 1 };
 
 function sameAnchors(left: MessageAnchor[], right: MessageAnchor[]) {
   return (
@@ -67,7 +61,6 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
   const reducedMotion = useReducedMotion();
   const [geometry, setGeometry] = useState<Geometry>(EMPTY_GEOMETRY);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [viewport, setViewport] = useState<Viewport>(FULL_VIEWPORT);
 
   const messagesRef = useRef(messages);
   const anchorsRef = useRef<MessageAnchor[]>(EMPTY_GEOMETRY.anchors);
@@ -79,7 +72,6 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
     setMeasuredScroller(scroller);
     setGeometry(EMPTY_GEOMETRY);
     setActiveId(null);
-    setViewport(FULL_VIEWPORT);
   }
 
   useEffect(() => {
@@ -87,16 +79,9 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
   }, [messages]);
 
   const sync = useCallback(() => {
-    if (!scroller) return;
+    if (!scroller || suppressed.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scroller;
-    const scrollable = Math.max(1, scrollHeight - clientHeight);
-    const start = scrollTop / Math.max(1, scrollHeight);
-    const size = Math.min(1, clientHeight / Math.max(1, scrollHeight));
-    setViewport((previous) =>
-      previous.start === start && previous.size === size ? previous : { start, size },
-    );
-    if (suppressed.current) return;
-    const atBottom = scrollTop >= scrollable - BOTTOM_EPSILON;
+    const atBottom = scrollTop >= Math.max(1, scrollHeight - clientHeight) - BOTTOM_EPSILON;
     setActiveId(resolveActiveId(anchorsRef.current, scrollTop + clientHeight * READING_LINE, atBottom));
   }, [scroller]);
 
@@ -108,10 +93,9 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
 
     scroller.querySelectorAll<HTMLElement>("[data-message-id]").forEach((node) => {
       const message = byId.get(node.dataset.messageId ?? "");
-      if (!message) return;
+      if (message?.role !== "user") return;
       anchors.push({
         id: message.id,
-        role: message.role,
         preview: derivePreview(message.content),
         top: Math.max(0, Math.round(node.getBoundingClientRect().top - origin)),
       });
@@ -196,11 +180,9 @@ export function useConversationMap(scroller: HTMLElement | null, messages: Messa
 
   return {
     anchors: geometry.anchors,
-    scrollHeight: geometry.scrollHeight,
     clientHeight: geometry.clientHeight,
     scrollable: geometry.scrollHeight - geometry.clientHeight > OVERFLOW_EPSILON,
     activeId,
-    viewport,
     jumpTo,
   };
 }
