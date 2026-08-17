@@ -201,22 +201,6 @@ def replace_section(document: dict, heading: str, nodes: list[dict]) -> dict:
     return {**document, "content": [*content[:start], *nodes, *content[end:]]}
 
 
-def has_heading(document: dict, text: str) -> bool:
-    """Report whether a document already carries a heading with the given text."""
-    for node in document.get("content") or []:
-        if node.get("type") != "heading":
-            continue
-        for child in node.get("content") or []:
-            if child.get("text") == text:
-                return True
-    return False
-
-
-def append_nodes(document: dict, nodes: list[dict]) -> dict:
-    """Return the document with nodes appended to its content."""
-    return {**document, "content": [*(document.get("content") or []), *nodes]}
-
-
 def build_bug_document(
     ticket: dict, client_environment: dict, reporter: dict, evidence: list[dict] | None = None
 ) -> dict:

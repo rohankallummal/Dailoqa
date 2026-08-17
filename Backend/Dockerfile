@@ -7,9 +7,8 @@ COPY pyproject.toml ./
 COPY src ./src
 COPY skills ./skills
 COPY knowledge-store ./knowledge-store
-COPY tests ./tests
 COPY entrypoint.sh worker-entrypoint.sh ./
-RUN pip install --no-cache-dir -e ".[dev]"
+RUN pip install --no-cache-dir -e .
 RUN chmod +x entrypoint.sh worker-entrypoint.sh
 
 EXPOSE 8000

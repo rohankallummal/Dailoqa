@@ -10,6 +10,13 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-16-mandatory-repro-steps-design.md`
 
+> **Status:** implemented and verified, then the test suite was removed at the project
+> owner's request. Tasks 1 and 8 and every `pytest` step below describe scaffolding that
+> no longer exists in the repository — `Backend/tests/`, the `dev` optional-dependency
+> group, and the pytest configuration were all deleted after verification passed. The
+> behavioural findings they produced are recorded in the spec's revision section. Reuse
+> this plan as the record of what was built, not as a runnable checklist.
+
 ## Global Constraints
 
 - **No Python on the host.** Every command runs through Docker. Tests:

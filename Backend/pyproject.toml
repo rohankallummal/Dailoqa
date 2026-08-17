@@ -20,19 +20,6 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.3",
-    "pytest-asyncio>=0.24",
-]
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-markers = [
-    "live: exercises the real LLM gateway; requires the VPN to be connected",
-]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

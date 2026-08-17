@@ -44,11 +44,6 @@ def record_steps(steps: list[str]) -> str:
     return f"{STEPS_MARKER}\n{body}"
 
 
-def empty_result(prior_requests: int) -> str:
-    """Return what an unanswered request says, given how many already went unanswered."""
-    return TERMINATE if prior_requests else ASK_AGAIN
-
-
 def _results(messages) -> list[str]:
     """Return the content of every request_steps result already in the thread."""
     return [
@@ -88,5 +83,5 @@ async def request_steps(question: str, runtime: ToolRuntime) -> str:
     provided = interrupt({"steps_request": True, "question": question})
     steps = parse_steps(provided if isinstance(provided, str) else "")
     if not steps:
-        return empty_result(prior)
+        return TERMINATE if prior else ASK_AGAIN
     return record_steps(steps)
