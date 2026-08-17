@@ -138,8 +138,11 @@ async def test_an_off_corpus_question_is_declined_without_citing(question):
 # an adverb between the negation and the verb for the same reason -- the first version demanded
 # "does not mention" adjacently and reported a correct decline as a confabulation.
 _DENIAL = re.compile(
+    # "appear" joined the list after a correct decline -- "the term 'Apache flow' does not appear
+    # in the documentation" -- was reported as a confabulation. Third widening of this pattern,
+    # each time because the model phrased a correct decline a way the regex had not anticipated.
     r"does(?:n['’]t| not)\s+(?:\w+\s+){0,2}"
-    r"(?:mention|cover|describe|discuss|include|provide|specify|define|detail|address)"
+    r"(?:mention|cover|describe|discuss|include|provide|specify|define|detail|address|appear|exist)"
     r"|no mention|not (?:mentioned|covered|documented|described)"
     r"|could(?:n['’]t| not) find|did(?:n['’]t| not) find|no .{0,12}reference",
     re.I,

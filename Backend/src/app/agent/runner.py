@@ -8,6 +8,7 @@ from langgraph.types import Command
 from app.agent.checkpointer import build_checkpointer
 from app.agent.context import TurnContext
 from app.agent.factory import build_agent
+from app.agent.middleware.grounding import OUT_OF_SCOPE_ANSWER, ungrounded_answer
 from app.db.base import async_session
 from app.db.repositories import append_message, has_active_job
 from app.sse.registry import registry
@@ -234,6 +235,21 @@ async def run_turn(
         trailing = "" if stream.text.strip() or not fallback else fallback
         if trailing:
             await stream.token(trailing)
+        # Last gate before anything is kept: an answer the documentation does not support is
+        # swapped for a fixed sentence rather than sent back to be rewritten. The retry route was
+        # tried and measurably makes things worse -- asked to fix an uncited answer, the model
+        # declines a question the corpus covers, because that satisfies the correction more
+        # cheaply than citing does. A substitution has no second attempt to go wrong.
+        #
+        # Safe to do after streaming because the terminal event below carries `replace: True`:
+        # tokens of the discarded answer are already on screen, and this overwrites them.
+        # "reply" is a turn that finished; the interrupt stages are the ticket approval flows,
+        # which retrieve no documentation and must never be rewritten.
+        if stage == "reply" and ungrounded_answer(final.values.get("messages", []), stream.text):
+            logger.warning(
+                "rag.grounding ungrounded answer replaced for conversation %s", conversation_id
+            )
+            stream.text = OUT_OF_SCOPE_ANSWER
         await _persist(conversation_id, turn_id, stream.text, stage)
         # The terminal event carries the whole answer and asks the client to replace what it
         # has, rather than closing an accumulation it has to have got exactly right. Tokens

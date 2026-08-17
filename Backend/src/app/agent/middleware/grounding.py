@@ -88,6 +88,69 @@ _MISATTRIBUTED = (
 )
 
 
+OUT_OF_SCOPE_ANSWER = (
+    "This is outside the DailoQA documentation scope. Please ask something about DailoQA, "
+    "LangChain, LangGraph or Deep Agents, or ask me to file a bug report or feature request."
+)
+"""What the user is shown instead of an answer the documentation does not support.
+
+Edit this string to change the wording; nothing else needs to move.
+"""
+
+# A fenced block. The opener alone is enough -- an unterminated fence still reads as code.
+_CODE_FENCE = re.compile(r"^\s*```", re.MULTILINE)
+
+# Phrasings that make an uncited answer a *decline*, which is a correct answer and must survive.
+_DECLINING = re.compile(
+    # "appear" and "exist" are here because leaving them out is a live hazard, not an omission:
+    # "the term does not appear in the documentation" is a textbook correct decline, and a gate
+    # that replaces it destroys the exact behaviour the rest of this module works to produce.
+    # Erring toward recognising a decline is the safe direction -- a missed fabrication is the
+    # bug we already had, a replaced decline is a new one.
+    r"does(?:n['’]t| not)\s+(?:\w+\s+){0,3}"
+    r"(?:mention|cover|describe|discuss|include|provide|specify|define|detail|address|state|say"
+    r"|contain|appear|exist|reference)"
+    r"|no mention|not (?:mentioned|covered|documented|described|appear\w*)"
+    r"|could(?:n['’]t| not) find|did(?:n['’]t| not) find|unable to find"
+    r"|i can only (?:help|assist)|outside the .{0,30}scope|can'?t (?:help|assist) with"
+    r"|i can'?t provide|is not (?:a |an )?(?:documented|mentioned)",
+    re.IGNORECASE,
+)
+
+# Below this, an uncited answer is too short to be a fabricated explanation: scope refusals,
+# clarifying questions and one-line declines all sit here. Measured on real turns -- the
+# fabrications ran 613 and 1705 characters, the refusals and clarifications 100 to 300.
+_SUBSTANTIAL = 420
+
+
+def ungrounded_answer(messages, answer: str) -> bool:
+    """Whether a final answer asserts things no retrieved passage backs.
+
+    The gate the middleware's retry could not be. Bouncing an ungrounded answer back to the model
+    makes it *worse*: measured twice, the retry declines a question the corpus covers rather than
+    fixing the citation, because declining is the cheaper way to satisfy the correction. So this
+    reports, and the runner substitutes a fixed sentence instead of asking for a rewrite.
+
+    Deliberately narrow, because the cost of a false positive is replacing a good answer:
+
+    * Anything carrying ``[Doc N]`` is grounded by the checks above and never reaches here.
+    * A decline is the *correct* uncited answer and is recognised by its wording.
+    * Short uncited replies -- scope refusals, clarifying questions -- are left alone.
+    * Nothing fires unless a citing tool actually returned passages this thread, so ticket flows,
+      which retrieve nothing, are untouched by construction.
+
+    What is left is the observed failure: a long uncited explanation, or a code sample, produced
+    after the documentation was consulted and not built from it. Five turns into one conversation
+    that was a complete "AI chatbot in LangGraph" built on ``compiled_graph.run()``, which is not
+    a LangGraph API.
+    """
+    if not passages_were_offered(messages) or _CITATION.search(answer):
+        return False
+    if _DECLINING.search(answer):
+        return False
+    return bool(_CODE_FENCE.search(answer)) or len(answer.strip()) >= _SUBSTANTIAL
+
+
 def _text(message) -> str:
     """Flatten a message's content, which providers return as a string or as blocks."""
     content = getattr(message, "content", "")
