@@ -10,12 +10,25 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-16-mandatory-repro-steps-design.md`
 
-> **Status:** implemented and verified, then the test suite was removed at the project
-> owner's request. Tasks 1 and 8 and every `pytest` step below describe scaffolding that
-> no longer exists in the repository — `Backend/tests/`, the `dev` optional-dependency
-> group, and the pytest configuration were all deleted after verification passed. The
-> behavioural findings they produced are recorded in the spec's revision section. Reuse
-> this plan as the record of what was built, not as a runnable checklist.
+> **Status: historical record, not a runnable checklist.** This plan was executed and
+> verified, then several parts were deliberately undone. Read the spec's two revision
+> sections for the current design. Four things below no longer match the repository:
+>
+> 1. **The test suite is gone.** Tasks 1 and 8 and every `pytest` step describe
+>    scaffolding that was removed after verification — `Backend/tests/`, the `dev`
+>    optional-dependency group, the pytest configuration, and the Dockerfile lines that
+>    installed and copied them.
+> 2. **The Similar Reports migration is gone.** Every existing ticket has been deleted, so
+>    `LEGACY_FILENAME` and `LEGACY_SIMILAR_REPORTS_HEADING` were removed along with the
+>    extra delete in `_replace_spreadsheet` and the legacy strip in `_refresh_sections`.
+>    Ignore every mention of them in Tasks 2, 3 and 5.
+> 3. **The gate was redesigned.** Task 6's model-supplied `steps_to_reproduce` argument
+>    induced fabrication and no longer exists. Steps are captured from the user by
+>    `request_steps`; see the spec's first revision section.
+> 4. **This plan missed a spec requirement.** The spec called for
+>    `build_bug_document`'s `if not evidence and steps` condition to be removed so steps
+>    always appear. No task covered it, the self-review below wrongly reported full spec
+>    coverage, and it shipped broken until 2026-08-17.
 
 ## Global Constraints
 
@@ -34,8 +47,9 @@
 - **Attachment naming, link path only:** `{safe(oauth_name)}-{safe(oauth_id)}-{n}{ext}`,
   `n` from 1 per reporter, stable source-filename order.
 - **Section headings, exact:** `More Evidence`, `Affected Users`.
-- **Spreadsheet filename:** `affected-users.xlsx`. Legacy name to migrate away from:
-  `similar-reports.xlsx`. Legacy heading: `Similar Reports`.
+- **Spreadsheet filename:** `affected-users.xlsx`. (This originally also named
+  `similar-reports.xlsx` and the `Similar Reports` heading as legacy artifacts to migrate
+  away from. Both are gone — see banner note 2.)
 - Do not commit to a remote. Local commits only, per `Frontend/CLAUDE.md`.
 
 ---
@@ -149,6 +163,10 @@ git commit -m "test: add pytest infrastructure for the backend"
 ---
 
 ### Task 2: ADF section builders and replaceable sections
+
+> Superseded in part: `LEGACY_SIMILAR_REPORTS_HEADING` was removed on 2026-08-17, and
+> `has_heading` / `append_nodes` were deleted once `replace_section` took their last
+> caller. The new section builders and `replace_section` stand as written.
 
 **Files:**
 - Modify: `Backend/src/app/jira/adf.py:79` (replace `SIMILAR_REPORTS_HEADING` and `similar_reports_section`)
@@ -358,6 +376,9 @@ git commit -m "feat: add More Evidence and Affected Users sections with replacem
 ---
 
 ### Task 3: Rename the spreadsheet to Affected Users
+
+> Superseded in part: `LEGACY_FILENAME` was removed on 2026-08-17. The rename itself
+> stands; only the legacy constant and its test went.
 
 **Files:**
 - Modify: `Backend/src/app/jira/similar_reports.py` → rename file to `Backend/src/app/jira/affected_users.py`
@@ -660,6 +681,10 @@ git commit -m "feat: rename link-path evidence per reporter"
 
 ### Task 5: Link path refreshes both sections and migrates the legacy ones
 
+> Superseded in part: the migration half was removed on 2026-08-17. `_refresh_sections`
+> no longer strips a `Similar Reports` section and `_replace_spreadsheet` deletes only
+> `affected-users.xlsx`. The two-section refresh and `linked_evidence` stand as written.
+
 **Files:**
 - Modify: `Backend/src/app/worker/link_step.py`
 - Modify: `Backend/src/app/jira/client.py:144` (`list_attachments` carries size)
@@ -872,6 +897,11 @@ git commit -m "feat: rebuild More Evidence and Affected Users on every link"
 ---
 
 ### Task 6: The structural gate in the agent's write tools
+
+> Superseded: the `steps_to_reproduce` argument this task adds is what made the model
+> invent steps to clear the gate. `create_ticket` and `link_to_existing` now take no such
+> argument and read the user's captured reply instead. `missing_steps` and
+> `STEPS_REQUIRED` survive, fed from the capture. See the spec's first revision section.
 
 **Files:**
 - Modify: `Backend/src/app/agent/tools/jira.py`
@@ -1258,10 +1288,22 @@ git commit -m "test: verify the mandatory-steps flow against the live model"
 
 ## Self-Review
 
-**Spec coverage.** Every spec section maps to a task: gate → Task 6; ADF sections and
-`replace_section` → Task 2; spreadsheet rename and migration → Tasks 3 and 5; evidence
-naming → Task 4; link refresh and `list_attachments` size → Task 5; skill flow → Task 7;
-testing → Tasks 1 and 8. The three out-of-scope defects stay out of scope.
+**Spec coverage.** ~~Every spec section maps to a task~~ — **this was wrong.** Corrected
+2026-08-17: the spec's ticket-structure table requires Steps to Reproduce to render
+*always*, replacing `build_bug_document`'s `if not evidence and steps` condition. No task
+below implements it, this review did not catch the gap, and the condition shipped
+unchanged — so steps were silently dropped from any ticket whose reporter attached a
+screenshot, inverting the intent of the whole change. Fixed separately.
+
+The mapping that did hold: gate → Task 6; ADF sections and `replace_section` → Task 2;
+spreadsheet rename and migration → Tasks 3 and 5; evidence naming → Task 4; link refresh
+and `list_attachments` size → Task 5; skill flow → Task 7; testing → Tasks 1 and 8. The
+three out-of-scope defects stay out of scope.
+
+**Lesson for the next plan.** The gap was in a spec section (Ticket structure) that reads
+as description rather than instruction, so it produced no task. Walk the spec's tables and
+prose with the same rigour as its Implementation section, and check coverage against the
+spec's requirements rather than against the task list already written.
 
 **Known ordering hazard.** Task 3 renames `similar_reports.py`, which `link_step.py`
 imports. The suite is red between Task 3 and Task 5. This is called out in Task 3 Step 4

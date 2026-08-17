@@ -84,12 +84,13 @@ again.
 | Steps to Reproduce | only when there is **no** evidence | **always** |
 | Reported By | always | unchanged |
 
-Section order is unchanged. `adf.py:185` currently gates Steps to Reproduce on
-`if not evidence and steps`; that condition is removed.
+Section order is unchanged. `adf.py` gated Steps to Reproduce on
+`if not evidence and steps`; that condition is removed, so attaching a screenshot no
+longer suppresses the steps.
 
 ### Bug description, link path
 
-`Similar Reports` is replaced by:
+The link path's `Similar Reports` section is replaced by:
 
 - **More Evidence** — a bulleted list, one line per file, formatted as the existing
   Evidence section does: `{filename} ({category}, {size})`.
@@ -149,11 +150,14 @@ not filed.
 
 - `SIMILAR_REPORTS_FILENAME` becomes `affected-users.xlsx`; the sheet title becomes
   `Affected Users`. Columns are unchanged.
-- **Migration:** `_replace_spreadsheet` deletes by filename. Issues already carrying
-  `similar-reports.xlsx` would keep it alongside the new file, and their description
-  would keep a stale `Similar Reports` heading. The refresh must therefore delete both
-  the old and the new filename, and remove a `Similar Reports` section if present.
-  This runs on the next link to a given issue and needs no backfill.
+- ~~**Migration:**~~ **Dropped 2026-08-17.** This originally specified a migration:
+  `_replace_spreadsheet` deletes by filename, so an issue already carrying
+  `similar-reports.xlsx` would have kept it alongside the new file and kept a stale
+  `Similar Reports` heading in its description. The refresh therefore deleted both
+  filenames and stripped the old section. The project owner has since deleted every
+  existing ticket, so nothing in Jira carries either artifact and the migration had
+  nothing left to migrate. `LEGACY_FILENAME` and `LEGACY_SIMILAR_REPORTS_HEADING` are
+  removed, and `_replace_spreadsheet` is back to a single-filename check.
 
 ### Skill — `skills/bug-report-creation/SKILL.md`
 
@@ -200,8 +204,6 @@ Link path:
 - More Evidence lists every later reporter's files and is regenerated, not duplicated,
   across successive links.
 - A retried link produces no duplicate attachments and no second section.
-- An issue holding `similar-reports.xlsx` ends up with only `affected-users.xlsx` and
-  no `Similar Reports` heading.
 
 ## Out of scope
 
@@ -245,6 +247,30 @@ steps.
   picker never opened, 0/4 — a regression of the original reported bug.
 - A `steps` stage was added to `STAGE_INPUT_STATES` mapping to an open composer, so no
   frontend change was needed.
+
+## Revision, 2026-08-17: cleanup
+
+**The test suite was removed** at the project owner's request once the behaviour was
+verified: `Backend/tests`, the `dev` optional-dependency group, the pytest configuration,
+and the Dockerfile lines installing and copying them. The behavioural findings those tests
+produced are recorded above and remain the justification for the design; nothing in the
+shipped code depends on them.
+
+Removing them also removed the code they had been keeping alive: `adf.has_heading` and
+`adf.append_nodes` lost their only caller when the link path moved to `replace_section`,
+and `steps.empty_result` existed only as a test seam for a single expression.
+
+**The Similar Reports migration was dropped**, as recorded against the Spreadsheet section
+above. Every existing ticket has been deleted, so no issue in Jira carries the old
+attachment or heading.
+
+**Steps to Reproduce were still being dropped when evidence was attached.** This spec
+called for the `if not evidence and steps` condition to be removed and the implementation
+plan never created a task for it, so it shipped unchanged and the plan's own self-review
+wrongly claimed full spec coverage. Found on 2026-08-17 while removing the legacy
+constants. Under this design steps are mandatory and are the only account a triager can
+follow without opening an attachment, so suppressing them for users who supplied a
+screenshot inverted the intent exactly. The condition is now `if steps`.
 
 ## Risks
 
