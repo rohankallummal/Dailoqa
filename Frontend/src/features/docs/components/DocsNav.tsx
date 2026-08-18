@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { docsNavItems } from "../lib/docsNavConfig";
+import { docsNavItems, docsSection } from "../lib/docsNavConfig";
 
 export function DocsNav() {
   const pathname = usePathname();
+  const current = docsSection(pathname);
 
   return (
     <nav className="flex h-12 flex-shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-white px-6">
       {docsNavItems.map((item) => {
-        const active = pathname === item.href;
+        const active = docsSection(item.href) === current;
         return (
           <Link
             key={item.href}

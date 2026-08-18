@@ -3,6 +3,10 @@ type DocsNavItem = {
   href: string;
 };
 
+export function docsSection(pathname: string): string {
+  return pathname.split("/")[2] ?? "";
+}
+
 export const docsNavItems: DocsNavItem[] = [
   { label: "Overview", href: "/docs" },
   { label: "DeepAgents", href: "/docs/deepagents" },

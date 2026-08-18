@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Expand, MessageSquarePlus, Sparkles, SquarePen, X } from "lucide-react";
+import { ArrowLeft, Expand, MessageSquarePlus, SquarePen, X } from "lucide-react";
 import { useChatPanel } from "./ChatPanelProvider";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { ChatComposer } from "./ChatComposer";
@@ -74,7 +74,7 @@ export function ChatPanel() {
       >
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-line px-5">
           <div className="flex items-center gap-2.5">
-            {showHistory ? (
+            {showHistory && (
               <button
                 type="button"
                 onClick={leaveHistory}
@@ -84,10 +84,6 @@ export function ChatPanel() {
               >
                 <ArrowLeft className="h-[18px] w-[18px]" />
               </button>
-            ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-active text-accent">
-                <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.8} />
-              </span>
             )}
           </div>
           <div className="flex items-center gap-1">

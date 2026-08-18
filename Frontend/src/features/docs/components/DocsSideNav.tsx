@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { docsSideNav, type DocsSideNavItem } from "../lib/docsNavConfig";
+import { docsSection, docsSideNav, type DocsSideNavItem } from "../lib/docsNavConfig";
 import { LanguageSelect } from "./LanguageSelect";
 
 function NavItem({ item, active }: { item: DocsSideNavItem; active: boolean }) {
@@ -23,7 +23,7 @@ function NavItem({ item, active }: { item: DocsSideNavItem; active: boolean }) {
 
 export function DocsSideNav() {
   const pathname = usePathname();
-  const section = docsSideNav[pathname.split("/")[2] ?? ""];
+  const section = docsSideNav[docsSection(pathname)];
 
   if (!section) return null;
 

@@ -1,23 +1,24 @@
 const CHANNEL_NAME = "dailoqa-session";
 const SIGN_OUT = "sign-out";
 
-function openChannel(): BroadcastChannel | null {
+let channel: BroadcastChannel | null = null;
+
+function sharedChannel(): BroadcastChannel | null {
   if (typeof BroadcastChannel === "undefined") return null;
-  return new BroadcastChannel(CHANNEL_NAME);
+  channel ??= new BroadcastChannel(CHANNEL_NAME);
+  return channel;
 }
 
 export function broadcastSignOut(): void {
-  const channel = openChannel();
-  if (!channel) return;
-  channel.postMessage(SIGN_OUT);
-  channel.close();
+  sharedChannel()?.postMessage(SIGN_OUT);
 }
 
 export function subscribeToSignOut(onSignOut: () => void): () => void {
-  const channel = openChannel();
-  if (!channel) return () => {};
-  channel.onmessage = (event) => {
+  const subscription = sharedChannel();
+  if (!subscription) return () => {};
+  const handler = (event: MessageEvent) => {
     if (event.data === SIGN_OUT) onSignOut();
   };
-  return () => channel.close();
+  subscription.addEventListener("message", handler);
+  return () => subscription.removeEventListener("message", handler);
 }
